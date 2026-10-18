@@ -12,3 +12,6 @@ node_modules/
 # Generated deck output and the concatenated intermediate doc.
 docs/dist/
 docs/.deck.md
+
+# Vite dependency cache (written by `npm run dev`).
+app/.vite/
