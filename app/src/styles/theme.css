@@ -29,6 +29,21 @@
   --cap-nav-top: #3c5e48;
   --cap-unwired: #1c1c20;
 
+  /* Bindings the firmware itself distinguishes: a transparent binding inherits
+   * from the slot below, a no-op binding is a real binding that does nothing,
+   * and a system behavior is not a key at all. */
+  --cap-inherit: #1f2126;
+  --cap-off: #17171a;
+  --cap-system: #35324a;
+  --cap-unknown: #4a2b2b;
+
+  --border-strong: #4a4a55;
+  --ok: #57a66c;
+  --warn: #d4a24c;
+  --err: #c9584f;
+
+  --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
   --cap-text: #ececef;
   --cap-text-hold: #cfa8ff;
 

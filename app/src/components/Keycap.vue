@@ -1,42 +1,42 @@
-<script setup>
+<script setup lang="ts">
+/*
+ * One key position on the grid.
+
+ * `pos` is the stock position number — the same number a keeb_cell carries —
+ * and the label is derived from the binding's token + params, never stored.
+ */
 import { computed } from 'vue'
-import { keyLabel, bindingCategory } from '../data/keycodes.js'
 
-const props = defineProps({
-  /** cell addressing (declared so they don't fall through as DOM attrs) */
-  k: { type: String, default: '' },
-  side: { type: String, default: '' },
-  row: { type: Number, default: -1 },
-  col: { type: Number, default: -1 },
-  /** resolved binding (may be null) */
-  binding: { type: Object, default: null },
-  /** true when the edited layer defines this cell itself */
-  own: { type: Boolean, default: false },
-  wired: { type: Boolean, default: true },
-  dimmed: { type: Boolean, default: false },
-  selected: { type: Boolean, default: false },
-  layerName: { type: String, default: '' },
-})
+import type { CapDisplay } from '../model/cap.ts'
 
-const emit = defineEmits(['pick'])
+const props = defineProps<{
+  pos: number
+  display: CapDisplay
+  own: boolean
+  reserved: boolean
+  /** the grid slot has no key position in the matrix transform */
+  unmapped: boolean
+  selected: boolean
+  dimmed: boolean
+  layerLabel: string
+}>()
 
-const category = computed(() =>
-  props.wired ? bindingCategory(props.binding) : 'unwired'
-)
+const emit = defineEmits<{ (e: 'pick', pos: number): void }>()
 
-/** Label(s) shown on the cap. Hold/tap kinds render a diagonal split. */
-const cap = computed(() => {
-  const b = props.binding
-  if (!b) return { main: '—', hold: null }
-  switch (b.kind) {
-    case 'key': return { main: keyLabel(b.code), hold: null }
-    case 'mo': return { main: 'MO', hold: b.layerName ?? b.layer }
-    case 'to': return { main: 'TO', hold: b.layerName ?? b.layer }
-    case 'lt': return { main: keyLabel(b.tap), hold: b.layerName ?? b.layer }
-    case 'hml': case 'hmr': return { main: keyLabel(b.tap), hold: keyLabel(b.hold) }
-    case 'mmv': case 'msc': case 'mkp': return { main: keyLabel(b.code), hold: null }
-    default: return { main: '?'.repeat(3), hold: null }
+const title = computed(() => {
+  const { display } = props
+
+  if (props.unmapped) {
+    return `position ${props.pos}: not wired to the matrix`
   }
+
+  if (props.reserved) {
+    return `position ${props.pos}: reserved position — the firmware will not rebind it`
+  }
+
+  const cap = display.hold ? `${display.main}/${display.hold}` : display.main
+
+  return `${props.layerLabel} · position ${props.pos} · ${cap} · ${display.tokenName}`
 })
 </script>
 
@@ -44,18 +44,26 @@ const cap = computed(() => {
   <button
     class="cap"
     :class="[
-      `cat-${category}`,
-      { own, inherit: !own && wired, selected, unwired: !wired, dimmed },
-      cap.hold ? 'holdtap' : '',
+      `cat-${display.category}`,
+      {
+        own,
+        inherit: !own && !unmapped && !reserved,
+        selected,
+        unmapped,
+        reserved,
+        dimmed,
+      },
+      display.hold ? 'holdtap' : '',
     ]"
-    :disabled="!wired"
-    :title="layerName ? `${layerName} · ${cap.main}${cap.hold ? '/' + cap.hold : ''}` : ''"
-    @click="$emit('pick')"
+    :disabled="unmapped"
+    :title="title"
+    @click="emit('pick', pos)"
   >
-    <template v-if="wired">
-      <span v-if="cap.hold" class="hold">{{ cap.hold }}</span>
-      <span class="main">{{ cap.main }}</span>
+    <template v-if="!unmapped">
+      <span v-if="display.hold" class="hold">{{ display.hold }}</span>
+      <span class="main">{{ display.main }}</span>
       <span v-if="!own" class="src-dot" />
+      <span v-if="reserved" class="lock" title="reserved">🔒</span>
     </template>
     <template v-else>
       <span class="main">·</span>
@@ -78,77 +86,71 @@ const cap = computed(() => {
   align-items: center;
   justify-content: center;
   transition: transform 0.06s ease, filter 0.12s ease, box-shadow 0.12s ease;
-  background: linear-gradient(160deg, var(--cap-key-top) 0%, var(--cap-key) 100%);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45);
-  user-select: none;
 }
 
-.cap:hover:enabled { filter: brightness(1.25); }
-.cap:active:enabled { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0,0,0,0.45); }
+.cap:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: var(--border-strong);
+}
 
-.cat-mod { background: linear-gradient(160deg, var(--cap-mod-top), var(--cap-mod)); }
-.cat-layer { background: linear-gradient(160deg, var(--cap-layer-top), var(--cap-layer)); }
-.cat-holdtap { background: linear-gradient(160deg, var(--cap-holdtap-top), var(--cap-holdtap)); }
-.cat-media { background: linear-gradient(160deg, var(--cap-media-top), var(--cap-media)); }
-.cat-mouse { background: linear-gradient(160deg, var(--cap-mouse-top), var(--cap-mouse)); }
-.cat-nav { background: linear-gradient(160deg, var(--cap-nav-top), var(--cap-nav)); }
-
-/* Diagonal hold/tap split, Oryx-style: hold label top-right, tap bottom-left. */
-.cap.holdtap { background: linear-gradient(
-    135deg,
-    var(--cap-holdtap-top) 0%, var(--cap-holdtap-top) 48%,
-    #26262c 48%, #26262c 52%,
-    var(--cap-key-top) 52%, var(--cap-key) 100%); }
-.cap.holdtap.cat-layer { background: linear-gradient(
-    135deg,
-    var(--cap-layer-top) 0%, var(--cap-layer-top) 48%,
-    #26262c 48%, #26262c 52%,
-    var(--cap-key-top) 52%, var(--cap-key) 100%); }
+.main { line-height: 1.1; }
 
 .hold {
   position: absolute;
   top: 3px;
-  right: 5px;
-  font-size: 8px;
-  color: var(--cap-text-hold);
-  opacity: 0.9;
+  right: 4px;
+  font-size: 9px;
+  opacity: 0.75;
 }
-.main { position: relative; z-index: 1; }
 
-/* inherited (resolved from a lower layer) — dimmed */
-.cap.inherit { filter: brightness(0.55) saturate(0.7); }
-/* unwired matrix cell */
-.cap.unwired {
-  background: var(--cap-unwired);
-  border-style: dashed;
-  border-color: var(--border-soft);
-  color: var(--text-faint);
-  cursor: default;
+/* Diagonal split for hold/tap caps: hold top-right, tap bottom-left. */
+.cap.holdtap {
+  background:
+    linear-gradient(
+      to top right,
+      transparent 0 calc(50% - 1px),
+      var(--border-soft) calc(50% - 1px) calc(50% + 1px),
+      transparent calc(50% + 1px) 100%
+    );
 }
-/* own override on edited layer gets an accent ring */
-.cap.own { border-color: var(--accent-dim); }
-.cap.own::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border-radius: 5px;
-  border: 1px solid rgba(224, 161, 88, 0.35);
-  pointer-events: none;
-}
-/* small dot marking inherited caps */
+
+.cap.holdtap .main { align-self: flex-end; margin-left: -8%; margin-bottom: 4%; }
+
+.cap.own { border-color: var(--layer-color, var(--accent)); border-width: 2px; }
+.cap.inherit { opacity: 0.72; }
+.cap.dimmed { opacity: 0.45; }
+.cap.unmapped { border-style: dashed; color: var(--text-faint); background: transparent; }
+.cap.reserved { border-style: double; border-width: 3px; }
+.cap.selected { box-shadow: 0 0 0 2px var(--accent); }
+
 .src-dot {
   position: absolute;
-  bottom: 3px;
-  right: 4px;
-  width: 3px;
-  height: 3px;
+  left: 4px;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--text-faint);
+  opacity: 0.6;
 }
-.cap.selected {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-  filter: brightness(1.15);
+
+.lock {
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  font-size: 8px;
+  opacity: 0.7;
 }
-.cap.dimmed { opacity: 0.45; }
+
+.cat-key { background: var(--cap-key); }
+.cat-mod { background: var(--cap-mod); }
+.cat-media { background: var(--cap-media); }
+.cat-nav { background: var(--cap-nav); }
+.cat-mouse { background: var(--cap-mouse); }
+.cat-layer { background: var(--cap-layer); }
+.cat-holdtap { background: var(--cap-holdtap); }
+.cat-system { background: var(--cap-system); }
+.cat-inherit { background: var(--cap-inherit); color: var(--text-faint); }
+.cat-off { background: var(--cap-off); color: var(--text-faint); }
+.cat-unknown { background: var(--cap-unknown); color: var(--text); }
 </style>

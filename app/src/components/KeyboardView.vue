@@ -1,75 +1,117 @@
-<script setup>
-import { computed } from 'vue'
-import { useConfigStore } from '../stores/config.js'
-import { useLayoutStore, cellKey } from '../stores/layout.js'
-import Keycap from './Keycap.vue'
-import { enrichBinding } from '../data/enrich.js'
-
-const props = defineProps({ selectedCell: { type: String, default: null } })
-const emit = defineEmits(['pick'])
-
-const config = useConfigStore()
-const layout = useLayoutStore()
-
-
-/**
- * Build the visual grid. When split, each matrix row renders as two halves
- * separated by the gap. Both halves render col 0..cols-1 left→right; the
- * LEFT half's last col and the RIGHT half's first col face the gap.
- * When not split, only the left half is shown (single side).
+<script setup lang="ts">
+/*
+ * The grid, drawn in stock positions.
+ *
+ * Left half is global columns 0-5, right half 6-11, and the position numbers
+ * run in the matrix transform's map order (keeb.dtsi), which is the numbering
+ * every CELLS record uses. Rows are not uniform: the extra row has 2 keys per
+ * half and the thumb row 4, exactly as the transform maps them.
  */
-const gridRows = computed(() => {
-  const rows = []
-  for (let r = 0; r < config.rows; r++) {
-    const line = { left: [], right: [] }
-    for (let c = 0; c < config.cols; c++) {
-      const key = (side) => cellKey(side, r, c)
-      const mk = (side) => {
-        const k = key(side)
-        const binding = enrichBinding(layout.resolve(config.activeLayer, side, r, c), config.layers)
-        return {
-          k,
-          side,
-          row: r,
-          col: c,
-          binding,
-          wired: layout.isWired(side, r, c),
-          own: layout.isOwnOverride(config.activeLayer, side, r, c),
-          selected: props.selectedCell === k,
-        }
+import { computed } from 'vue'
+
+import Keycap from './Keycap.vue'
+import { describeBinding } from '../model/cap.ts'
+import { GRID_ROWS, gridSide, useKeymapStore } from '../stores/keymap.ts'
+import { KEY_COUNT } from '../proto/zmk.gen.ts'
+
+const props = defineProps<{ selectedPos: number | null }>()
+
+const emit = defineEmits<{ (e: 'pick', pos: number, own: boolean): void }>()
+
+const keymap = useKeymapStore()
+
+interface CapCell {
+  pos: number
+  display: ReturnType<typeof describeBinding>
+  own: boolean
+  reserved: boolean
+  unmapped: boolean
+  selected: boolean
+}
+
+const rows = computed(() => {
+  const out: Array<{ row: number; left: CapCell[]; right: CapCell[] }> = []
+
+  for (let row = 0; row < GRID_ROWS; row++) {
+    const mk = (pos: number, unmapped: boolean): CapCell => {
+      const own = keymap.ownCell(keymap.editingSlot, pos) !== null
+      const resolved = keymap.resolve(keymap.editingSlot, pos)
+
+      return {
+        pos,
+        display: describeBinding(resolved?.binding ?? null, keymap.layerName),
+        own,
+        reserved: keymap.isReserved(pos),
+        unmapped,
+        selected: props.selectedPos === pos,
       }
-      line.left.push(mk('L'))
-      if (config.split) line.right.push(mk('R'))
     }
-    rows.push(line)
+
+    const line = { row, left: [] as CapCell[], right: [] as CapCell[] }
+
+    for (const g of gridSide(row, 'L')) {
+      line.left.push(mk(g.pos, false))
+    }
+
+    /* A half with fewer mapped slots than the widest row renders short, which
+     * is the honest picture of the matrix transform. */
+    for (const g of gridSide(row, 'R')) {
+      line.right.push(mk(g.pos, false))
+    }
+
+    out.push(line)
   }
-  return rows
+
+  return out
 })
 
-const layerName = computed(() => config.layers[config.activeLayer]?.name ?? '')
+const maxCols = computed(() => Math.max(...rows.value.map((r) => r.left.length), 1))
+const rightCols = computed(() => Math.max(...rows.value.map((r) => r.right.length), 1))
+const layerLabel = computed(() => keymap.editingName)
+const positions = computed(() => KEY_COUNT)
 </script>
 
 <template>
-  <div class="keyboard">
-    <div v-for="line in gridRows" :key="line.left[0].row" class="row">
-      <div class="half left">
+  <div class="keyboard" :style="{ '--layer-color': 'var(--accent)' }">
+    <div v-for="line in rows" :key="line.row" class="row">
+      <div class="half left" :style="{ '--cols': maxCols }">
         <Keycap
           v-for="cell in line.left"
-          :key="cell.k"
-          v-bind="cell"
-          :layer-name="layerName"
-          @pick="emit('pick', cell)"
+          :key="cell.pos"
+          :pos="cell.pos"
+          :display="cell.display"
+          :own="cell.own"
+          :reserved="cell.reserved"
+          :unmapped="cell.unmapped"
+          :selected="cell.selected"
+          :dimmed="false"
+          :layer-label="layerLabel"
+          @pick="(pos) => emit('pick', pos, cell.own)"
         />
       </div>
-      <div v-if="config.split" class="half right">
+
+      <div class="gap" />
+
+      <div class="half right" :style="{ '--cols': rightCols }">
         <Keycap
           v-for="cell in line.right"
-          :key="cell.k"
-          v-bind="cell"
-          :layer-name="layerName"
-          @pick="emit('pick', cell)"
+          :key="cell.pos"
+          :pos="cell.pos"
+          :display="cell.display"
+          :own="cell.own"
+          :reserved="cell.reserved"
+          :unmapped="cell.unmapped"
+          :selected="cell.selected"
+          :dimmed="false"
+          :layer-label="layerLabel"
+          @pick="(pos) => emit('pick', pos, cell.own)"
         />
       </div>
+    </div>
+
+    <div class="footnote">
+      {{ positions }} stock positions · editing slot {{ keymap.editingSlot }}
+      <template v-if="keymap.editingId !== 0xff"> ({{ layerLabel }}) </template>
     </div>
   </div>
 </template>
@@ -84,10 +126,20 @@ const layerName = computed(() => config.layers[config.activeLayer]?.name ?? '')
   border: 1px solid var(--border-soft);
   border-radius: 12px;
 }
-.row { display: flex; gap: var(--split-gap); justify-content: center; }
+
+.row { display: flex; align-items: flex-start; justify-content: center; }
+
+.gap { width: var(--split-gap); }
+
 .half {
   display: grid;
-  grid-template-columns: repeat(v-bind('config.cols'), minmax(44px, 64px));
+  grid-template-columns: repeat(var(--cols), minmax(44px, 60px));
   gap: var(--gap);
+}
+
+.footnote {
+  margin-top: 6px;
+  color: var(--text-faint);
+  font-size: 11px;
 }
 </style>

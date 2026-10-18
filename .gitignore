@@ -15,3 +15,6 @@ docs/.deck.md
 
 # Vite dependency cache (written by `npm run dev`).
 app/.vite/
+
+# SSR smoke-test bundle (npm run smoke).
+app/dist-ssr/
