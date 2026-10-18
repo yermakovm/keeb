@@ -1,0 +1,45 @@
+# Copyright (c) 2025 The keeb keyboard authors
+# SPDX-License-Identifier: MIT
+
+description: |
+  Live keymap mutation engine (keeb,engine).
+
+  The node is the engine's data: which behaviors a host may bind, and which
+  key positions the engine owns and refuses to rebind over the TLV channel.
+  Written from scratch; ZMK Studio is not involved.
+
+  tokens is the token table, and token id = index into this list. The host
+  references behaviors by that number, never by a name, because ZMK resolves a
+  binding by device-name string and a behavior that is not in the image cannot
+  be bound. Reordering this list changes the protocol's meaning, so the engine
+  publishes a hash of it (keeb_info.token_hash) and the configurator refuses to
+  write when the hash disagrees.
+
+  Behaviors whose driver is not compiled in (a feature switched off) are
+  detected at runtime and reported as unavailable, so listing one here is
+  harmless.
+
+compatible: "keeb,engine"
+
+properties:
+  tokens:
+    type: phandles
+    required: true
+    description:
+      Behaviors the TLV channel may bind, in token-id order.
+
+  reserved-positions:
+    type: array
+    required: true
+    description:
+      Stock key positions the engine owns. Writes to them are refused, so a
+      layout sent by the configurator can never take away the keys the revert
+      chord is made of. They keep whatever the keymap file defines for them.
+
+  revert-hold-ms:
+    type: int
+    default: 3000
+    description:
+      How long every reserved position must be held together to discard the
+      saved keymap and fall back to the keymap file. Works on raw key
+      positions, so it cannot be defeated by rebinding.

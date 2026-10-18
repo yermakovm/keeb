@@ -1,0 +1,24 @@
+# Copyright (c) 2025 The keeb keyboard authors
+# SPDX-License-Identifier: MIT
+
+description: |
+  Forward a reset / bootloader-reset invocation to the peripheral (right)
+  half.
+
+  ZMK evaluates combos on the central half, and the stock &sys_reset /
+  &bootloader behaviors are source-local - so a combo built from
+  right-half keys would reset the LEFT half. A binding for this behavior
+  instead reboots the right half: on the central it invokes the target
+  behavior on peripheral 0 over the split behavior transport; if invoked on
+  the peripheral itself, it runs the target locally. See
+  boards/shields/keeb/behavior_remote_reset.c.
+
+compatible: "keeb,remote-reset"
+
+include: zero_param.yaml
+
+properties:
+  target:
+    type: phandle
+    required: true
+    description: Behavior to run on the right half (e.g. &sys_reset, &bootloader).

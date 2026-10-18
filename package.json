@@ -1,0 +1,15 @@
+{
+  "name": "keeb-docs",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Marp slide deck for the keeb split keyboard project (docs/)",
+  "scripts": {
+    "deck": "node docs/build.mjs html pdf",
+    "deck:html": "node docs/build.mjs",
+    "deck:pdf": "node docs/build.mjs pdf",
+    "preview": "marp docs/0_index.md --theme-set docs/theme/keeb.css --allow-local-files --preview"
+  },
+  "devDependencies": {
+    "@marp-team/marp-cli": "^4.5.1"
+  }
+}

@@ -1,0 +1,169 @@
+# Copyright (c) 2025 The keeb keyboard authors
+# SPDX-License-Identifier: MIT
+#
+# Options for the keeb module. Everything here is scoped to the keeb shields so
+# the module can stay in the workspace without affecting other keyboards.
+
+config KBEEB_UI
+	bool "Custom keeb status screen"
+	depends on SHIELD_KEEB_LEFT || SHIELD_KEEB_RIGHT
+	select ZMK_DISPLAY
+	select LV_USE_CANVAS
+	select LV_USE_IMAGE
+	select LV_USE_THEME_MONO
+	select LV_FONT_MONTSERRAT_8
+	select LV_FONT_MONTSERRAT_16
+	select LV_FONT_MONTSERRAT_26
+	default y
+	help
+	  Replaces ZMK's built-in status screen with the keeb panels: the
+	  central half shows the active layer plus both halves' batteries, the
+	  peripheral half shows the layer artwork inside a fixed frame.
+
+if KBEEB_UI
+
+choice KBEEB_UI_ROTATION
+	prompt "Status screen rotation"
+	default KBEEB_UI_ROTATION_0
+	help
+	  How the UI is rotated relative to the panel's native orientation.
+	  The nice!view panel is 160x68 and is mounted horizontally, so 0 is the
+	  normal choice; 90/270 lay the UI out in a 68x160 portrait space and
+	  rotate it into the panel for a vertically mounted display.
+
+config KBEEB_UI_ROTATION_0
+	bool "0 (landscape)"
+
+config KBEEB_UI_ROTATION_90
+	bool "90 (portrait)"
+
+config KBEEB_UI_ROTATION_180
+	bool "180 (landscape, upside down)"
+
+config KBEEB_UI_ROTATION_270
+	bool "270 (portrait, other way)"
+
+endchoice
+
+config KBEEB_UI_ART
+	bool "Layer artwork on the peripheral display"
+	depends on ZMK_SPLIT
+	default y
+	help
+	  Draws the active layer's artwork on the peripheral half. The artwork
+	  is pushed from the central half, which is what keeps the two displays
+	  in sync without duplicating ZMK's keymap state.
+
+config KBEEB_LAYER_LED_INDICATE
+	bool "Layer colour indication on the RGB status LED"
+	depends on ZMK_STATUS_LED
+	default y
+	help
+	  Lights each half's KY-016 in a solid colour while its non-home
+	  layer is active: left half NAV=green FUN=blue, right half
+	  MEDIA=green GAME=blue, HOME and anything else off (normal status
+	  palette). The peripheral half learns the active layer from the
+	  layer_art push, so this rides on KBEEB_UI being enabled.
+
+config KBEEB_ADC_DIAG
+	bool "ADC channel scan diagnostic (battery divider hunt)"
+	default n
+	help
+	  TEMPORARY: samples all SAADC inputs with the battery gate off/on
+	  and logs millivolts, to find which pin the battery divider really
+	  feeds on clone boards. Remove once battery reporting works.
+
+config KBEEB_POWER_DIAG
+	bool "Log the inherited nRF52840 power state at boot"
+	depends on SOC_SERIES_NRF52X
+	default y
+	help
+	  Logs the DCDCEN0/DCDCEN (REG0/REG1 stage) mode inherited from the
+	  bootloader plus the UICR REGOUT0 LDO level, so an unregulated VDD on
+	  undocumented clone hardware can be attributed. See
+	  boards/shields/keeb/power.c.
+
+config KBEEB_POWER_FORCE_LDO
+	bool "Force both nRF52840 regulator stages to LDO at boot"
+	depends on KBEEB_POWER_DIAG
+	default y
+	help
+	  Zephyr never clears DCDCEN0/DCDCEN (soc.c only sets them when the
+	  devicetree nodes are okay), so a bootloader-left DCDC mode survives
+	  into the app. With the clone boards missing the buck inductors that
+	  means VDD rides at VDDH (battery/USB) - unregulated and out of spec.
+	  This clears both enable bits at boot, making the app's supply mode
+	  deterministic: LDO, the only mode that regulates on this hardware.
+
+config KBEEB_UI_LAYER_SYNC_POLL_MS
+	int "Peripheral link poll interval (ms)"
+	depends on ZMK_SPLIT && ZMK_SPLIT_ROLE_CENTRAL
+	default 1000
+	help
+	  ZMK raises no central-side event when a peripheral connects, so the
+	  link indicator and the artwork push rely on this poll. Only a local
+	  status read happens per tick; the layer is re-sent once per connect.
+
+# LVGL/ZMK stack and pool overrides live in boards/shields/keeb/Kconfig.defconfig:
+# defconfig fragments are sourced after the app's own Kconfig, so a plain
+# default here would lose to ZMK's.
+
+endif # KBEEB_UI
+
+menuconfig KBEEB_ENGINE
+	bool "Live keymap mutation engine (TLV config channel)"
+	depends on !ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL
+	# The same prerequisites ZMK Studio's own RPC menu selects
+	# (zmk/app/src/studio/Kconfig: ZMK_KEYMAP_SETTINGS_STORAGE depends on
+	# SETTINGS and ZMK_BEHAVIOR_LOCAL_IDS), minus nanopb/ring-buffer, which
+	# only the protobuf RPC needs and this engine never sees.
+	select SETTINGS
+	select ZMK_BEHAVIOR_LOCAL_IDS
+	select ZMK_BEHAVIOR_METADATA
+	select ZMK_KEYMAP_SETTINGS_STORAGE
+	select ZMK_KEYMAP_LAYER_REORDERING
+	help
+	  Rebinds keys and reorders layers at runtime from a TLV config channel
+	  written in this module (proto/, engine/, keymap/, transport/). Built
+	  from scratch: ZMK Studio's protobuf RPC, its subsystem tables and its
+	  transports are NOT used and are NOT compiled.
+
+	  The engine reuses ZMK's own dynamic keymap core rather than
+	  implementing a second keymap: CONFIG_ZMK_KEYMAP_SETTINGS_STORAGE
+	  provides the mutable in-RAM layout plus its settings (NVS) persistence,
+	  and CONFIG_ZMK_KEYMAP_LAYER_REORDERING provides layer add/remove/
+	  reorder. Both are core ZMK options that ZMK Studio merely selects, so
+	  enabling them here is the same feature without Studio.
+	  CONFIG_ZMK_BEHAVIOR_METADATA is selected because a binding is then
+	  validated by ZMK's own rule (zmk_behavior_validate_binding) instead of
+	  by a copy of it, and because the configurator can ask the firmware
+	  what a token's parameters mean rather than duplicating ZMK's keycode
+	  tables in JavaScript.
+
+if KBEEB_ENGINE
+
+config KBEEB_ENGINE_BLE
+	bool "BLE GATT transport"
+	depends on ZMK_BLE
+	default y
+	help
+	  Vendor GATT service carrying the TLV channel: one characteristic for
+	  host->keyboard writes (write without response, encryption required),
+	  one for keyboard->host notifications.
+
+	  The engine is central-only by design: ZMK resolves bindings on the
+	  central and sends the resolved binding to the peripheral
+	  (zmk/app/src/split/peripheral.c), so the peripheral executes whatever
+	  the central's layout says, and it never holds the host connection
+	  that a config channel needs. It also means the revert chord sees both
+	  halves' key positions, which is the only place it is detectable.
+
+config KBEEB_ENGINE_FW_VERSION
+	int "Firmware version reported to the configurator"
+	default 1
+	help
+	  Sent in keeb_info.fw_version. The configurator shows it and refuses to
+	  write when the token-table hash disagrees, which is what keeps a host
+	  from binding a behavior it believes sits at a different token id.
+
+endif # KBEEB_ENGINE

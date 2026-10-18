@@ -1,0 +1,27 @@
+config ZMK_STATUS_LED
+	bool "Status LED: boot/connect/advertising/battery-error indicators"
+	default n
+
+if ZMK_STATUS_LED
+
+config ZMK_STATUS_LED_BATTERY_ERROR_LEVEL
+	int "Battery charge level (percent) that latches the solid error state"
+	range 0 100
+	default 10
+
+config ZMK_STATUS_LED_BOOT_BLINKS
+	int "Number of quick blinks at boot"
+	range 1 10
+	default 3
+
+config ZMK_STATUS_LED_ADV_PERIOD_MS
+	int "Advertising blink period in ms"
+	range 200 60000
+	default 2000
+
+config ZMK_STATUS_LED_ADV_PULSE_MS
+	int "Advertising blink on-time in ms"
+	range 20 1000
+	default 100
+
+endif # ZMK_STATUS_LED

@@ -1,0 +1,42 @@
+description: |
+  Three-channel (RGB) status LED driven by the zmk-status-led module.
+
+  Example:
+
+    leds {
+        compatible = "gpio-leds";
+        led_r: led_r { gpios = <&expander 5 GPIO_ACTIVE_HIGH>; };
+        led_g: led_g { gpios = <&expander 6 GPIO_ACTIVE_HIGH>; };
+        led_b: led_b { gpios = <&expander 7 GPIO_ACTIVE_HIGH>; };
+    };
+
+    status_led_device {
+        compatible = "zmk,status-led";
+        led-r = <&led_r>;
+        led-g = <&led_g>;
+        led-b = <&led_b>;
+    };
+
+  where led-r/g/b are gpio-leds children. The channels may live anywhere
+  the GPIO API reaches - e.g. directly on SoC pins or on an I2C expander
+  like the MCP23017 (on/off only: no PWM/brightness control).
+
+  State palette (see src/status_led.c): red = battery error (solid),
+  green = profile connected (150 ms flash), blue = advertising (slow
+  pulse), white = boot blinks.
+
+compatible: "zmk,status-led"
+
+properties:
+  led-r:
+    type: phandle
+    required: true
+    description: Red channel (a gpio-leds child).
+  led-g:
+    type: phandle
+    required: true
+    description: Green channel (a gpio-leds child).
+  led-b:
+    type: phandle
+    required: true
+    description: Blue channel (a gpio-leds child).

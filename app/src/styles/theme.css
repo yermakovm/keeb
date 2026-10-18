@@ -1,0 +1,70 @@
+/* Oryx-inspired dark theme */
+:root {
+  --bg: #131316;
+  --bg-raised: #1b1b1f;
+  --bg-panel: #1e1e23;
+  --bg-inset: #0f0f12;
+  --border: #33333a;
+  --border-soft: #26262c;
+  --text: #e6e6e9;
+  --text-dim: #9a9aa2;
+  --text-faint: #5c5c66;
+  --accent: #e0a158;
+  --accent-dim: #b07f45;
+
+  /* key categories (Oryx-style color coding) */
+  --cap-key: #3a3a42;
+  --cap-key-top: #45454f;
+  --cap-mod: #4a5568;
+  --cap-mod-top: #5b6a85;
+  --cap-layer: #6e4a26;
+  --cap-layer-top: #8a5c2e;
+  --cap-holdtap: #4a4260;
+  --cap-holdtap-top: #5e5478;
+  --cap-media: #5b3350;
+  --cap-media-top: #74405f;
+  --cap-mouse: #2a5450;
+  --cap-mouse-top: #356863;
+  --cap-nav: #2f4a38;
+  --cap-nav-top: #3c5e48;
+  --cap-unwired: #1c1c20;
+
+  --cap-text: #ececef;
+  --cap-text-hold: #cfa8ff;
+
+  --gap: 6px;
+  --split-gap: 40px;
+
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+input, select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
+::-webkit-scrollbar-track { background: transparent; }

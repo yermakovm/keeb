@@ -1,0 +1,262 @@
+/*!
+ * Marp theme for the "keeb" split keyboard project deck (docs/*.md)
+ *
+ * Dark palette matching the hardware: black PCB, OLED panels, green status LED.
+ * Based on Marp's default theme, then overridden.
+ *
+ * @theme keeb
+ * @author Mykhailo Yermakov
+ * @size 16:9 1280px 720px
+ * @size 4:3 960px 720px
+ * @auto-scaling true
+ */
+
+@import "default";
+
+:root {
+  --kb-bg: #0b0e11;          /* PCB black */
+  --kb-bg-soft: #141a20;
+  --kb-fg: #e8ecf0;
+  --kb-dim: #97a3af;
+  --kb-accent: #6ee7a0;      /* status LED green */
+  --kb-warn: #f0b05e;        /* amber: problems / open questions */
+  --kb-line: #2b343c;
+  --kb-font: system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto,
+    "PT Sans", "Noto Sans", Arial, sans-serif;
+}
+
+/* ---- base slide ---- */
+section {
+  color-scheme: dark;
+  background-color: var(--kb-bg);
+  background-image: radial-gradient(
+    115% 90% at 100% 0%,
+    var(--kb-bg-soft) 0%,
+    var(--kb-bg) 60%
+  );
+  color: var(--kb-fg);
+  font-family: var(--kb-font);
+  font-size: 32px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  padding: 60px 70px;
+}
+
+section h1,
+section h2,
+section h3 {
+  color: var(--kb-fg);
+  text-wrap: balance;
+}
+
+/* slide title (the title slide overrides it, see section.title below) */
+section h1 {
+  border-bottom: 1px solid var(--kb-line);
+  font-size: 1.32em;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.45em;
+  padding-bottom: 0.25em;
+}
+
+section h2 {
+  color: var(--kb-accent);
+  font-size: 1.05em;
+  margin-bottom: 0.35em;
+}
+
+section a,
+section strong {
+  color: var(--kb-accent);
+}
+
+section code {
+  background: var(--kb-bg-soft);
+  border: 1px solid var(--kb-line);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
+section table th {
+  background: var(--kb-bg-soft);
+}
+
+section footer,
+section header {
+  color: var(--kb-dim);
+}
+
+/* ---- title slide (class: title) ---- */
+/* Text column stays clear of the split background image on the right:
+   1280px slide, 70px padding, image right:45% => ~520px for text. */
+section.title {
+  align-content: center;
+}
+
+section.title h1 {
+  border-bottom: none;
+  font-size: 2.15em;
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.12;
+  margin-bottom: 0.35em;
+  max-width: 620px;
+  padding-bottom: 0;
+}
+
+/* accent rule above the title */
+section.title h1::before {
+  background: var(--kb-accent);
+  content: "";
+  display: block;
+  height: 5px;
+  margin-bottom: 0.45em;
+  width: 2.6em;
+}
+
+section.title p {
+  color: var(--kb-dim);
+  font-size: 0.88em;
+  max-width: 620px;
+}
+
+section.title p strong {
+  color: var(--kb-fg);
+}
+
+/* Flip the layout to "image left, text right":
+   use `![bg left:45% contain](...)` together with `class: title flip`.
+   The 680px offset puts the text past the 45% image zone (576px + gap). */
+section.title.flip h1,
+section.title.flip p {
+  margin-left: 680px;
+}
+
+section.title.flip h1 {
+  max-width: 460px;
+}
+
+/* ---- layout helpers ---- */
+/* Two side-by-side panels. Marpit does not support `:::container` blocks, and
+   markdown inside an HTML block is not parsed, so structural blocks are plain
+   HTML with explicit tags (card text needs <strong> instead of **). */
+section .cols {
+  align-content: center;
+  display: grid;
+  gap: 20px 26px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ---- cards ---- */
+section .cards {
+  display: grid;
+  gap: 12px 18px;
+  grid-template-columns: 1fr;
+}
+
+section .cards.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+section .card {
+  background: var(--kb-bg-soft);
+  border: 1px solid var(--kb-line);
+  border-left: 5px solid var(--kb-accent);
+  border-radius: 10px;
+  padding: 11px 20px;
+}
+
+section .card.wide {
+  grid-column: 1 / -1;
+}
+
+section .card h2 {
+  color: var(--kb-fg);
+  font-size: 1.02em;
+  margin: 0 0 0.3em;
+}
+
+section .card h3 {
+  color: var(--kb-accent);
+  font-size: 0.66em;
+  letter-spacing: 1px;
+  margin: 0 0 0.3em;
+  text-transform: uppercase;
+}
+
+section .card p {
+  color: var(--kb-dim);
+  font-size: 0.74em;
+  line-height: 1.4;
+  margin: 0;
+}
+
+section .card p + p,
+section .card p + ul,
+section .card ul + p {
+  margin-top: 0.3em;
+}
+
+section .card ul {
+  color: var(--kb-dim);
+  font-size: 0.74em;
+  line-height: 1.4;
+  margin: 0;
+  padding-left: 1.15em;
+}
+
+section .card ul li {
+  margin: 0.12em 0;
+}
+
+section .card p.why {
+  color: var(--kb-accent);
+  font-size: 0.66em;
+  margin-top: 0.35em;
+}
+
+section .card strong {
+  color: var(--kb-fg);
+}
+
+section .card a {
+  border-bottom: 1px dotted var(--kb-accent);
+  color: var(--kb-accent);
+  text-decoration: none;
+}
+
+/* card accents: amber for problems, green for the answer */
+section .card.bad {
+  border-left-color: var(--kb-warn);
+}
+
+section .card.bad h2,
+section .card.bad h3 {
+  color: var(--kb-warn);
+}
+
+section .card.bad p.why {
+  color: var(--kb-warn);
+}
+
+/* media block: a photo or a video frame in a column */
+section .media {
+  align-self: center;
+}
+
+section .media img {
+  border: 1px dashed var(--kb-line);
+  border-radius: 12px;
+  display: block;
+  width: 100%;
+}
+
+/* note strip under the content */
+section .note {
+  color: var(--kb-dim);
+  font-size: 0.76em;
+  margin-top: 1em;
+}
+
+section .note strong {
+  color: var(--kb-fg);
+}

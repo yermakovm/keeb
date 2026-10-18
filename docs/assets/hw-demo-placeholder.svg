@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+<!-- Placeholder for the hardware demo (video or photo). Keep ~16:10 so it fits the left column. -->
+<defs>
+    <pattern id="keys" width="24" height="21" patternUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="19" height="16" rx="3" fill="none" stroke="#394853" stroke-width="2"/>
+    </pattern>
+</defs>
+<rect width="640" height="400" fill="#0b0e11"/>
+<rect x="14" y="14" width="612" height="372" rx="16" fill="none" stroke="#2b343c" stroke-width="3" stroke-dasharray="16 11"/>
+<g stroke="#4c5a66" stroke-width="3" fill="none">
+<rect x="48" y="60" width="230" height="150" rx="10"/>
+<rect x="66" y="76" width="90" height="52" rx="4"/>
+<rect x="170" y="76" width="90" height="52" rx="4"/>
+<rect x="66" y="140" width="90" height="52" rx="4"/>
+</g>
+<g fill="none" stroke="#394853" stroke-width="1.5">
+<path d="M160 102 h10 M160 112 h10 M160 122 h10"/>
+</g>
+<g fill="#97a3af" font-size="13">
+<text x="111" y="106" text-anchor="middle">контролер</text>
+<text x="215" y="106" text-anchor="middle">екран</text>
+<text x="111" y="170" text-anchor="middle">акумулятор</text>
+</g>
+<g stroke="#4c5a66" stroke-width="3" fill="none"><rect x="330" y="60" width="230" height="150" rx="10"/></g>
+<rect x="344" y="74" width="202" height="126" fill="url(#keys)"/>
+<g fill="#6ee7a0" opacity="0.6"><rect x="330" y="222" width="28" height="6" rx="3"/></g>
+<g stroke="#6ee7a0" stroke-width="2.5" fill="none" opacity="0.5" stroke-linecap="round">
+<path d="M300 210 v-12"/><path d="M288 190 a16 16 0 0 1 24 0"/><path d="M278 178 a28 28 0 0 1 44 0"/>
+</g>
+<g fill="#97a3af" font-size="21" text-anchor="middle">
+<text x="320" y="290">Відео або фото: половини,</text>
+<text x="320" y="320">внутрішній бік, екрани</text>
+</g>
+<text x="320" y="356" fill="#4c5a66" font-size="15" text-anchor="middle">docs/assets/hw-demo.mp4</text>
+</svg>

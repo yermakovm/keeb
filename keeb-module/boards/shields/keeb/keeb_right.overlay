@@ -1,0 +1,8 @@
+/* Right half. */
+#include "keeb.dtsi"
+
+/* Shift this half's local columns 0-5 into the right region (global cols
+ * 6-11) of the shared keymap. The left half keeps the default col-offset 0. */
+&default_transform {
+	col-offset = <6>;
+};

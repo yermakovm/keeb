@@ -1,0 +1,31 @@
+manifest:
+  remotes:
+    - name: zmkfirmware
+      url-base: https://github.com/zmkfirmware
+  projects:
+    - name: zmk
+      remote: zmkfirmware
+      revision: main
+      import: app/west.yml
+    # The keeb code is NOT a west project: it lives in this repo as
+    #   keeb-module/ - the keeb shield, behaviors, bindings, status screen
+    #   status-led/  - the RGB status LED driver
+    # and both are handed to ZMK with -DZMK_EXTRA_MODULES="$(KEEB_MODULE);$(STATUS_LED)"
+    # (see Makefile / env.mk / env.sh).
+    #
+    # Why not west projects: a project here is a *second checkout* of the same
+    # code (modules/<name>), which is easy to edit by mistake while the build
+    # reads the other copy, and `west update` would reset the manifest revision
+    # inside a dev tree. If these ever get a real remote and you want them
+    # declarative, the form is:
+    #   - name: keeb-module
+    #     url: https://github.com/<you>/keeb-module
+    #     revision: <sha-or-branch>
+    #     path: modules/keeb-module
+    # then drop it from ZMK_EXTRA_MODULES (west checkouts are auto-loaded).
+    #
+    # NB: do not use the EXTRA_ZEPHYR_MODULES env var instead of
+    # -DZMK_EXTRA_MODULES - on Zephyr 4.1 it replaces ZMK's own module list and
+    # silently drops zmk/app/module (see env.sh).
+  self:
+    path: zmk-config

@@ -1,0 +1,14 @@
+# Build trees live in the workspace (../out/{left,right}), not in this repo.
+# These patterns are a safety net for a stray `west build -d build-left`.
+build*/
+out/
+__pycache__/
+*.pyc
+
+# Deck toolchain (npm / Marp). The deck is built from docs/*.md, so
+# nothing here is source.
+node_modules/
+
+# Generated deck output and the concatenated intermediate doc.
+docs/dist/
+docs/.deck.md

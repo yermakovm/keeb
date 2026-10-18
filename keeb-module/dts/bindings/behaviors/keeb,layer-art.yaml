@@ -1,0 +1,14 @@
+# Copyright (c) 2025 The keeb keyboard authors
+# SPDX-License-Identifier: MIT
+
+description: |
+  Layer artwork selector for the keeb split keyboard.
+
+  Invoked by the central half whenever the active layer changes. The behaviour
+  has global locality, so ZMK forwards every invocation to the peripherals,
+  where it selects which artwork the right hand display paints. param1 is the
+  index of the layer whose artwork to show.
+
+compatible: "keeb,layer-art"
+
+include: one_param.yaml

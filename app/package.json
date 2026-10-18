@@ -1,0 +1,20 @@
+{
+  "name": "keeb-configurator",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Web UI configurator for the keeb split keyboard (ZMK). State is plain JSON, designed to be serialized to TLV and pushed over BLE later.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pinia": "^3.0.2",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.0",
+    "vite": "^7.0.0"
+  }
+}

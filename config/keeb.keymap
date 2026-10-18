@@ -1,0 +1,279 @@
+/*
+ * keeb keymap - bring-up build.
+ *
+ * HOME is a full 12-column grid (6 left PLUS 6 right, split marked by the wider
+ * gap): 4 alpha rows, a 4-key extra row (LBKT/RBKT on the left half,
+ * LBRC/RBRC on the right), and an 8-key thumb row = 60 positions (0..59).
+ * The other four layers are placeholders "for now": they duplicate the HOME
+ * grid so every position is mapped while the matrix is brought up.
+ *
+ * The zmk,matrix-transform in keeb.dtsi maps these 60 positions onto the
+ * physical 6x6 matrix (rows 0-3 alpha; row 4 = the 2 extra keys per half
+ * at local cols 2-3; row 5 = thumb cluster, first 4 cols per half), so
+ * this grid stays visually clean regardless of wiring.
+ * Replace the placeholder layers with real per-layer content as needed.
+ *
+ * NOTE: the only working layer switches are &mo 1 (NAV) and &mo 2 (FUN) in the
+ * thumb row, present in every layer. &to 3 / &to 4 were dropped by the HOME
+ * copy, so MEDIA and GAME are defined but not yet reachable.
+ *
+ * Layer names double as the artwork lookup order for tools/gen_art.py.
+ */
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/pointing.h>
+
+// Home-row mods: left-hand A/S/D/F, right-hand J/K/L/;
+#define HM_A &hml LGUI A
+#define HM_S &hml LALT S
+#define HM_D &hml LCTRL D
+#define HM_F &hml LSHFT F
+
+#define HM_SM &hml RGUI SEMI
+#define HM_L &hml RALT L
+#define HM_K &hml RCTRL K
+#define HM_J &hml RSHFT J
+
+// Thumb hold-momentary layers
+#define TH_TAB &lt 1 TAB
+#define TH_SPC &lt 2 SPC
+#define TH_HOME &lt 3 HOME
+
+#define MS_D &mmv MOVE_DOWN
+#define MS_U &mmv MOVE_UP
+#define MS_R &mmv MOVE_RIGHT
+#define MS_L &mmv MOVE_LEFT
+/ {
+	/* Timeless home-row mods (recommended config from this ZMK version's
+	 * hold-tap docs). hml for the left home row, hmr for the right.
+	 *   balanced flavor + hold-trigger-on-release + positional hold
+	 *   (opposite-hand keys) -> same-hand letter rolls never false-hold,
+	 *   cross-hand mods resolve reliably regardless of timing.
+	 *   require-prior-idle-ms 150 -> fast typing resolves as tap instantly.
+	 *   tapping-term-ms 280 -> intentional same-hand holds still work.
+	 *   quick-tap-ms 175 -> tapped key can be held for repeat. */
+	behaviors {
+		hml: home_row_mod_left {
+			compatible = "zmk,behavior-hold-tap";
+			#binding-cells = <2>;
+			flavor = "balanced";
+			require-prior-idle-ms = <150>;
+			tapping-term-ms = <280>;
+			quick-tap-ms = <175>;
+			bindings = <&kp>, <&kp>;
+			/* right-half positions (cols 6-11 rows 0-3, extras 50-51,
+			 * right thumb 56-59) */
+			hold-trigger-key-positions = <6 7 8 9 10 11 18 19 20 21 22 23 30 31 32 33 34 35 42 43 44 45 46 47 50 51 56 57 58 59>;
+			hold-trigger-on-release;
+		};
+		hmr: home_row_mod_right {
+			compatible = "zmk,behavior-hold-tap";
+			#binding-cells = <2>;
+			flavor = "balanced";
+			require-prior-idle-ms = <150>;
+			tapping-term-ms = <280>;
+			quick-tap-ms = <175>;
+			bindings = <&kp>, <&kp>;
+			/* left-half positions (cols 0-5 rows 0-3, extras 48-49,
+			 * left thumb 52-55) */
+			hold-trigger-key-positions = <0 1 2 3 4 5 12 13 14 15 16 17 24 25 26 27 28 29 36 37 38 39 40 41 48 49 52 53 54 55>;
+			hold-trigger-on-release;
+		};
+	};
+
+keymap {
+    compatible = "zmk,keymap";
+
+    home_layer {
+        display-name = "HOME";
+        bindings = <
+        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
+            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp RBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
+        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
+															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+        //									 └────────┴────────┘                            		        └────────┴────────┘
+        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
+												      TH_TAB    TH_SPC  TH_HOME  &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+        >;
+    };
+
+		navigation_layer {
+			display-name = "NAV";
+			bindings = <
+        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
+            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H    &kp DOWN  &kp UP &kp LEFT  &kp RIGHT &kp RBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
+        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
+															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+        //									 └────────┴────────┘                            		        └────────┴────────┘
+        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
+												      &kp TAB &kp SPC  &mo HOME &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+        >;		
+		};
+
+		function_layer {
+			display-name = "FUN";
+			bindings = <
+        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
+            &kp F12  &kp F1   &kp F2   &kp F3    &kp F4  &kp F5     		&kp F6   &kp F7   &kp F8   &kp F9   &kp F10 &kp F11
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp RBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
+        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
+															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+        //									 └────────┴────────┘                            		        └────────┴────────┘
+        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
+												      &kp TAB &kp SPC  &mo HOME &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+        >;		
+		};
+
+    mouse_layer {
+        display-name = "MOUSE";
+        bindings = <
+        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
+            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     MS_D     MS_U     MS_L     MS_R   &kp RBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
+        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
+															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+        //									 └────────┴────────┘                            		        └────────┴────────┘
+        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
+												      TH_TAB    TH_SPC  TH_HOME  &mo END 		  &msc SCRL_UP &msc SCRL_DOWN &mkp LCLK &mkp RCLK
+        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+        >;
+    };
+
+
+		media_layer {
+			display-name = "MEDIA";
+			bindings = <
+        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
+            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp RBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
+        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
+															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+        //									 └────────┴────────┘                            		        └────────┴────────┘
+        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
+												      &kp TAB &kp SPC  &mo HOME &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+        >;	
+		};
+
+		game_layer {
+			display-name = "GAME";
+			bindings = <
+        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
+            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp TAB &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+            &kp ESC    &kp A   &kp S     &kp D    &kp F    &kp G     		&kp H     &kp J    &kp K   &kp L   &kp SEMI  &kp RBRC
+        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
+           &kp LSHFT  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
+        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
+															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+        //									 └────────┴────────┘                            		        └────────┴────────┘
+        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
+												      &kp LCTRL &kp SPC  &mo HOME &mo END 		&kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+        >;		
+		};
+	};
+
+	/* Hold both ends of the top row (PLUS + MINUS, positions 0 and 11) to
+	 * clear ALL BLE host bonds/profiles (zmk_ble_clear_all_bonds()).
+	 * Afterwards the keyboard advertises unpaired; pair the host fresh.
+	 * Positions 0 (PLUS) + 24 (ESC) are both LEFT-half keys: a combo only
+	 * triggers on the half where both keys live. For the split bond use a
+	 * power-cycle of both halves instead.
+	 * NB: this clears HOST bonds, NOT the split-central/peripheral bond;
+	 * power-cycle both halves if the split bond itself needs redoing.
+	 * (This ZMK version has no &settings_reset behavior.) */
+	combos {
+		compatible = "zmk,combos";
+
+    combo_toggle_game {
+            timeout-ms = <50>;
+            key-positions = <53 58>;
+            bindings = <&tog 5>;     // Toggles layer GAME
+		};
+
+		settings_reset_combo {
+			key-positions = <0 24>;
+			bindings = <&bt BT_CLR_ALL 0>;
+			timeout-ms = <300>;
+		};
+
+		/* Reboot / UF2-bootloader chords, HOME layer only (layers = <0>).
+		 *   LEFT:  PLUS + 1 = reset, PLUS + 2 = bootloader. Combos are
+		 *   evaluated on the central half and &sys_reset / &bootloader
+		 *   are source-local, so these reboot the LEFT half directly.
+		 *   RIGHT: MINUS + 6 = reset, MINUS + 7 = bootloader, via
+		 *   keeb,remote-reset which forwards the reboot to the right
+		 *   half over the split behavior transport (a direct &sys_reset
+		 *   binding would reboot the LEFT half here - the combo fires
+		 *   centrally even though its keys live on the right).
+		 * require-prior-idle-ms keeps fast typing ("+1", "-6", dates,
+		 * formulas) from tripping the chords: they only arm after
+		 * ~200 ms without any other keypress. */
+		left_reset_combo {
+			key-positions = <0 1>;
+			bindings = <&sys_reset>;
+			layers = <0>;
+			timeout-ms = <100>;
+			require-prior-idle-ms = <200>;
+		};
+
+		left_boot_combo {
+			key-positions = <0 2>;
+			bindings = <&bootloader>;
+			layers = <0>;
+			timeout-ms = <100>;
+			require-prior-idle-ms = <200>;
+		};
+
+		right_reset_combo {
+			key-positions = <11 6>;
+			bindings = <&right_reset>;
+			layers = <0>;
+			timeout-ms = <100>;
+			require-prior-idle-ms = <200>;
+		};
+
+		right_boot_combo {
+			key-positions = <11 7>;
+			bindings = <&right_boot>;
+			layers = <0>;
+			timeout-ms = <100>;
+			require-prior-idle-ms = <200>;
+		};
+	};
+};

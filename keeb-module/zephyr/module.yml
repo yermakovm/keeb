@@ -1,0 +1,23 @@
+# keeb - ZMK module for the split keyboard halves.
+#
+# board_root makes Zephyr discover boards/shields/keeb (and dts/bindings)
+# automatically when the module is handed to ZMK through -DZMK_EXTRA_MODULES
+# (see the repo Makefile / env.mk - it is deliberately NOT a west project).
+# cmake/kconfig add the custom status screen.
+#
+# The explicit `name:` below is load-bearing: Zephyr keys modules by name and
+# falls back to the directory basename (zephyr/scripts/zephyr_module.py:228,
+# :765), so a generic directory name like `module/` silently collides with
+# ZMK's own zmk/app/module - and one of the two modules is dropped with no
+# error (symptom: "No shield named 'keeb_right' found").
+name: keeb-module
+build:
+  settings:
+    board_root: .
+    # dts/bindings holds the keeb behavior bindings (keeb,layer-art,
+    # keeb,remote-reset); without dts_root Zephyr never scans the directory
+    # (board_root only adds boards/), and the bindings only load if nothing
+    # references their nodes as phandles.
+    dts_root: .
+  cmake: .
+  kconfig: Kconfig
