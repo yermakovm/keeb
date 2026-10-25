@@ -1,17 +1,24 @@
 <script setup lang="ts">
 /*
- * The grid, drawn in stock positions.
+ * The grid, drawn where the keys actually are.
  *
- * Left half is global columns 0-5, right half 6-11, and the position numbers
- * run in the matrix transform's map order (keeb.dtsi), which is the numbering
- * every CELLS record uses. Rows are not uniform: the extra row has 2 keys per
- * half and the thumb row 4, exactly as the transform maps them.
+ * Positions come from the matrix transform's map (keeb.dtsi), and the map is
+ * written in physical order: the left half lists columns 0-5 from its outer
+ * edge to the split gap, the right half lists 11-6 from the gap to its outer
+ * edge. `gridHalf()` reproduces that order, so a cap lands in the same slot it
+ * occupies on the board, and the position number a CELLS record carries means
+ * the same key here and in the firmware.
+ *
+ * Each half is drawn as the full 6 columns it has room for. A row that the
+ * transform maps shorter - the 2-key extra row at cols 2-3, the 4-key thumb row
+ * at cols 2-5 - keeps its columns instead of collapsing to the left, and the
+ * grid slots with no switch render as dashed placeholders.
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import Keycap from './Keycap.vue'
 import { describeBinding } from '../model/cap.ts'
-import { GRID_ROWS, gridSide, useKeymapStore } from '../stores/keymap.ts'
+import { GRID_ROWS, HALF_COLS, gridHalf, type GridSlot, useKeymapStore } from '../stores/keymap.ts'
 import { KEY_COUNT } from '../proto/zmk.gen.ts'
 
 const props = defineProps<{ selectedPos: number | null }>()
@@ -20,98 +27,124 @@ const emit = defineEmits<{ (e: 'pick', pos: number, own: boolean): void }>()
 
 const keymap = useKeymapStore()
 
+/** Print the stock position number in every cap, for when the number on the
+ * keyboard and the number in a CELLS record have to be matched by eye. */
+const showPositions = ref(false)
+
 interface CapCell {
   pos: number
   display: ReturnType<typeof describeBinding>
   own: boolean
   reserved: boolean
-  unmapped: boolean
   selected: boolean
+  pending: boolean
+}
+
+interface SlotView {
+  slot: GridSlot
+  cell: CapCell | null
 }
 
 const rows = computed(() => {
-  const out: Array<{ row: number; left: CapCell[]; right: CapCell[] }> = []
+  const out: Array<{ row: number; left: SlotView[]; right: SlotView[] }> = []
 
   for (let row = 0; row < GRID_ROWS; row++) {
-    const mk = (pos: number, unmapped: boolean): CapCell => {
+    const mk = (slot: GridSlot): SlotView => {
+      if (slot.pos === null) {
+        return { slot, cell: null }
+      }
+
+      const pos = slot.pos
       const own = keymap.ownCell(keymap.editingSlot, pos) !== null
       const resolved = keymap.resolve(keymap.editingSlot, pos)
 
       return {
-        pos,
-        display: describeBinding(resolved?.binding ?? null, keymap.layerName),
-        own,
-        reserved: keymap.isReserved(pos),
-        unmapped,
-        selected: props.selectedPos === pos,
+        slot,
+        cell: {
+          pos,
+          display: describeBinding(resolved?.binding ?? null, keymap.layerName),
+          own,
+          reserved: keymap.isReserved(pos),
+          selected: props.selectedPos === pos,
+          pending: keymap.isPending(keymap.editingSlot, pos),
+        },
       }
     }
 
-    const line = { row, left: [] as CapCell[], right: [] as CapCell[] }
-
-    for (const g of gridSide(row, 'L')) {
-      line.left.push(mk(g.pos, false))
-    }
-
-    /* A half with fewer mapped slots than the widest row renders short, which
-     * is the honest picture of the matrix transform. */
-    for (const g of gridSide(row, 'R')) {
-      line.right.push(mk(g.pos, false))
-    }
-
-    out.push(line)
+    out.push({
+      row,
+      left: gridHalf(row, 'L').map(mk),
+      right: gridHalf(row, 'R').map(mk),
+    })
   }
 
   return out
 })
 
-const maxCols = computed(() => Math.max(...rows.value.map((r) => r.left.length), 1))
-const rightCols = computed(() => Math.max(...rows.value.map((r) => r.right.length), 1))
 const layerLabel = computed(() => keymap.editingName)
 const positions = computed(() => KEY_COUNT)
+
+const slotTitle = (slot: { row: number; col: number }): string =>
+  `matrix row ${slot.row} col ${slot.col}: no switch wired here, so this grid slot has no key position`
 </script>
 
 <template>
   <div class="keyboard" :style="{ '--layer-color': 'var(--accent)' }">
+    <div class="head">
+      <div class="cols">
+        {{ positions }} stock positions · {{ GRID_ROWS }}×{{ HALF_COLS * 2 }} matrix grid · editing slot
+        {{ keymap.editingSlot }}
+        <template v-if="keymap.editingId !== 0xff"> ({{ layerLabel }})</template>
+      </div>
+
+      <button
+        class="btn pos-toggle"
+        :class="{ on: showPositions }"
+        :title="showPositions ? 'hide the stock position numbers' : 'print the stock position number on every cap - the number a CELLS record uses'"
+        @click="showPositions = !showPositions"
+      >
+        positions
+      </button>
+    </div>
+
     <div v-for="line in rows" :key="line.row" class="row">
-      <div class="half left" :style="{ '--cols': maxCols }">
-        <Keycap
-          v-for="cell in line.left"
-          :key="cell.pos"
-          :pos="cell.pos"
-          :display="cell.display"
-          :own="cell.own"
-          :reserved="cell.reserved"
-          :unmapped="cell.unmapped"
-          :selected="cell.selected"
-          :dimmed="false"
-          :layer-label="layerLabel"
-          @pick="(pos) => emit('pick', pos, cell.own)"
-        />
+      <div class="half left" :style="{ '--cols': HALF_COLS }">
+        <template v-for="{ slot, cell } in line.left" :key="`L${line.row}-${slot.col}`">
+          <Keycap
+            v-if="cell"
+            :pos="cell.pos"
+            :display="cell.display"
+            :own="cell.own"
+            :reserved="cell.reserved"
+            :selected="cell.selected"
+            :pending="cell.pending"
+            :show-pos="showPositions"
+            :layer-label="layerLabel"
+            @pick="(pos) => emit('pick', pos, cell.own)"
+          />
+          <div v-else class="slot" :title="slotTitle(slot)" />
+        </template>
       </div>
 
       <div class="gap" />
 
-      <div class="half right" :style="{ '--cols': rightCols }">
-        <Keycap
-          v-for="cell in line.right"
-          :key="cell.pos"
-          :pos="cell.pos"
-          :display="cell.display"
-          :own="cell.own"
-          :reserved="cell.reserved"
-          :unmapped="cell.unmapped"
-          :selected="cell.selected"
-          :dimmed="false"
-          :layer-label="layerLabel"
-          @pick="(pos) => emit('pick', pos, cell.own)"
-        />
+      <div class="half right" :style="{ '--cols': HALF_COLS }">
+        <template v-for="{ slot, cell } in line.right" :key="`R${line.row}-${slot.col}`">
+          <Keycap
+            v-if="cell"
+            :pos="cell.pos"
+            :display="cell.display"
+            :own="cell.own"
+            :reserved="cell.reserved"
+            :selected="cell.selected"
+            :pending="cell.pending"
+            :show-pos="showPositions"
+            :layer-label="layerLabel"
+            @pick="(pos) => emit('pick', pos, cell.own)"
+          />
+          <div v-else class="slot" :title="slotTitle(slot)" />
+        </template>
       </div>
-    </div>
-
-    <div class="footnote">
-      {{ positions }} stock positions · editing slot {{ keymap.editingSlot }}
-      <template v-if="keymap.editingId !== 0xff"> ({{ layerLabel }}) </template>
     </div>
   </div>
 </template>
@@ -127,6 +160,33 @@ const positions = computed(() => KEY_COUNT)
   border-radius: 12px;
 }
 
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.cols {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.btn.pos-toggle {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 9px;
+}
+
+.btn.pos-toggle:hover { border-color: var(--border-strong); color: var(--text-dim); }
+.btn.pos-toggle.on { border-color: var(--accent); color: var(--accent); }
+
 .row { display: flex; align-items: flex-start; justify-content: center; }
 
 .gap { width: var(--split-gap); }
@@ -137,9 +197,11 @@ const positions = computed(() => KEY_COUNT)
   gap: var(--gap);
 }
 
-.footnote {
-  margin-top: 6px;
-  color: var(--text-faint);
-  font-size: 11px;
+/* A grid slot the transform does not map to a switch. */
+.slot {
+  aspect-ratio: 1 / 1;
+  border: 1px dashed var(--border);
+  border-radius: 7px;
+  opacity: 0.45;
 }
 </style>

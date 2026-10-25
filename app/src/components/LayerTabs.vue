@@ -9,14 +9,27 @@
 import { ref } from 'vue'
 
 import { LAYER_ID_INVALID, useKeymapStore } from '../stores/keymap.ts'
+import type { WriteResult } from '../stores/keymap.ts'
 
 const keymap = useKeymapStore()
 const notice = ref('')
 
+/** A layer operation can succeed over the wire and still be unpersisted, which
+ * is the half the user cannot see from the tab moving: ZMK saves the layer
+ * order and the names with the same SAVE a rebound key needs.
+ */
+const outcome = (r: WriteResult, label: string): string => {
+  if (!r.ok) {
+    return r.reason ?? `${label} failed`
+  }
+
+  return r.saveReason ? `${label} applied, save failed: ${r.saveReason}` : ''
+}
+
 async function rename(index: number, value: string): Promise<void> {
   const r = await keymap.renameLayer(index, value)
 
-  notice.value = r.ok ? '' : (r.reason ?? 'rename failed')
+  notice.value = outcome(r, 'rename')
 }
 
 async function move(index: number, delta: number): Promise<void> {
@@ -28,19 +41,19 @@ async function move(index: number, delta: number): Promise<void> {
 
   const r = await keymap.moveLayer(index, to)
 
-  notice.value = r.ok ? '' : (r.reason ?? 'move failed')
+  notice.value = outcome(r, 'move')
 }
 
 async function add(): Promise<void> {
   const r = await keymap.addLayer()
 
-  notice.value = r.ok ? '' : (r.reason ?? 'add failed')
+  notice.value = outcome(r, 'add')
 }
 
 async function remove(index: number): Promise<void> {
   const r = await keymap.removeLayer(index)
 
-  notice.value = r.ok ? '' : (r.reason ?? 'remove failed')
+  notice.value = outcome(r, 'remove')
 }
 </script>
 

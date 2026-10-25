@@ -203,3 +203,57 @@ export interface PendingChange {
   before: Binding | null
   after: Binding
 }
+
+/** struct keeb_widget — one entry of the panel's widget table. 7 bytes, and
+ * the same layout the firmware keeps in RAM and writes to settings. */
+export interface Widget {
+  kind: number
+  source: number
+  x: number
+  y: number
+  w: number
+  h: number
+  style: number
+}
+
+/** struct keeb_display_info — this panel's real limits. Coordinates are in the
+ * logical UI space: the panel is panel_w x panel_h, but a rotated build lays
+ * out logical_w x logical_h and rotates the result. */
+export interface DisplayInfoPayload {
+  editable: boolean
+  presetCount: number
+  widgetMax: number
+  textSlots: number
+  textMax: number
+  valueSlots: number
+  kindMax: number
+  sourceMax: number
+  logicalW: number
+  logicalH: number
+  panelW: number
+  panelH: number
+  rotation: number
+  widgetSize: number
+  /** KEEB_DISPLAY_INFO_F_ART: this half can draw KEEB_WID_ART */
+  flags: number
+  /** KBEEB_LAYER_COUNT: how many pips a KEEB_WID_PIPS row draws */
+  layers: number
+}
+
+/** A panel as one message: table + the host-owned slots. */
+export interface DisplayTablePayload {
+  count: number
+  preset: number
+  flags: number
+  widgets: Widget[]
+  /** slot index -> string */
+  texts: Record<number, string>
+  /** slot index -> number */
+  values: Record<number, number>
+}
+
+/** struct keeb_preset_name. */
+export interface PresetName {
+  preset: number
+  name: string
+}

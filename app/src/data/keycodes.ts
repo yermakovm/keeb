@@ -43,8 +43,11 @@ export const CATALOG = {
   letters: 'QWERTYUIOPASDFGHJKLZXCVBNM'.split('').map((c) => mk(c)),
   numbers: '1234567890'.split('').map((d) => mk(`N${d}`)),
   symbols: [
-    mk('MINUS', '-'), mk('EQUAL', '='), mk('GRAVE', '`'), mk('LBRC', '['), mk('RBRC', ']'),
-    mk('BSLS', '\\'), mk('SEMI', ';'), mk('QUOT', "'"), mk('COMMA', ','), mk('DOT', '.'),
+    /* Unshifted usages only. In ZMK, LBRC/RBRC are LS(...) — they send { and }
+     * — so the brackets are LBKT/RBKT, and the backslash is BSLH: ZMK has no
+     * BSLS. */
+    mk('MINUS', '-'), mk('EQUAL', '='), mk('GRAVE', '`'), mk('LBKT', '['), mk('RBKT', ']'),
+    mk('BSLH', '\\'), mk('SEMI', ';'), mk('QUOT', "'"), mk('COMMA', ','), mk('DOT', '.'),
     mk('FSLH', '/'), mk('SPACE', '␣'), mk('RET', '⏎'), mk('BKSP', '⌫'), mk('TAB', '⇆'),
     mk('ESC', '⎋'),
   ],
@@ -99,7 +102,8 @@ const SHORT_LABELS: Record<string, string> = {
   LCTRL: 'LCtrl', LSHFT: 'LSh', LALT: 'LAlt', LGUI: 'LGui',
   RCTRL: 'RCtrl', RSHFT: 'RSh', RALT: 'RAlt', RGUI: 'RGui',
   CAPSLOCK: 'Caps', HOME: 'Home', END: 'End', PGUP: 'Pg↑', PGDN: 'Pg↓',
-  MINUS: '-', EQUAL: '=', GRAVE: '`', LBRC: '[', RBRC: ']', BSLS: '\\',
+  MINUS: '-', EQUAL: '=', GRAVE: '`', LBKT: '[', RBKT: ']', BSLH: '\\',
+  LBRC: '{', RBRC: '}', PIPE: '|',
   SEMI: ';', QUOT: "'", COMMA: ',', DOT: '.', FSLH: '/',
   K_PLAY_PAUSE: '⏯', K_NEXT: '⏭', K_PREV: '⏮', K_MUTE: '🔇',
   K_VOLUME_UP: '🔉+', K_VOLUME_DOWN: '🔉−',

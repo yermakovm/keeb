@@ -22,6 +22,9 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 
+import { clearTrace, onTrace, trace } from '../debug/trace.ts'
+import type { TraceEntry } from '../debug/trace.ts'
+
 import {
   KEEB_ERR_TEXT,
   KEEB_T_ACK,
@@ -42,6 +45,17 @@ import {
   KEEB_T_SAVE,
   KEEB_T_DISCARD,
   KEEB_T_TOKEN_PARAMS,
+  KEEB_T_DISPLAY,
+  KEEB_T_DISPLAY_BLANK,
+  KEEB_T_DISPLAY_DISCARD,
+  KEEB_T_DISPLAY_GET,
+  KEEB_T_DISPLAY_INFO,
+  KEEB_T_DISPLAY_RESET,
+  KEEB_T_DISPLAY_SAVE,
+  KEEB_T_PRESET_NAME,
+  KEEB_T_PRESET_SET,
+  KEEB_T_TEXT_SET,
+  KEEB_T_VALUE_SET,
   KEEB_T_TOKENS,
   KEEB_TOKEN_F_READY,
   KEEB_TLV_MSG_MAX,
@@ -58,19 +72,44 @@ import {
   iterateMessage,
   readAck,
   readCells as decodeCells,
+  readDisplayHeader,
+  readDisplayInfo as decodeDisplayInfo,
+  readDisplayWidgets,
   readInfo,
   readLayerName,
   readLayers as decodeLayers,
   readNotify,
   readParamValue,
+  readPresetName,
+  readTextSlot,
   readTokenRec,
   readTokensHeader,
+  readValueSlot,
   tokenTableHash,
+  writeDisplayTable,
   writeLayerName,
+  writeTextSlot,
+  writeValueSlot,
+  writeWidgetSet,
 } from '../proto/tlv.ts'
 import { TOKENS } from '../proto/zmk.gen.ts'
-import type { AckPayload, Binding, Capabilities, InfoPayload, LayersPayload, ParamValue, TokenRecord } from '../proto/types.ts'
-import { BleTransport } from '../transport/ble.ts'
+import type {
+  AckPayload,
+  Binding,
+  Capabilities,
+  DisplayInfoPayload,
+  DisplayTablePayload,
+  InfoPayload,
+  LayersPayload,
+  ParamValue,
+  PresetName,
+  TokenRecord,
+  Widget,
+} from '../proto/types.ts'
+import { BleTransport, forgetGrants } from '../transport/ble.ts'
+/* Test double, not a device: MockKeyboard is what the codec, session and store
+ * tests (and the SSR smoke render) speak to. The app itself only ever talks to
+ * a real keyboard. */
 import { MockKeyboard } from '../transport/mockKeyboard.ts'
 import type { KeebTransport, TransportState } from '../transport/types.ts'
 
@@ -94,6 +133,63 @@ interface Pending {
 const ACK_TIMEOUT_MS = 4000
 const MAX_SHRINK_RETRIES = 3
 
+/**
+ * Explain a token-table mismatch instead of only announcing it.
+ *
+ * The hash check can tell that two tables disagree; it cannot tell which side is
+ * stale. The keyboard's own listing arrives in the same handshake, so the
+ * disagreement can be named: a renamed or added behavior in the devicetree, and
+ * an image that predates this contract, look different, and the fixes
+ * (re-run `npm run gen` vs. rebuild and reflash) are opposites.
+ *
+ * Names here are the firmware's device names (`key_press`), which is what the
+ * hash is computed over; `&label` is only shown as the form a person recognises.
+ */
+export function describeTokenDiff(
+  deviceTokens: Array<{ token: number; name: string }>,
+  deviceCount: number,
+  localTokens: Array<{ id: number; name: string; label: string }>,
+  limit = 8,
+): string[] {
+  const out: string[] = []
+
+  if (deviceCount !== localTokens.length) {
+    out.push(`the keyboard has ${deviceCount} tokens, this configurator has ${localTokens.length}`)
+  }
+
+  /* No listing to compare against: the count line is the whole honest answer,
+   * and naming 28 missing tokens would read as 28 separate problems.
+   */
+  if (deviceTokens.length === 0) {
+    out.push('the keyboard’s token listing was not obtained, so the difference cannot be pinned to a token')
+    return out
+  }
+
+  const deviceById = new Map(deviceTokens.map((t) => [t.token, t.name]))
+  const localNames = new Set(localTokens.map((t) => t.name))
+
+  for (const t of localTokens) {
+    const deviceName = deviceById.get(t.id)
+
+    if (deviceName === undefined) {
+      out.push(`token ${t.id} (&${t.label}) is not in the keyboard's table`)
+      continue
+    }
+
+    if (deviceName !== t.name) {
+      out.push(`token ${t.id}: keyboard "${deviceName}" vs configurator "${t.name}" (&${t.label})`)
+    }
+  }
+
+  for (const t of deviceTokens) {
+    if (!localNames.has(t.name)) {
+      out.push(`the keyboard has token ${t.token} ("${t.name}") this configurator does not know`)
+    }
+  }
+
+  return out.slice(0, limit)
+}
+
 export const useDeviceStore = defineStore('device', () => {
   const transport = shallowRef<KeebTransport | null>(null)
   const kind = ref<TransportKind | null>(null)
@@ -115,6 +211,17 @@ export const useDeviceStore = defineStore('device', () => {
   const eventListeners = new Set<(e: DeviceEvent) => void>()
   const packetUnsub: Array<() => void> = []
 
+  /* Channel trace: what left this host, what the keyboard acknowledged, and what
+   * it volunteered as an event. The console gets every line; this is the same
+   * history kept for anything that wants to render it.
+   */
+  const traceLog = ref<TraceEntry[]>([])
+
+  function clearTraceLog(): void {
+    clearTrace()
+    traceLog.value = []
+  }
+
   const connected = computed(() => state.value === 'connected')
 
   /** True when the connected keyboard's token table is the one this UI was
@@ -122,6 +229,16 @@ export const useDeviceStore = defineStore('device', () => {
   const writable = computed(() => connected.value && info.value !== null && tokenTableMatches.value)
 
   const readyTokens = computed(() => tokens.value.filter((t) => (t.flags & KEEB_TOKEN_F_READY) !== 0))
+
+  /** What actually disagrees, when the handshake says the tables differ.
+   * Empty while the tables agree or before a handshake, so a UI can show it
+   * unconditionally.
+   */
+  const tokenTableDiff = computed<string[]>(() =>
+    tokenTableMatches.value || !info.value
+      ? []
+      : describeTokenDiff(tokens.value, info.value.tokenCount, TOKENS),
+  )
 
   function onEvent(cb: (e: DeviceEvent) => void): () => void {
     eventListeners.add(cb)
@@ -136,7 +253,11 @@ export const useDeviceStore = defineStore('device', () => {
 
   /* ---------------------------------------------------------------- session */
 
-  async function attach(t: KeebTransport, as: TransportKind): Promise<void> {
+  async function attach(
+    t: KeebTransport,
+    as: TransportKind,
+    open: (t: KeebTransport) => Promise<unknown> = (x) => x.connect(),
+  ): Promise<void> {
     detach()
 
     transport.value = t
@@ -152,6 +273,13 @@ export const useDeviceStore = defineStore('device', () => {
 
     packetUnsub.push(
       t.onPacket(onPacket),
+      onTrace((e) => {
+        traceLog.value.push(e)
+
+        if (traceLog.value.length > 200) {
+          traceLog.value.shift()
+        }
+      }),
       t.onState((s, detail) => {
         state.value = s
         statusLine.value = detail || s
@@ -176,9 +304,12 @@ export const useDeviceStore = defineStore('device', () => {
       )
     }
 
-    label.value = t.label
-
-    await t.connect()
+    /* Opened through the caller: the chooser path, or the gesture-free
+     * reconnect to a saved grant. The label is only known afterwards, and a
+     * reconnect that found nothing must not leave a label behind.
+     */
+    await open(t)
+    label.value = t.state === 'connected' ? t.label : ''
   }
 
   function detach(): void {
@@ -196,17 +327,60 @@ export const useDeviceStore = defineStore('device', () => {
     transport.value = null
     kind.value = null
     state.value = 'offline'
+    label.value = ''
     info.value = null
     tokens.value = []
     tokenTableMatches.value = false
   }
 
+  /** Test-only: attach the simulated keyboard. Nothing in the UI calls this;
+   * it exists so the protocol and the stores stay testable without hardware.
+   */
   async function connectMock(): Promise<void> {
     await attach(new MockKeyboard(), 'mock')
   }
 
-  async function connectBle(): Promise<void> {
-    await attach(new BleTransport(), 'ble')
+  /** `all` opens the chooser with every BLE device in range, for when the
+   * advertised name is not the one the generated contract expects.
+   */
+  async function connectBle(all = false): Promise<void> {
+    await attach(new BleTransport(), 'ble', (t) => (t as BleTransport).connect({ all }))
+  }
+
+  /** Restore the session without asking anyone to click: reconnect to a device
+   * this browser was already granted, which is the one Web Bluetooth path that
+   * needs no user gesture.
+   *
+   * Returns the keyboard label, or null when nothing saved is reachable - the
+   * keyboard is off, asleep, or holding another host's profile. That is a normal
+   * load-time state, so the transport is detached again and the status line keeps
+   * whatever the transport said about why. The answer is the Bluetooth… button.
+   */
+  async function reconnectBle(): Promise<string | null> {
+    const t = new BleTransport()
+
+    await attach(t, 'ble', () => t.connectSaved())
+
+    if (t.state !== 'connected') {
+      detach()
+      return null
+    }
+
+    return t.label
+  }
+
+  /** Revoke this browser's Bluetooth grants for this origin. Chrome keeps them
+   * across reloads and across a firmware flash, and stale entries are what make
+   * the chooser offer a device that can never connect.
+   */
+  async function forgetBle(): Promise<number> {
+    const t = transport.value
+
+    if (t instanceof BleTransport) {
+      return t.forget()
+    }
+
+    return forgetGrants()
   }
 
   function disconnect(): void {
@@ -228,6 +402,14 @@ export const useDeviceStore = defineStore('device', () => {
    * still in flight (a refresh triggered by an event), so the serialisation
    * has to live here rather than in each caller. */
   const queue: QueuedRequest[] = []
+
+  /** Record types a built message carries, for the trace line. Reading the
+   * finished bytes rather than the builder calls is what keeps the trace honest
+   * about a message that a builder helper quietly truncated.
+   */
+  function messageTypes(bytes: Uint8Array): number[] {
+    return iterateMessage(bytes).records.map((r) => r.type)
+  }
 
   function request(
     build: (msg: TlvMessage) => void,
@@ -277,6 +459,8 @@ export const useDeviceStore = defineStore('device', () => {
         abortPending(`no ACK for message ${msgId} in ${ACK_TIMEOUT_MS} ms`)
       }, ACK_TIMEOUT_MS),
     }
+
+    trace('tx', msgId, { types: messageTypes(bytes), bytes: bytes.length })
 
     transmit(bytes, msgId, 0, 0)
   }
@@ -364,6 +548,7 @@ export const useDeviceStore = defineStore('device', () => {
     }
 
     clearTimeout(pending.timer)
+    trace('err', pending.msgId, { note: reason })
     pending.reject(new Error(reason))
     pending = null
     sending = null
@@ -383,6 +568,7 @@ export const useDeviceStore = defineStore('device', () => {
     const fed = receiver.feed(pkt)
 
     if (fed.kind === 'error') {
+      trace('err', -1, { note: `packet rejected: ${KEEB_ERR_TEXT[fed.err] ?? fed.err}` })
       fail(`packet rejected: ${KEEB_ERR_TEXT[fed.err] ?? fed.err}`)
       return
     }
@@ -394,14 +580,20 @@ export const useDeviceStore = defineStore('device', () => {
     const { records, malformed } = iterateMessage(fed.msg)
 
     if (malformed) {
+      trace('err', fed.msgId, { note: 'torn record stream', bytes: fed.msg.length })
       fail('torn record stream')
       return
     }
+
+    const types = records.map((r) => r.type)
 
     if (fed.flags & KEEB_PKT_F_NOTIFY) {
       for (const rec of records) {
         if (rec.type === KEEB_T_NOTIFY) {
           const n = readNotify(rec.value)
+
+          trace('evt', fed.msgId, { event: n.event, seq: n.seq, bytes: n.data.length })
+
           for (const l of eventListeners) {
             l({ event: n.event, seq: n.seq, data: n.data })
           }
@@ -416,7 +608,10 @@ export const useDeviceStore = defineStore('device', () => {
     if (!want || want.msgId !== fed.msgId) {
       /* A reply for a message we already gave up on. Ignoring it is the only
        * safe move: acting on a stale ACK would report a write we no longer
-       * know the outcome of. */
+       * know the outcome of. It is still worth a trace line - this is the
+       * signature of a link that is slower than the request timeout.
+       */
+      trace('err', fed.msgId, { types, bytes: fed.msg.length, note: 'reply for a message already given up on' })
       return
     }
 
@@ -434,6 +629,15 @@ export const useDeviceStore = defineStore('device', () => {
     clearTimeout(want.timer)
     pending = null
     sending = null
+
+    trace('ack', fed.msgId, {
+      types,
+      bytes: fed.msg.length,
+      status: ack ? ack.status : undefined,
+      err: ack?.errCode,
+      detail: ack?.detail,
+      note: ack ? undefined : 'reply carried no ACK',
+    })
 
     if (!ack) {
       want.reject(new Error('reply carried no ACK'))
@@ -613,6 +817,99 @@ export const useDeviceStore = defineStore('device', () => {
   const discard = () => request((m) => m.add(KEEB_T_DISCARD, 0))
   const reset = () => request((m) => m.add(KEEB_T_RESET, 0))
 
+  /* ---------------------------------------------------------------- display ops
+   *
+   * The panel is a table of drawing primitives the firmware paints from ZMK's
+   * own state, so these reads and writes never move a value - they move a
+   * readout. The limits come from DISPLAY_INFO rather than from a table the UI
+   * was generated with, because the panel is not in devicetree. */
+
+  async function readDisplayInfo(): Promise<{ info: DisplayInfoPayload; presets: PresetName[] }> {
+    let got: DisplayInfoPayload | null = null
+    const presets: PresetName[] = []
+
+    await request(
+      (m) => m.add(KEEB_T_DISPLAY_INFO, 0),
+      (type, value) => {
+        if (type === KEEB_T_DISPLAY_INFO) {
+          got = decodeDisplayInfo(value)
+        } else if (type === KEEB_T_PRESET_NAME) {
+          presets.push(readPresetName(value))
+        }
+      },
+    )
+
+    if (!got) {
+      throw new Error('DISPLAY_INFO reply had no DISPLAY_INFO record')
+    }
+
+    return { info: got, presets }
+  }
+
+  async function readDisplay(): Promise<DisplayTablePayload> {
+    let table: DisplayTablePayload | null = null
+
+    await request(
+      (m) => m.add(KEEB_T_DISPLAY_GET, 0),
+      (type, value) => {
+        if (type === KEEB_T_DISPLAY) {
+          const hdr = readDisplayHeader(value)
+
+          table = { ...hdr, widgets: readDisplayWidgets(value), texts: {}, values: {} }
+        } else if (type === KEEB_T_TEXT_SET && table) {
+          const slot = readTextSlot(value)
+
+          table.texts[slot.slot] = slot.text
+        } else if (type === KEEB_T_VALUE_SET && table) {
+          const slot = readValueSlot(value)
+
+          table.values[slot.slot] = slot.value
+        }
+      },
+    )
+
+    if (!table) {
+      throw new Error('DISPLAY reply had no DISPLAY record')
+    }
+
+    return table
+  }
+
+  const writeDisplay = (widgets: Widget[]) =>
+    request((m) => {
+      writeDisplayTable(m, widgets)
+    })
+
+  const writeWidget = (index: number, w: Widget) =>
+    request((m) => {
+      writeWidgetSet(m, index, w)
+    })
+
+  const writeText = (slot: number, text: string) =>
+    request((m) => {
+      writeTextSlot(m, slot, text)
+    })
+
+  const writeValue = (slot: number, value: number) =>
+    request((m) => {
+      writeValueSlot(m, slot, value)
+    })
+
+  const applyPreset = (preset: number) =>
+    request((m) => {
+      const dv = m.add(KEEB_T_PRESET_SET, 2)
+
+      if (dv) {
+        dv.setUint8(0, preset & 0xff)
+        dv.setUint8(1, 0)
+      }
+    })
+
+  const displaySave = () => request((m) => m.add(KEEB_T_DISPLAY_SAVE, 0))
+  const displayDiscard = () => request((m) => m.add(KEEB_T_DISPLAY_DISCARD, 0))
+  const displayReset = () => request((m) => m.add(KEEB_T_DISPLAY_RESET, 0))
+  const displayBlank = () => request((m) => m.add(KEEB_T_DISPLAY_BLANK, 0))
+
   async function readTokenParams(token: number): Promise<ParamValue[]> {
     if (token === KEEB_TOKEN_NONE || token === KEEB_TOKEN_UNKNOWN) {
       return []
@@ -634,10 +931,13 @@ export const useDeviceStore = defineStore('device', () => {
 
   return {
     transport, kind, state, label, info, tokens, readyTokens, tokenTableMatches, lastError, statusLine,
-    connected, writable, localTokenHash,
-    connectMock, connectBle, disconnect, handshake, ping, fetchTokens,
+    connected, writable, localTokenHash, tokenTableDiff,
+    connectMock, connectBle, reconnectBle, forgetBle, disconnect, handshake, ping, fetchTokens,
     readLayerCells, writeCells, readLayers, renameLayer, moveLayer, addLayer, removeLayer, restoreLayer,
     save, discard, reset, readTokenParams,
+    readDisplayInfo, readDisplay, writeDisplay, writeWidget, writeText, writeValue, applyPreset,
+    displaySave, displayDiscard, displayReset, displayBlank,
+    traceLog, clearTraceLog,
     onEvent,
   }
 })

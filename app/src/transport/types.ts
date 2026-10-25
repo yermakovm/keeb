@@ -26,8 +26,17 @@ export interface KeebTransport {
 
   readonly state: TransportState
 
-  connect(): Promise<void>
+  /** `all` widens the chooser to every BLE device (BLE transport only). */
+  connect(opts?: { all?: boolean }): Promise<void>
   disconnect(): void
+
+  /** BLE only: reconnect to a device this origin was already granted, without a
+   * chooser. Returns the label, or null when nothing saved is reachable.
+   */
+  connectSaved?(): Promise<string | null>
+
+  /** BLE only: revoke this origin's saved Bluetooth grants; returns how many. */
+  forget?(): Promise<number>
 
   /** The codec's send hook: 0 on success, else KEEB_TX_BUSY / KEEB_TX_MTU /
    * KEEB_TX_FAIL. */

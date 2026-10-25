@@ -37,7 +37,11 @@ import {
   KEEB_TLV_MSG_MAX,
   KEEB_TLV_VERSION,
   KEEB_T_CELLS_SET,
+  KEEB_T_DISPLAY_SET,
   KEEB_T_LAYER_NAME_SET,
+  KEEB_T_TEXT_SET,
+  KEEB_T_VALUE_SET,
+  KEEB_T_WIDGET_SET,
   KEEB_TOKEN_F_READY,
   KEEB_TX_BUSY,
   KEEB_TX_MTU,
@@ -49,13 +53,17 @@ import type {
   Cell,
   CellPayload,
   CellSetPayload,
+  DisplayInfoPayload,
+  DisplayTablePayload,
   InfoPayload,
   LayersPayload,
   NotifyHeader,
   ParamValue,
   PktHdr,
+  PresetName,
   TlvRecord,
   TokenRecord,
+  Widget,
 } from './types.ts'
 
 /* --------------------------------------------------------------------------
@@ -357,6 +365,183 @@ export function readParamValue(value: Uint8Array): ParamValue {
     name: new TextDecoder().decode(value.subarray(14, 14 + nameLen)),
     set: dv.getUint8(13),
   }
+}
+
+/* --------------------------------------------------------------------------
+ * Display: the widget table
+ *
+ * struct keeb_widget is 7 bytes and is the same layout the firmware keeps in
+ * RAM and writes to settings, so the editor's model, the wire record and the
+ * saved blob are one thing (keeb-module/display/keeb_display.c).
+ * -------------------------------------------------------------------------- */
+
+export const WIDGET_SIZE = 7
+
+/** struct keeb_display_info. */
+export function readDisplayInfo(value: Uint8Array): DisplayInfoPayload {
+  const dv = view(value)
+
+  return {
+    editable: dv.getUint8(0) !== 0,
+    presetCount: dv.getUint8(1),
+    widgetMax: dv.getUint8(2),
+    textSlots: dv.getUint8(3),
+    textMax: dv.getUint8(4),
+    valueSlots: dv.getUint8(5),
+    kindMax: dv.getUint8(6),
+    sourceMax: dv.getUint8(7),
+    logicalW: dv.getUint16(8, true),
+    logicalH: dv.getUint16(10, true),
+    panelW: dv.getUint16(12, true),
+    panelH: dv.getUint16(14, true),
+    rotation: dv.getUint16(16, true),
+    widgetSize: dv.getUint8(18),
+    flags: dv.getUint8(19),
+    layers: dv.getUint8(20),
+  }
+}
+
+/** One keeb_widget at a byte offset. */
+export function readWidgetAt(dv: DataView, at: number): Widget {
+  return {
+    kind: dv.getUint8(at),
+    source: dv.getUint8(at + 1),
+    x: dv.getUint8(at + 2),
+    y: dv.getUint8(at + 3),
+    w: dv.getUint8(at + 4),
+    h: dv.getUint8(at + 5),
+    style: dv.getUint8(at + 6),
+  }
+}
+
+/** KEEB_T_DISPLAY header + widgets. The text and value slots ride as their own
+ * records in the same message, exactly like a layer dump's name records. */
+export function readDisplayHeader(value: Uint8Array): Pick<DisplayTablePayload, 'count' | 'preset' | 'flags'> {
+  const dv = view(value)
+
+  return { count: dv.getUint8(0), preset: dv.getUint8(1), flags: dv.getUint8(2) }
+}
+
+export function readDisplayWidgets(value: Uint8Array): Widget[] {
+  const dv = view(value)
+  const { count } = readDisplayHeader(value)
+  const out: Widget[] = []
+
+  for (let i = 0; i < count; i++) {
+    const at = 4 + i * WIDGET_SIZE
+
+    if (at + WIDGET_SIZE > value.length) {
+      break
+    }
+
+    out.push(readWidgetAt(dv, at))
+  }
+
+  return out
+}
+
+/** KEEB_T_TEXT_SET: slot byte, length byte, then the string. */
+export function readTextSlot(value: Uint8Array): { slot: number; text: string } {
+  const len = value[1]
+
+  return { slot: value[0], text: new TextDecoder().decode(value.subarray(2, 2 + len)) }
+}
+
+/** KEEB_T_VALUE_SET: slot, reserved, int16. */
+export function readValueSlot(value: Uint8Array): { slot: number; value: number } {
+  const dv = view(value)
+
+  return { slot: dv.getUint8(0), value: dv.getInt16(2, true) }
+}
+
+/** KEEB_T_PRESET_NAME: preset byte, length byte, then the name. */
+export function readPresetName(value: Uint8Array): PresetName {
+  const len = value[1]
+
+  return { preset: value[0], name: new TextDecoder().decode(value.subarray(2, 2 + len)) }
+}
+
+/** Append a KEEB_T_DISPLAY_SET record: header + the whole table. The firmware
+ * validates every entry before replacing any, so a table it cannot draw is
+ * refused whole. */
+export function writeDisplayTable(msg: TlvMessage, widgets: Widget[]): boolean {
+  const dv = msg.add(KEEB_T_DISPLAY_SET, 4 + widgets.length * WIDGET_SIZE)
+
+  if (!dv) {
+    return false
+  }
+
+  dv.setUint8(0, widgets.length & 0xff)
+  dv.setUint8(1, 0)
+  dv.setUint8(2, 0)
+  dv.setUint8(3, 0)
+
+  for (let i = 0; i < widgets.length; i++) {
+    const at = 4 + i * WIDGET_SIZE
+
+    dv.setUint8(at, widgets[i].kind)
+    dv.setUint8(at + 1, widgets[i].source)
+    dv.setUint8(at + 2, widgets[i].x)
+    dv.setUint8(at + 3, widgets[i].y)
+    dv.setUint8(at + 4, widgets[i].w)
+    dv.setUint8(at + 5, widgets[i].h)
+    dv.setUint8(at + 6, widgets[i].style)
+  }
+
+  return true
+}
+
+/** KEEB_T_WIDGET_SET: index byte, reserved, then one widget. */
+export function writeWidgetSet(msg: TlvMessage, index: number, w: Widget): boolean {
+  const dv = msg.add(KEEB_T_WIDGET_SET, 2 + WIDGET_SIZE)
+
+  if (!dv) {
+    return false
+  }
+
+  dv.setUint8(0, index & 0xff)
+  dv.setUint8(1, 0)
+
+  dv.setUint8(2, w.kind)
+  dv.setUint8(3, w.source)
+  dv.setUint8(4, w.x)
+  dv.setUint8(5, w.y)
+  dv.setUint8(6, w.w)
+  dv.setUint8(7, w.h)
+  dv.setUint8(8, w.style)
+
+  return true
+}
+
+/** KEEB_T_TEXT_SET: one host-owned string slot. */
+export function writeTextSlot(msg: TlvMessage, slot: number, text: string): boolean {
+  const enc = new TextEncoder().encode(text)
+  const dv = msg.add(KEEB_T_TEXT_SET, 2 + enc.length)
+
+  if (!dv) {
+    return false
+  }
+
+  dv.setUint8(0, slot & 0xff)
+  dv.setUint8(1, enc.length & 0xff)
+  msg.buf.set(enc, msg.len - enc.length)
+
+  return true
+}
+
+/** KEEB_T_VALUE_SET: one host-owned number slot. */
+export function writeValueSlot(msg: TlvMessage, slot: number, value: number): boolean {
+  const dv = msg.add(KEEB_T_VALUE_SET, 4)
+
+  if (!dv) {
+    return false
+  }
+
+  dv.setUint8(0, slot & 0xff)
+  dv.setUint8(1, 0)
+  dv.setInt16(2, value, true)
+
+  return true
 }
 
 /* --------------------------------------------------------------------------

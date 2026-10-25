@@ -21,6 +21,20 @@
  * edits are local until committed as one CELLS_SET, and any notification
  * (layer state, cells set, saved, discarded, layer changed) re-reads rather
  * than trusts the local copy.
+ *
+ * Applying and persisting are two different firmware operations, and only the
+ * second one survives a reboot:
+ *
+ *   - `CELLS_SET` / the layer ops land in ZMK's in-RAM keymap
+ *     (`zmk_keymap_set_layer_binding_at_idx`), which is what makes a change
+ *     usable immediately and also what makes it evaporate on power loss;
+ *   - `SAVE` is what copies the pending changes into ZMK's settings subtree
+ *     (`zmk_keymap_save_changes` -> `settings_save_one` -> NVS), which the
+ *     firmware re-applies at boot.
+ *
+ * So the store persists after every successful write by default (`autosave`),
+ * and keeps `unsavedWrites` honest when it cannot: a change that reached the
+ * keyboard but not its settings is a change that will be lost.
  */
 
 import { defineStore } from 'pinia'
@@ -29,10 +43,52 @@ import { computed, ref } from 'vue'
 import { KEEB_EV_CELLS_SET, KEEB_EV_DISCARDED, KEEB_EV_LAYER_CHANGED, KEEB_EV_LAYER_STATE, KEEB_EV_SAVED } from '../proto/constants.ts'
 import { KEEB_TOKEN_NONE, KEEB_TOKEN_UNKNOWN } from '../proto/constants.ts'
 import type { Binding, Cell, LayersPayload } from '../proto/types.ts'
-import { GRID, KEY_COUNT, LAYER_CAPACITY, RESERVED_POSITIONS, STOCK_LAYER_NAMES, TOKENS } from '../proto/zmk.gen.ts'
+import { GRID, GRID_COLS, KEY_COUNT, LAYER_CAPACITY, RESERVED_POSITIONS, STOCK_LAYER_NAMES, TOKENS } from '../proto/zmk.gen.ts'
 import { useDeviceStore } from './device.ts'
 
 export const LAYER_ID_INVALID = 0xff
+
+/*
+ * The autosave preference is this browser's habit, so it lives in
+ * localStorage. It is deliberately not a firmware setting: the firmware's rule
+ * is "SAVE is an explicit operation", and that stays the firmware's rule.
+ *
+ * localStorage is only touched when a window exists - this module is also
+ * imported by the SSR smoke render and by the node tests, where it is not.
+ */
+const AUTOSAVE_KEY = 'keeb.autosave'
+
+const browserSetting = (key: string): string | null => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null
+  }
+
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    /* Private-mode / disabled storage: the default still applies. */
+    return null
+  }
+}
+
+const writeBrowserSetting = (key: string, value: string): void => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return
+  }
+
+  try {
+    window.localStorage.setItem(key, value)
+  } catch {
+    /* Same: a preference that cannot be remembered falls back to the default. */
+  }
+}
+
+/** Autosave is on unless this browser has explicitly turned it off. */
+const readAutosaveDefault = (): boolean => {
+  const stored = browserSetting(AUTOSAVE_KEY)
+
+  return stored === null ? true : stored === '1'
+}
 
 const tokenByLabel = (label: string): number => {
   const t = TOKENS.find((x) => x.label === label)
@@ -42,6 +98,22 @@ const tokenByLabel = (label: string): number => {
 
 export const TRANSPARENT_TOKEN = tokenByLabel('trans')
 export const NONE_TOKEN = tokenByLabel('none')
+
+/**
+ * Outcome of a write that may also have been persisted.
+ *
+ * `ok` is the keyboard's answer to the write; `saved` is the separate answer to
+ * "will this survive a reboot". Collapsing them is exactly the confusion this
+ * store is trying to remove.
+ */
+export interface WriteResult {
+  ok: boolean
+  applied: number
+  reason?: string
+  /** the write reached the keyboard's settings storage (autosave on and SAVE accepted) */
+  saved: boolean
+  saveReason?: string
+}
 
 export interface SlotView {
   index: number
@@ -74,6 +146,15 @@ export const useKeymapStore = defineStore('keymap', () => {
   const loading = ref(false)
   /** when the keyboard last confirmed a save (KEEB_EV_SAVED), for the UI */
   const savedAt = ref(0)
+  /** persist a write to the keyboard's settings as soon as it lands */
+  const autosave = ref(readAutosaveDefault())
+  /**
+   * Writes that reached the keyboard's RAM but not its settings.
+   * A count of cells for `CELLS_SET`, one per layer operation - the unit is
+   * "firmware operations that still need a SAVE", not ZMK's per-binding
+   * pending bits, which the protocol does not expose.
+   */
+  const unsavedWrites = ref(0)
 
   const reserved = new Set<number>(RESERVED_POSITIONS)
   const isReserved = (pos: number): boolean => reserved.has(pos)
@@ -97,6 +178,8 @@ export const useKeymapStore = defineStore('keymap', () => {
   const editingName = computed(() => (names.value[editingId.value] ?? ''))
   const dirtyTotal = computed(() => Object.values(dirty.value).reduce((n, m) => n + m.size, 0))
   const isDirty = computed(() => dirtyTotal.value > 0)
+  /** True when the keyboard is holding a change that a reboot would drop. */
+  const hasUnsaved = computed(() => unsavedWrites.value > 0)
 
   /** Layer name by id, for rendering MO/LT caps. */
   const layerName = (id: number): string => names.value[id] ?? `#${id}`
@@ -163,6 +246,12 @@ export const useKeymapStore = defineStore('keymap', () => {
       }
 
       dirty.value = {}
+      /* The keyboard's own state is now the model's state. NB this is a local
+       * baseline, not a report from the firmware: ZMK's per-binding pending
+       * bits are not in the protocol, so a keyboard that still holds unsaved
+       * edits from an earlier session reads back as "no unsaved changes".
+       */
+      unsavedWrites.value = 0
     } finally {
       loading.value = false
     }
@@ -255,10 +344,38 @@ export const useKeymapStore = defineStore('keymap', () => {
     delete dirty.value[layerId]
   }
 
+  /** True when this position holds an edit that has not been written yet. */
+  function isPending(slot: number, pos: number): boolean {
+    const id = order.value[slot]
+
+    return id !== LAYER_ID_INVALID && (dirty.value[id]?.has(pos) ?? false)
+  }
+
+  /** Throw away every local edit and show the keyboard's layout again.
+   * Nothing these edits did ever reached the firmware - that is what staging
+   * them means - so this is a reload, not an undo over the wire.
+   */
+  async function revertEdits(): Promise<number> {
+    const ids = Object.keys(dirty.value).map(Number)
+    const count = dirtyTotal.value
+
+    dirty.value = {}
+
+    if (ids.length && device.connected) {
+      for (const id of ids) {
+        await refreshLayer(id)
+      }
+    }
+
+    return count
+  }
+
   /** One CELLS_SET per layer: the firmware validates the whole record before
    * applying any of it, so a rejected commit leaves the layout untouched and
-   * the pending edits stay pending. */
-  async function commitLayer(slot = editingSlot.value): Promise<{ ok: boolean; applied: number; reason?: string }> {
+   * the pending edits stay pending. This is the RAM half only - `commitLayer`
+   * and `commitAll` are the ones that also persist.
+   */
+  async function commitCells(slot: number): Promise<{ ok: boolean; applied: number; reason?: string }> {
     const id = order.value[slot]
 
     if (id === LAYER_ID_INVALID) {
@@ -289,29 +406,105 @@ export const useKeymapStore = defineStore('keymap', () => {
     }
   }
 
-  async function commitAll(): Promise<{ ok: boolean; applied: number; reason?: string }> {
+  /** Remember that the keyboard now holds a change its settings do not have. */
+  function markUnsaved(count: number): void {
+    unsavedWrites.value += count
+  }
+
+  /**
+   * Send SAVE when autosave is on and something is pending.
+   *
+   * Never throws, and a failed persist leaves `unsavedWrites` set: a write the
+   * settings do not have is a write a reboot will drop, and the UI has to keep
+   * saying so rather than report success.
+   */
+  async function persistAfterWrite(): Promise<{ saved: boolean; reason?: string }> {
+    if (unsavedWrites.value === 0 || !autosave.value) {
+      return { saved: false }
+    }
+
+    if (!device.writable) {
+      return { saved: false, reason: 'no writable keyboard - the change is live but not saved' }
+    }
+
+    try {
+      await device.save()
+
+      /* The ACK is the confirmation; KEEB_EV_SAVED is the same fact a second
+       * time, and a dropped notification must not leave the UI claiming the
+       * layout is unpersisted.
+       */
+      unsavedWrites.value = 0
+      savedAt.value = Date.now()
+
+      return { saved: true }
+    } catch (err) {
+      return { saved: false, reason: err instanceof Error ? err.message : String(err) }
+    }
+  }
+
+  /** Commit one layer as one CELLS_SET, then persist it when autosave is on. */
+  async function commitLayer(slot = editingSlot.value): Promise<WriteResult> {
+    const r = await commitCells(slot)
+
+    if (!r.ok || r.applied === 0) {
+      return { ...r, saved: false }
+    }
+
+    markUnsaved(r.applied)
+
+    const p = await persistAfterWrite()
+
+    return { ...r, saved: p.saved, saveReason: p.reason }
+  }
+
+  async function commitAll(): Promise<WriteResult> {
     let applied = 0
+    let failure: string | undefined
 
     for (const slot of editableSlots.value.map((s) => s.index)) {
-      const r = await commitLayer(slot)
+      const r = await commitCells(slot)
 
       if (!r.ok) {
-        return r
+        failure = r.reason
+        break
       }
 
       applied += r.applied
     }
 
-    return { ok: true, applied }
+    /* Layers that did land before a rejected one are live in the keyboard,
+     * so they count as unsaved too rather than vanishing from the report.
+     */
+    if (applied > 0) {
+      markUnsaved(applied)
+
+      const p = await persistAfterWrite()
+
+      return { ok: !failure, applied, reason: failure, saved: p.saved, saveReason: p.reason }
+    }
+
+    return { ok: !failure, applied, reason: failure, saved: false }
   }
 
   /* ---------------------------------------------------------------- layer ops */
 
-  async function renameLayer(index: number, name: string): Promise<{ ok: boolean; reason?: string }> {
+  /** A layer operation is persisted by the same SAVE a cell write uses: ZMK
+   * saves the layer order and the layer names in the same "keymap" settings
+   * subtree, so a rename or a reorder that is never saved disappears on reboot
+   * exactly like a rebound key does.
+   */
+  async function afterLayerOp(): Promise<{ saved: boolean; reason?: string }> {
+    markUnsaved(1)
+
+    return persistAfterWrite()
+  }
+
+  async function renameLayer(index: number, name: string): Promise<WriteResult> {
     const id = order.value[index]
 
     if (id === LAYER_ID_INVALID) {
-      return { ok: false, reason: 'slot is empty' }
+      return { ok: false, applied: 0, reason: 'slot is empty', saved: false }
     }
 
     const clean = name.trim().slice(0, 20)
@@ -321,54 +514,64 @@ export const useKeymapStore = defineStore('keymap', () => {
       names.value[id] = clean
       await device.readLayers().then(applyLayers)
 
-      return { ok: true }
+      const p = await afterLayerOp()
+
+      return { ok: true, applied: 1, saved: p.saved, saveReason: p.reason }
     } catch (err) {
-      return { ok: false, reason: err instanceof Error ? err.message : String(err) }
+      return { ok: false, applied: 0, reason: err instanceof Error ? err.message : String(err), saved: false }
     }
   }
 
-  async function moveLayer(from: number, to: number): Promise<{ ok: boolean; reason?: string }> {
+  async function moveLayer(from: number, to: number): Promise<WriteResult> {
     try {
       await device.moveLayer(from, to)
       applyLayers(await device.readLayers())
 
-      return { ok: true }
+      const p = await afterLayerOp()
+
+      return { ok: true, applied: 1, saved: p.saved, saveReason: p.reason }
     } catch (err) {
-      return { ok: false, reason: err instanceof Error ? err.message : String(err) }
+      return { ok: false, applied: 0, reason: err instanceof Error ? err.message : String(err), saved: false }
     }
   }
 
-  async function addLayer(): Promise<{ ok: boolean; index?: number; reason?: string }> {
+  async function addLayer(): Promise<WriteResult & { index?: number }> {
     try {
       const ack = await device.addLayer()
       applyLayers(await device.readLayers())
 
-      return { ok: true, index: ack.detail }
+      const p = await afterLayerOp()
+
+      return { ok: true, applied: 1, index: ack.detail, saved: p.saved, saveReason: p.reason }
     } catch (err) {
-      return { ok: false, reason: err instanceof Error ? err.message : String(err) }
+      return { ok: false, applied: 0, reason: err instanceof Error ? err.message : String(err), saved: false }
     }
   }
 
-  async function removeLayer(index: number): Promise<{ ok: boolean; reason?: string }> {
+  async function removeLayer(index: number): Promise<WriteResult> {
     try {
       await device.removeLayer(index)
       applyLayers(await device.readLayers())
 
-      return { ok: true }
+      const p = await afterLayerOp()
+
+      return { ok: true, applied: 1, saved: p.saved, saveReason: p.reason }
     } catch (err) {
-      return { ok: false, reason: err instanceof Error ? err.message : String(err) }
+      return { ok: false, applied: 0, reason: err instanceof Error ? err.message : String(err), saved: false }
     }
   }
 
-  async function restoreLayer(id: number, index: number): Promise<{ ok: boolean; reason?: string }> {
+  async function restoreLayer(id: number, index: number): Promise<WriteResult> {
     try {
       await device.restoreLayer(id, index)
       applyLayers(await device.readLayers())
       await refreshLayer(id)
 
-      return { ok: true }
+      const p = await afterLayerOp()
+
+      return { ok: true, applied: 1, saved: p.saved, saveReason: p.reason }
     } catch (err) {
-      return { ok: false, reason: err instanceof Error ? err.message : String(err) }
+      return { ok: false, applied: 0, reason: err instanceof Error ? err.message : String(err), saved: false }
     }
   }
 
@@ -391,6 +594,10 @@ export const useKeymapStore = defineStore('keymap', () => {
           break
 
         case KEEB_EV_DISCARDED:
+          /* The keyboard dropped what it had not saved; anything it had saved
+           * is still what it says it is.
+           */
+          unsavedWrites.value = 0
           void loadAll()
           break
 
@@ -400,6 +607,7 @@ export const useKeymapStore = defineStore('keymap', () => {
 
         case KEEB_EV_SAVED:
           savedAt.value = Date.now()
+          unsavedWrites.value = 0
           break
 
         default:
@@ -410,9 +618,18 @@ export const useKeymapStore = defineStore('keymap', () => {
 
   /* ---------------------------------------------------------------- persistence */
 
+  /** Turn autosave on or off for this browser. */
+  function setAutosave(on: boolean): void {
+    autosave.value = on
+    writeBrowserSetting(AUTOSAVE_KEY, on ? '1' : '0')
+  }
+
   async function save(): Promise<{ ok: boolean; reason?: string }> {
     try {
       await device.save()
+
+      unsavedWrites.value = 0
+      savedAt.value = Date.now()
 
       return { ok: true }
     } catch (err) {
@@ -444,17 +661,51 @@ export const useKeymapStore = defineStore('keymap', () => {
 
   return {
     capacity, keyCount, order, names, cells, layerState, layerLocked, activeLayerId, savedAt,
+    autosave, unsavedWrites, hasUnsaved,
     editingSlot, editingId, editingName, slots, editableSlots, dirtyTotal, isDirty, loading,
-    isReserved, layerName, tokenName, tokenLabel, tokenDef,
+    isReserved, layerName, tokenName, tokenLabel, tokenDef, isPending,
     applyLayers, applyCells, cellList, loadAll, refreshLayer, ownCell, resolve,
-    setBinding, makeTransparent, makeDisabled, commitLayer, commitAll, dropDirty,
+    setBinding, makeTransparent, makeDisabled, commitLayer, commitAll, dropDirty, revertEdits,
     renameLayer, moveLayer, addLayer, removeLayer, restoreLayer,
-    save, discard, resetSettings, bindEvents,
+    save, discard, resetSettings, setAutosave, persistAfterWrite, bindEvents,
   }
 })
 
-/** Grid helpers shared by the views: stock position -> where it renders. */
+/* ---------------------------------------------------------------- grid view */
+
+/*
+ * Where a position sits on the keyboard, straight out of the matrix transform.
+ *
+ * The transform's `map` is written in the order the keys are physically laid
+ * out, so the position number a CELLS record carries already says where the
+ * key is — but only if the view reads the map the way the firmware does:
+ *
+ *   left half   cols 0..5  listed outer edge -> split gap
+ *   right half  cols 11..6 listed split gap  -> outer edge (col-offset 6)
+ *
+ * Sorting each half by column number flips the right half: it would put the
+ * outer top-right corner (position 11, col 6) next to the gap. So a half is
+ * drawn by *slot inside the half*, and the right half's slot counts back from
+ * its outer edge. That is also what makes the transform's mirror rule read
+ * correctly: the mirror of global col c is 11 - c, and mirrored keys land in
+ * the same slot of their own half.
+ */
 export const GRID_ROWS = Math.max(...GRID.map((g) => g.row)) + 1
-export const gridRow = (row: number) => GRID.filter((g) => g.row === row)
-export const gridSide = (row: number, side: 'L' | 'R') =>
-  gridRow(row).filter((g) => g.side === side).sort((a, b) => a.col - b.col)
+export const HALF_COLS = GRID_COLS / 2
+
+export interface GridSlot {
+  /** null when this grid slot has no switch, i.e. no key position exists */
+  pos: number | null
+  /** the transform's global column, 0-11, for tooltips */
+  col: number
+  row: number
+}
+
+/** One half of one matrix row, in the order it is drawn on screen. */
+export const gridHalf = (row: number, side: 'L' | 'R'): GridSlot[] =>
+  Array.from({ length: HALF_COLS }, (_, slot) => {
+    const col = side === 'L' ? slot : GRID_COLS - 1 - slot
+    const cell = GRID.find((g) => g.row === row && g.col === col)
+
+    return { pos: cell?.pos ?? null, col, row }
+  })

@@ -18,6 +18,7 @@
  * Sources (all outside app/, resolved relative to this file):
  *   ../../keeb-module/boards/shields/keeb/keeb.dtsi   tokens, reserved positions, grid
  *   ../../config/keeb.keymap                          stock layers + stock bindings
+ *   ../../config/keeb.conf                            the advertised keyboard name
  *   ../../../zmk/app/dts/behaviors/*.dtsi             binding-cells, display names
  *   ../../../zmk/app/include/dt-bindings/zmk/*.h      keycodes and behavior args
  *
@@ -37,6 +38,7 @@ const ZMK = resolve(process.env.ZMK_DIR ?? join(REPO, '..', 'zmk'))
 
 const DTSI = join(REPO, 'keeb-module/boards/shields/keeb/keeb.dtsi')
 const KEYMAP = join(REPO, 'config/keeb.keymap')
+const CONF = join(REPO, 'config/keeb.conf')
 const ZMK_BEHAVIORS = join(ZMK, 'app/dts/behaviors')
 const ZMK_DT = join(ZMK, 'app/include/dt-bindings/zmk')
 const ZMK_HEADERS = ['keys.h', 'hid_usage.h', 'hid_usage_pages.h', 'modifiers.h', 'pointing.h', 'mouse.h', 'bt.h', 'outputs.h']
@@ -45,7 +47,7 @@ const OUT = join(APP_DIR, 'src/proto/zmk.gen.ts')
 
 /* Fail with instructions rather than a raw ENOENT: the pinned ZMK checkout is a
  * workspace sibling, not part of this repo, so it moves. */
-for (const path of [DTSI, KEYMAP, ZMK_BEHAVIORS, ZMK_DT]) {
+for (const path of [DTSI, KEYMAP, CONF, ZMK_BEHAVIORS, ZMK_DT]) {
   if (!existsSync(path)) {
     console.error(`missing input: ${path}`)
     console.error('the generator needs config/keeb.keymap, keeb.dtsi and the pinned ZMK checkout (ZMK_DIR=<path> when it moved)')
@@ -352,6 +354,26 @@ const dtsi = stripComments(readFileSync(DTSI, 'utf8'))
 const keymapSrc = readFileSync(KEYMAP, 'utf8')
 const keymap = stripComments(keymapSrc)
 
+/* CONFIG_ZMK_KEYBOARD_NAME is what the keyboard puts in its advertisement
+ * (ZMK advertises with BT_LE_ADV_OPT_USE_NAME | FORCE_NAME_IN_AD). It belongs
+ * in the generated contract because it is also the only thing a Web Bluetooth
+ * chooser can filter on: the HID service it advertises (0x1812) is on the Web
+ * Bluetooth GATT blocklist, so filtering by "is a HID device" is not just
+ * useless, it is forbidden. A name filter is the one narrowing that works, and
+ * a name filter that is hardcoded here would silently stop matching the day the
+ * keyboard is renamed.
+ */
+const keyboardName = (() => {
+  const m = /CONFIG_ZMK_KEYBOARD_NAME\s*=\s*"([^"]*)"/.exec(readFileSync(CONF, 'utf8'))
+
+  if (!m) {
+    console.error(`missing CONFIG_ZMK_KEYBOARD_NAME in ${relative(REPO, CONF)}`)
+    process.exit(1)
+  }
+
+  return m[1]
+})()
+
 const tokensBlock = /tokens\s*=\s*<([^>]*)>/.exec(dtsi)
 
 if (!tokensBlock) {
@@ -620,6 +642,7 @@ const ts = `/*
  * Derived from the firmware's own sources:
  *   keeb-module/boards/shields/keeb/keeb.dtsi   token table, reserved positions, grid
  *   config/keeb.keymap                          stock layers and bindings
+ *   config/keeb.conf                            CONFIG_ZMK_KEYBOARD_NAME, the advertised name
  *   zmk/app/dts/behaviors/*.dtsi                binding cells, display names
  *   zmk/app/include/dt-bindings/zmk/*.h         keycodes and behavior arguments
  *
@@ -631,7 +654,16 @@ const ts = `/*
 
 import type { GridCell, StockLayer, TokenDef } from './types.ts'
 
-export const GENERATED_FROM = ${JSON.stringify({ dtsi: 'keeb-module/boards/shields/keeb/keeb.dtsi', keymap: 'config/keeb.keymap', zmk: rel(ZMK), headers: ZMK_HEADERS }, null, 2)}
+export const GENERATED_FROM = ${JSON.stringify({ dtsi: 'keeb-module/boards/shields/keeb/keeb.dtsi', keymap: 'config/keeb.keymap', conf: 'config/keeb.conf', zmk: rel(ZMK), headers: ZMK_HEADERS }, null, 2)}
+
+/** CONFIG_ZMK_KEYBOARD_NAME: the name the keyboard advertises, and the only
+ * thing a Web Bluetooth chooser may filter this device by. ZMK advertises the
+ * HID service (0x1812) and Battery (0x180F), but 0x1812 is on the Web Bluetooth
+ * GATT blocklist - filtering by it is a SecurityError, not a narrowing. A name
+ * filter has to come from the firmware config or it stops matching the day the
+ * keyboard is renamed.
+ */
+export const KEYBOARD_NAME = ${JSON.stringify(keyboardName)}
 
 /** keeb,engine:tokens in devicetree order — token id === index. */
 export const TOKENS: TokenDef[] = ${JSON.stringify(tokens.map(({ id, label, name, bindingCells, displayName, compatible }) => ({ id, label, name, bindingCells, displayName, compatible })), null, 2)}

@@ -72,7 +72,7 @@ async function chooseToken(id: number): Promise<void> {
   metadata.value = []
 
   if (id === TRANSPARENT_TOKEN || id === NONE_TOKEN) {
-    emit('set', { token: id, param1: 0, param2: 0 })
+    stage({ token: id, param1: 0, param2: 0 })
     return
   }
 
@@ -137,12 +137,28 @@ const preview = computed<Binding | null>(() =>
   token.value === null ? null : { token: token.value, param1: paramValues.value[0] ?? 0, param2: paramValues.value[1] ?? 0 },
 )
 
+/**
+ * Stage a binding for this position and leave the picker.
+ *
+ * The picker is opened for one position, so a staged write is the end of that
+ * visit: the grid is where the result is checked, and the next edit starts by
+ * clicking the next cap. Keeping the overlay open after a write only hid the
+ * grid behind a panel that had nothing left to do.
+ *
+ * Staging (not committing) is still the rule - closing the picker does not send
+ * anything, "Apply changes" does.
+ */
+function stage(binding: Binding): void {
+  emit('set', binding)
+  emit('close')
+}
+
 function apply(): void {
   if (token.value === null) {
     return
   }
 
-  emit('set', { token: token.value, param1: paramValues.value[0] ?? 0, param2: paramValues.value[1] ?? 0 })
+  stage({ token: token.value, param1: paramValues.value[0] ?? 0, param2: paramValues.value[1] ?? 0 })
 }
 
 function paramLabel(kind: ParamKind, index: number): string {
@@ -342,7 +358,7 @@ function reset(): void {
               {{ keyLabel(preview.param2) }}{{ (chosenDef?.bindingCells ?? 0) === 1 ? keyLabel(preview.param1) : '' }}
             </template>
           </span>
-          <button class="chip primary" @click="apply">Apply to position {{ pos }}</button>
+          <button class="chip primary" title="stage this binding for position {{ pos }} and close the picker; nothing is written until Apply changes" @click="apply">Apply</button>
         </div>
 
         <p v-if="notice" class="notice">{{ notice }}</p>

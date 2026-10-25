@@ -4,6 +4,9 @@
 
  * `pos` is the stock position number — the same number a keeb_cell carries —
  * and the label is derived from the binding's token + params, never stored.
+ *
+ * Where the cap sits is not this component's business: KeyboardView places it,
+ * straight from the matrix transform's map order.
  */
 import { computed } from 'vue'
 
@@ -14,10 +17,11 @@ const props = defineProps<{
   display: CapDisplay
   own: boolean
   reserved: boolean
-  /** the grid slot has no key position in the matrix transform */
-  unmapped: boolean
   selected: boolean
-  dimmed: boolean
+  /** this cell has a staged edit that has not been written to the keyboard */
+  pending: boolean
+  /** print the stock position number, for matching a cap to a CELLS record */
+  showPos: boolean
   layerLabel: string
 }>()
 
@@ -26,17 +30,14 @@ const emit = defineEmits<{ (e: 'pick', pos: number): void }>()
 const title = computed(() => {
   const { display } = props
 
-  if (props.unmapped) {
-    return `position ${props.pos}: not wired to the matrix`
-  }
-
   if (props.reserved) {
     return `position ${props.pos}: reserved position — the firmware will not rebind it`
   }
 
   const cap = display.hold ? `${display.main}/${display.hold}` : display.main
+  const staged = props.pending ? ' · staged, not written yet' : ''
 
-  return `${props.layerLabel} · position ${props.pos} · ${cap} · ${display.tokenName}`
+  return `${props.layerLabel} · position ${props.pos} · ${cap} · ${display.tokenName}${staged}`
 })
 </script>
 
@@ -47,27 +48,25 @@ const title = computed(() => {
       `cat-${display.category}`,
       {
         own,
-        inherit: !own && !unmapped && !reserved,
+        inherit: !own && !reserved,
         selected,
-        unmapped,
         reserved,
-        dimmed,
+        pending,
       },
       display.hold ? 'holdtap' : '',
     ]"
-    :disabled="unmapped"
     :title="title"
     @click="emit('pick', pos)"
   >
-    <template v-if="!unmapped">
-      <span v-if="display.hold" class="hold">{{ display.hold }}</span>
-      <span class="main">{{ display.main }}</span>
-      <span v-if="!own" class="src-dot" />
+    <span v-if="showPos || reserved" class="corner">
+      <span v-if="showPos" class="pos-num">{{ pos }}</span>
       <span v-if="reserved" class="lock" title="reserved">🔒</span>
-    </template>
-    <template v-else>
-      <span class="main">·</span>
-    </template>
+    </span>
+
+    <span v-if="display.hold" class="hold">{{ display.hold }}</span>
+    <span class="main">{{ display.main }}</span>
+    <span v-if="!own" class="src-dot" />
+    <span v-if="pending" class="pending-dot" title="staged edit - Push writes it" />
   </button>
 </template>
 
@@ -118,10 +117,38 @@ const title = computed(() => {
 
 .cap.own { border-color: var(--layer-color, var(--accent)); border-width: 2px; }
 .cap.inherit { opacity: 0.72; }
-.cap.dimmed { opacity: 0.45; }
-.cap.unmapped { border-style: dashed; color: var(--text-faint); background: transparent; }
 .cap.reserved { border-style: double; border-width: 3px; }
 .cap.selected { box-shadow: 0 0 0 2px var(--accent); }
+
+/* Top-left corner: the stock position number and the reserved lock share it. */
+.corner {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pos-num {
+  font-size: 8px;
+  font-weight: 700;
+  opacity: 0.55;
+}
+
+/* Staged edit: the local model already shows the new binding, so what has to
+ * be visible is that it is not the keyboard's state yet. */
+.cap.pending { box-shadow: 0 0 0 1px var(--ok); }
+
+.pending-dot {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ok);
+}
 
 .src-dot {
   position: absolute;
@@ -135,9 +162,6 @@ const title = computed(() => {
 }
 
 .lock {
-  position: absolute;
-  left: 3px;
-  top: 2px;
   font-size: 8px;
   opacity: 0.7;
 }
