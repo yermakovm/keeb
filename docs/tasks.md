@@ -208,8 +208,10 @@ survive reboot — **not verified yet** (hardware).
       wipe the RAM table, so devicetree stays the fallback and saved changes
       survive reboot (`zmk/app/src/keymap.c` settings handler). `RESET` clears
       the settings subtree through `zmk_keymap_reset_settings()`.
-- [ ] Notification on persist failure — `SAVE` answers with the settings-core
-      error mapped to `KEEB_ERR_*`; the app side of showing it is Phase 3.
+- [x] Notification on persist failure — `SAVE` answers with the settings-core
+      error mapped to `KEEB_ERR_*`; the app shows it (`WriteResult.saveReason`
+      in `app/src/stores/keymap.ts`, surfaced by `ParamPanel.vue` and
+      `LayerTabs.vue`). Hardware confirmation of the NVS write is still open.
 - [ ] **Acceptance:** a hostile TLV stream cannot lose the config channel or
       leave a broken partial write — the refusal paths are implemented and
       host-tested at the codec level; the full stream test needs hardware.
@@ -231,8 +233,15 @@ App side as built (`app/`, now TypeScript throughout):
       generated table carries — no shared fixture file, because the firmware's
       own table is the fixture.
 - [x] Stores: device session, capabilities, keymap state, pending-edit diff.
-      Prompt-to-save is the Save button plus the `KEEB_EV_SAVED` / `DISCARDED`
-      notifications; there is no localStorage mirror any more.
+      Saving is an explicit `SAVE` to the keyboard (no localStorage mirror of the
+      layout); `KEEB_EV_SAVED` / `DISCARDED` keep the UI in step, and autosave
+      sends that `SAVE` after each accepted write.
+- [x] Autosave: applying and persisting are separate firmware operations, so a
+      write that only reaches the RAM keymap is lost on reboot. The keymap store
+      sends `SAVE` after every accepted `CELLS_SET` and every layer rename /
+      move / add / remove; `autosave` is on by default and remembered per browser
+      (`localStorage` key `keeb.autosave`), and `unsavedWrites` / `hasUnsaved`
+      keep the UI honest when a SAVE is refused or autosave is off.
 - [x] Web Bluetooth adapter (vendor service by UUID, write-without-response /
       notify, MTU shrink handling). **Reconnect handling is not implemented.**
 - [x] Token catalogue: the generator extracts the token table, the grid
@@ -240,6 +249,15 @@ App side as built (`app/`, now TypeScript throughout):
       send a token the device reported as having no driver.
 - [x] Live grid editor on stock positions, layer slots with rename / reorder /
       add / remove / restore, live read-back on every notification.
+- [x] Grid drawn in the transform's **map order**, not by column number: the
+      left half lists cols 0-5 outer edge → gap, the right half lists 11-6 gap
+      → outer edge, so sorting each half by column mirrors the entire right
+      hand and puts the outer top-right corner (position 11) beside the split.
+      `gridHalf()` in `app/src/stores/keymap.ts` reproduces the map, short rows
+      keep their columns, unmapped grid slots render dashed, and a
+      "positions" overlay prints the stock position number in every cap.
+      Checked by `app/tests/grid.test.ts` (hand-written expectations from the
+      board) and by the SSR smoke test (caps appear as 0..59, 12 placeholders).
 - [x] Conflict detection when the firmware lacks a token (`KEEB_TOKEN_UNKNOWN`,
       greyed in the picker, refused locally before it can fail remotely).
 - [x] Tests: `app/tests/codec.test.ts` (framing, CRC, reassembly, fragment
@@ -256,13 +274,76 @@ App side as built (`app/`, now TypeScript throughout):
 - [ ] Keymap export back to `.keymap` DTS text (the UI is write-only into the
       firmware's settings store; the devicetree file stays the factory default).
 
-## Phase 4 — generic settings + screen images (sketched, not scheduled)
+## Phase 4 — live panel (done) + generic settings and images (not scheduled)
+
+### 4a. The status screen became a host-editable model
+
+Chosen model: **a firmware-owned widget table** (option A). Two alternatives were
+considered and rejected for this keyboard:
+
+- *host-rendered framebuffer* — simplest firmware, but a 160×68 1-bit frame is
+  1360 bytes over a 46-byte notification payload, the panel only takes full-frame
+  refreshes, and the screen would go blank the moment the app is closed;
+- *an LVGL widget tree* — RAM pressure, and it fights the existing canvas +
+  `lv_draw_sw_rotate()` + dither path that already owns the glass.
+
+Shipped:
+
+- [x] `keeb-module/boards/shields/keeb/ui/widget_model.{h,c}` — the table
+      (≤ 24 widgets, 8 text slots, 4 value slots), presets, validation, the draw
+      interpreter, and the state formatter that reads ZMK at draw time.
+- [x] `panel_central.c` / `panel_peripheral.c` rewritten to interpret the table
+      instead of hard-coding a layout; the shipped layout is preset 0, so the
+      panel a user had is the panel the firmware starts with.
+- [x] **The right half shows the connected device** — BLE profile index + 1
+      (`1`, `2`, `3`…), `USB` on the cable, `--` when nothing is attached —
+      relayed in `param2` of the existing `keeb,layer-art` behaviour push
+      (`layer_sync.c`), the only split channel that already reaches peripherals.
+- [x] `keeb-module/display/keeb_display.{h,c}` — the `DISPLAY` facade, and the
+      settings subtree `keebui` (table + text slots) re-applied after
+      `settings_load()`. Value slots are deliberately not persisted.
+- [x] `KEEB_NS_DISPLAY` records in `proto/keeb_tlv.h` and a `handle_display()`
+      dispatcher in the engine; `SYS INFO` advertises `KEEB_INFO_F_DISPLAY`.
+- [x] Holding the revert chord now discards the saved keymap **and** the saved
+      panel — one chord, one meaning: "forget what the app saved".
+- [x] `CONFIG_KBEEB_UI_CENTRAL_ART` (default `n`) keeps the ~54 KB of artwork
+      out of the central image, `CONFIG_KBEEB_UI_PERIPHERAL_PRESET` picks the
+      peripheral's boot preset.
+- [x] App side: `stores/display.ts`, `components/PanelEditor.vue`, widget
+      catalog in `data/widgets.ts`, display codec in `proto/tlv.ts`, display
+      handlers in `mockKeyboard.ts`, a `status panel` view in `App.vue`.
+- [x] Tests: `app/tests/display.test.ts` — codec round-trips, the mock engine's
+      refusals, and a parser that reads the **C** preset table out of
+      `widget_model.c` and compares it to the mock's copy. That last check is
+      what caught a preset pip row that the firmware's own validator rejected
+      (`12 + 6 × (7 + 3) > 68`): a panel its own preset cannot be written back
+      to is a panel that cannot be edited.
+
+Measured cost (left / central): flash 527 804 B (65.4 %), RAM 133 036 B (50.8 %).
+Right / peripheral: 468 504 B (58.1 %), RAM 102 592 B (39.1 %) — the peripheral
+carries the artwork; `CONFIG_KBEEB_UI_PERIPHERAL_PRESET=1` (DEVICE only) drops
+it from the image.
+
+Still open in 4a:
+
+- [ ] Host-driven content on the **peripheral** panel. Its table is compiled in
+      and `DISPLAY` is central-only; a rich peripheral layout needs chunked
+      behaviour relay, which the 16-byte behaviour-name channel does not give.
+- [ ] `DISPLAY_INFO` grew by one byte (`layers`, so the editor can measure a pip
+      row the way the firmware does). Verified against the mock and the host
+      codec test, not against hardware.
+- [ ] Nothing here has run on a real keyboard yet.
+
+### 4b. Not scheduled
 
 - [ ] `SETTINGS` namespace handler: idle-sleep / idle-timeout runtime value
       (needs our own watchdog or a minimal core override — decision point),
       LED pattern, screen rotation/selection.
 - [ ] `IMAGE` namespace: chunked blob upload, storage partition design,
       replacing the const `gen_art.py` pipeline with a runtime image store.
+      The panel namespace reserves `KEEB_NS_IMAGE`, and the 32 KB NVS settings
+      store is not where images belong — a dedicated partition or a packed 1-bit
+      format has to be decided first.
 
 ## Risks & mitigations
 
@@ -283,9 +364,15 @@ App side as built (`app/`, now TypeScript throughout):
   token hash must cover the layer/position count too.
 - **No host connection = no config** (BLE-only): expected, recovery over BLE
   requires the keyboard to be connectable; document it in the app UI.
+- **Deep sleep blanks the panel and wake is a reboot** → anything the user wants
+  to keep on the screen has to be in `keebui` settings, not in RAM. Value slots
+  are lost by design.
+- **Panel writes are unauthenticated beyond the bond** → any bonded client can
+  redraw the screen. Writes are validated per entry, the whole-table write is
+  all-or-nothing, and `DISPLAY_RESET` / the revert chord are the escape hatches.
 
 ## Out of scope for this feature
 
 ZMK Studio (its protobuf RPC, subsystem/handler linker sections, transports and
 locking), USB TLV path, live editing of combos/conditional-layer/hold-tap
-parameters, image upload (Phase 4).
+parameters, image upload (Phase 4b).

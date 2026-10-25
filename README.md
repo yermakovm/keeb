@@ -114,8 +114,12 @@ after a ZMK rebase, that is the one file to re-audit.
 (`magic | version | flags | msg_id | frag_off | frag_len | msg_len | crc32`),
 payload = records of `type(u16) | len(u16) | value`. A message is up to
 `KEEB_TLV_MSG_MAX` (1024 B) bytes and is fragmented by the sender to
-`CONFIG_BT_L2CAP_TX_MTU - 3`, so a 700-byte keymap dump travels as twelve 62-byte
-notifications. Records are applied in order, and the reply carries an ACK record
+`CONFIG_BT_L2CAP_TX_MTU - 3 - 16` (46 B: the ATT opcode and handle, and the
+packet header itself, all of which live inside the notification), so a 700-byte
+keymap dump travels as sixteen notifications. The peer's real MTU is checked per
+connection before a fragment is handed to `bt_gatt_notify`, because Zephyr
+reports an oversized PDU as `-ENOMEM` - the same code an empty TX pool gives,
+and the wrong reason to retry the same bytes. Records are applied in order, and the reply carries an ACK record
 as record 0 plus the response records; a failure in one record is reported as
 the ACK code while earlier records stay applied — only `CELLS_SET` is
 all-or-nothing (validate every cell with `zmk_behavior_validate_binding` first,
@@ -139,9 +143,13 @@ the firmware cannot execute.
 positions 0 and 11, the outer top corners: `&kp PLUS` / `&kp MINUS`) are refused
 by the engine (`KEEB_ERR_RESERVED_POSITION`), so a layout from the configurator
 can never take away the revert chord. Holding *all* reserved positions for
-`revert-hold-ms` (3 s) discards the saved keymap and falls back to the keymap
-file. It is detected on raw key positions, so no layout — and no broken or
-missing layout — can lock the configurator out. Persistence is ZMK's own:
+`revert-hold-ms` (3 s) runs `keeb_keymap_discard()`, i.e. ZMK's
+`zmk_keymap_discard_changes()`: unsaved changes are dropped and the keyboard
+returns to its saved overlay (the keymap file when nothing is saved). It is
+detected on raw key positions, so no layout — and no broken or missing layout —
+can lock the configurator out. Clearing a *saved* layout without the app needs
+`keeb_keymap_reset()`, which the chord does not call today.
+Persistence is ZMK's own:
 `SAVE` / `DISCARD` / `RESET` go to `zmk_keymap_save_changes()`,
 `zmk_keymap_discard_changes()`, `zmk_keymap_reset_settings()`.
 
@@ -181,11 +189,53 @@ ZMK's built-in status screen is replaced by the keeb panels
   `zmk_peripheral_battery_state_changed`, which is why
   `CONFIG_ZMK_BATTERY_REPORTING=y` and
   `CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING=y` must stay on).
-- **right (peripheral)**: fixed rounded frame, only the layer artwork changes.
-  No battery, no link state — the left half owns all readouts.
+- **right (peripheral)**: the layer artwork plus **which device this keyboard is
+  talking to** — `1`, `2`, `3` for BLE profile 0/1/2, `USB` over the cable, `--`
+  when nothing is connected. No battery, no link state — the left half owns the
+  rest of the readouts.
 
 Both are 160x68 1-bit panels drawn into an L8 canvas that LVGL dithers to the
 panel (same trick as ZMK's nice!view custom screen).
+
+### The panel is a widget table
+
+`keeb-module/boards/shields/keeb/ui/widget_model.c` holds the screen as a
+bounded table of drawing primitives — up to `KBEEB_UI_WIDGET_MAX` (24) entries
+of `{kind, source, x, y, w, h, style}` in the **logical** UI space — plus eight
+text slots and four value slots. It is not an LVGL widget tree: the table is
+interpreted by one painter, which is what keeps the existing canvas, rotation
+and dither path intact.
+
+- **kind** is what to draw: frame, fill, rule, text, bar, battery, pip row,
+  bolt, artwork.
+- **source** is what value to draw it from, and the firmware reads that value
+  from ZMK at draw time — layer index/name/pips, both batteries, split link,
+  host link, charging, the connected device. The configurator moves these
+  readouts; it can never set them.
+- The only host-owned values are **text slots** (8 × 24 bytes, persisted) and
+  **value slots** (4 × int16, live only — never saved, because a number the app
+  pushes is not a setting).
+- Presets are compiled in: `STATUS` and `MINIMAL` on the central, `ART + DEVICE`
+  and `DEVICE` on the peripheral (`CONFIG_KBEEB_UI_PERIPHERAL_PRESET`, default 0
+  — preset 1 drops the artwork and roughly 60 KB of flash from the right half).
+- A host-written table is validated entry by entry (`keeb_ui_validate_widget`):
+  known kind, a source that can feed that kind, geometry inside the panel, and a
+  pip row measured as `layer_count × (pip_w + gap)`.
+- Artwork on the central is behind `CONFIG_KBEEB_UI_CENTRAL_ART` (default `n`):
+  the art is ~54 KB of A8 stencils and a panel that shows readouts should not
+  pay for it. `DISPLAY_INFO` reports whether the half you are talking to can
+  draw it.
+
+**Persistence** is a settings subtree of its own (`keebui`: the table plus the
+text slots), applied after `settings_load()` so a saved panel replaces the boot
+preset. `DISPLAY_SAVE` writes it, `DISPLAY_DISCARD` returns to it, and
+`DISPLAY_RESET` deletes it and falls back to the preset. Holding the keymap's
+revert chord discards **both** saved settings — the layout and the panel.
+
+**How the right half learns the device id**: the same `keeb,layer-art` behaviour
+that carries the layer carries the connected endpoint in its second parameter
+(`keeb-module/boards/shields/keeb/ui/layer_sync.c`). ZMK replicates behaviour
+invocations to peripherals; it does not replicate endpoint state.
 
 **Rotation**: the UI is laid out in the viewing orientation and rotated with
 `lv_draw_sw_rotate()` before it reaches the framebuffer. Pick it in Kconfig
@@ -225,6 +275,32 @@ and re-sends it when a peripheral connects (polled every
 `KBEEB_UI_LAYER_SYNC_POLL_MS`, since ZMK raises no central-side connect event).
 The behaviour node is named `la` on purpose: a behaviour's device name is its
 node name.
+
+## Editing the panel from the app
+
+The live configurator (`app/`) edits this table over the same KEEB TLV channel
+as the keymap, in the `DISPLAY` namespace that the protocol reserved from the
+start:
+
+| record | what it does |
+|---|---|
+| `DISPLAY_INFO` | the real limits: widget count, slot count, slot length, kind/source range, logical vs panel size, rotation, `sizeof(keeb_widget)`, layer count, whether artwork is drawable |
+| `PRESET_NAME` | one per preset, so the picker is built from the keyboard |
+| `DISPLAY_GET` → `DISPLAY` | the table, then the text slots and value slots as their own records |
+| `DISPLAY_SET` | replace the whole table (validated as a unit: nothing is drawn if one entry is bad) |
+| `WIDGET_SET` | replace or append one entry |
+| `TEXT_SET` / `VALUE_SET` | write a host-owned slot |
+| `PRESET_SET` | restore a compiled-in preset, including its own text |
+| `DISPLAY_SAVE` / `DISPLAY_DISCARD` / `DISPLAY_RESET` | persist / revert / delete the saved panel |
+| `DISPLAY_BLANK` | clear the glass once, on the next paint |
+
+Applying and persisting stay two operations, exactly as in the keymap: a
+`DISPLAY_SET` redraws the panel now, and only `DISPLAY_SAVE` survives a reboot
+or a deep sleep. `SYS INFO` advertises `KEEB_INFO_F_DISPLAY` so a configurator
+can tell a panel-capable build from one that is not.
+
+Image upload (`KEEB_NS_IMAGE`) is still unimplemented: the panel today selects
+compiled-in artwork, it does not receive bitmaps.
 
 ## Presentation deck (docs/)
 
