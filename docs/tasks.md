@@ -130,6 +130,9 @@ silently disagree about what a token means.
       the right half.
 - [ ] `config/keeb.keymap`: spare placeholder layers for add/remove capacity —
       still open, so `LAYER_ADD` will fail with `NO_CAPACITY` until they exist.
+      Placeholder layers are now six lines each (shared rows, see the hygiene
+      section), so adding them is cheap; the ceiling is ZMK's compile-time
+      `ZMK_KEYMAP_LAYERS_LEN`, i.e. the number of layer nodes in this file.
 - [x] `make clean && make left right` — both halves build. Delta measured
       against the pre-engine build: left 506704 → **523128 B** flash
       (788 KB, 64.83%), RAM **131884 B** of 256 KB (50.31%); right (no engine)
@@ -347,6 +350,60 @@ Still open in 4a:
       The panel namespace reserves `KEEB_NS_IMAGE`, and the 32 KB NVS settings
       store is not where images belong — a dedicated partition or a packed 1-bit
       format has to be decided first.
+
+## Config & contract hygiene (refactor pass)
+
+- [x] **One position table.** `keeb-module/dts/keeb-positions.dtsi` names every
+      position (`KEEB_POS_L_TOP_0` … `KEEB_POS_R_THUMB_3`), groups them per half
+      (`KEEB_POS_LEFT_HALF`, `KEEB_POS_RIGHT_HALF`, alpha / extra / thumb) and
+      names the layer indices (`KEEB_LAYER_HOME` … `KEEB_LAYER_GAME`). The
+      keymap, `keeb.dtsi`'s `reserved-positions`, the combos and the hold-tap
+      trigger lists all read from it. Naming convention: **the same local column
+      on both halves** — each half numbers its own columns 0-5 and
+      `keeb_right.overlay` adds `col-offset = <6>`, so the mirror of global
+      column `c` is `c + 6`, not `11 - c`.
+- [x] **Home-row hold-taps fixed and mirrored.** HM_J/HM_K/HM_L/HM_SM bound
+      `&hml`, the left-hand behavior, so the right hand's mods could only be
+      triggered by the right half — the false-hold case positional triggering
+      exists to remove — while `&hmr` was declared and used by nothing. Now
+      `&hmr` binds the right home row and both trigger lists are the named half
+      lists. The generated devicetree trigger lists are identical to before; only
+      the four bindings moved.
+- [x] **The generator is the gate.** `app/scripts/gen-contract.mjs` reads the
+      position table and fails the build when: a `&mo/&lt/&to/&tog` argument is a
+      layer *name* or an out-of-range index; a `KEEB_LAYER_*` value does not
+      match the keymap's definition order; a named group does not match the
+      matrix transform's map; the two halves overlap or fail to cover the grid; a
+      `_L_*`/`_R_*` pair is not the same column of its own half; a hold-tap
+      triggers from anything but one whole half; a behavior declared in the
+      keymap file is bound by nothing. Each guard was checked by mutating the
+      config and watching it fail.
+- [x] **Placeholder layers de-duplicated.** The six rows are defined once as
+      `KEEB_ROW_TOP / _QWERTY / _MODS / _LOWER / _CLUSTER` plus
+      `KEEB_THUMB_BACK / _THUMB_RIGHT`; every layer names the rows it shares and
+      spells out only what it changes. `app/src/proto/zmk.gen.ts` is identical
+      before and after — the diff caught a transcribed `LSHFT` → `LCTRL` slip in
+      GAME row 3 — so this was a readability change only.
+- [x] Drifted comments corrected: the map's row-5 columns, the "mirror of col `c`
+      is `11-c`" claim, the reserved corners' keycodes (EQUAL/MINUS, not
+      PLUS/MINUS) and the reboot / bootloader chord labels.
+- [ ] Split `keeb-module/proto/keeb_tlv.h` into wire / records / API headers with
+      `_Static_assert` on the wire struct sizes.
+- [ ] Table-driven dispatch in `keeb-module/engine/keeb_engine.c`, keeping
+      `CELLS_SET` and `APPLY_*` explicit.
+- [ ] Split `ui/widget_model.c` (preset / validate / state / draw / facade) and
+      give layer state + connect polling one owner, `ui/layer_state.c`.
+- [ ] Generate the protocol constants in `app/src/proto/constants.ts` from
+      `keeb-module/proto/keeb_tlv.h` instead of hand-copying them.
+- [ ] One env source for `Makefile` / `env.sh` / `env.mk`, which repeat the same
+      paths today, plus the stale `module/` references.
+- [ ] Rename the `KBEEB_*` Kconfig symbols to `KEEB_*`.
+
+**Verified after each step:** `make clean && make left && make right` (left
+531172 B flash / 133164 B RAM, right 471872 B / 102848 B — unchanged across the
+pass), `make tlv-test` (87 checks, 0 failures), `npm run gen` (28 tokens, hash
+`0x5f56a415`, 60 positions × 6 layers, 686 named params) and `npm test`
+(87 pass).
 
 ## Risks & mitigations
 

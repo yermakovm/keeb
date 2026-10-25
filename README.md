@@ -74,6 +74,7 @@ needs `CONFIG_ZMK_USB_LOGGING=y` in `config/keeb.conf`).
 | to change… | edit |
 |---|---|
 | keymap, layers, combos, Kconfig of the build | `config/keeb.keymap`, `config/keeb.conf` |
+| key **position** names and layer indices | `keeb-module/dts/keeb-positions.dtsi` (included by both the keymap and `keeb.dtsi`) |
 | matrix wiring, shields, battery sense, display, behavior nodes | `keeb-module/boards/shields/keeb/keeb.dtsi`, `keeb_{left,right}.overlay`, `keeb_{left,right}.conf` |
 | a behavior (e.g. right-half reboot forwarding) | `keeb-module/boards/shields/keeb/behavior_*.c` + `keeb-module/dts/bindings/behaviors/*.yaml` |
 | status screen panels | `keeb-module/boards/shields/keeb/ui/` |

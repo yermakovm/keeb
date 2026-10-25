@@ -56,10 +56,34 @@
 #define TH_SPC &lt KEEB_LAYER_FUN SPC
 #define TH_HOME &lt KEEB_LAYER_MOUSE HOME
 
+// Mouse-layer pointer keys (MOUSE layer, right home row)
 #define MS_D &mmv MOVE_DOWN
 #define MS_U &mmv MOVE_UP
 #define MS_R &mmv MOVE_RIGHT
 #define MS_L &mmv MOVE_LEFT
+
+/* The six shared rows, drawn once. Row order is the matrix order (rows 0-5 of
+ * keeb.dtsi's transform): left half cols 0-5, right half cols 6-11, the right
+ * half drawn outward from the gap.
+ *
+ *   KEEB_ROW_TOP       row 0   number row
+ *   KEEB_ROW_QWERTY    row 1   Q-P
+ *   KEEB_ROW_MODS      row 2   home row, home-row mods included
+ *   KEEB_ROW_LOWER     row 3   Z-/   (HOME keeps its own variant of this row)
+ *   KEEB_ROW_CLUSTER   row 4   the four inner-cluster keys
+ *   KEEB_THUMB_BACK    row 5   left thumb, TAB / SPC / back to HOME
+ *   KEEB_THUMB_RIGHT   row 5   right thumb, PG_UP PG_DN BSPC ENTER
+ *
+ * A layer below names the rows it shares and spells out only the rows it
+ * changes — which is all a layer ever is: HOME plus a few cells. */
+#define KEEB_ROW_TOP     &kp EQUAL  &kp N1   &kp N2   &kp N3   &kp N4   &kp N5      &kp N6   &kp N7   &kp N8   &kp N9   &kp N0   &kp MINUS
+#define KEEB_ROW_QWERTY  &kp GRAVE  &kp Q    &kp W    &kp E    &kp R    &kp T       &kp Y    &kp U    &kp I    &kp O    &kp P    &kp BSLH
+#define KEEB_ROW_MODS    &kp ESC    HM_A     HM_S     HM_D     HM_F     &kp G       &kp H    HM_J     HM_K     HM_L     HM_SM    &kp SQT
+#define KEEB_ROW_LOWER   &kp LCTRL  &kp Z    &kp X    &kp C    &kp V    &kp B       &kp N    &kp M    &kp COMMA &kp DOT &kp FSLH &kp RALT
+#define KEEB_ROW_CLUSTER &kp LBKT   &kp RBKT                                                              &kp BSLH  &kp RBRC
+
+#define KEEB_THUMB_BACK  &kp TAB    &kp SPC  &mo KEEB_LAYER_HOME &kp END
+#define KEEB_THUMB_RIGHT &kp PG_UP  &kp PG_DN &kp BSPC &kp ENTER
 
 / {
 	/* Timeless home-row mods (recommended config from this ZMK version's
@@ -112,124 +136,91 @@ keymap {
     home_layer {
         display-name = "HOME";
         bindings = <
-        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp SQT
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp HOME  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp END
-        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
-        //									 └────────┴────────┘                            		        └────────┴────────┘
-        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      TH_TAB    TH_SPC  TH_HOME  &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
-        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+            KEEB_ROW_TOP
+            KEEB_ROW_QWERTY
+            KEEB_ROW_MODS
+            &kp HOME  &kp Z   &kp X   &kp C   &kp V   &kp B          &kp N    &kp M    &kp COMMA &kp DOT &kp FSLH &kp END
+            KEEB_ROW_CLUSTER
+            TH_TAB  TH_SPC  TH_HOME  &kp END   KEEB_THUMB_RIGHT
         >;
     };
 
-		navigation_layer {
-			display-name = "NAV";
-			bindings = <
-        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     	&kp LEFT &kp DOWN  &kp UP  &kp RIGHT &kp SEMI &kp SQT
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
-        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
-        //									 └────────┴────────┘                            		        └────────┴────────┘
-        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp TAB &kp SPC  &mo KEEB_LAYER_HOME &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
-        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
-        >;		
-		};
+    navigation_layer {
+        display-name = "NAV";
+        /* Row 2 becomes the arrow cluster under the right hand; the left
+         * thumb returns to HOME instead of momentary-shifting. */
+        bindings = <
+            KEEB_ROW_TOP
+            KEEB_ROW_QWERTY
+            &kp ESC   HM_A    HM_S    HM_D    HM_F    &kp G          &kp LEFT &kp DOWN &kp UP   &kp RIGHT &kp SEMI &kp SQT
+            KEEB_ROW_LOWER
+            KEEB_ROW_CLUSTER
+            KEEB_THUMB_BACK  KEEB_THUMB_RIGHT
+        >;
+    };
 
-		function_layer {
-			display-name = "FUN/BT";
-			bindings = <
-        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp F12  &kp F1   &kp F2   &kp F3    &kp F4  &kp F5     		&kp F6   &kp F7   &kp F8   &kp F9   &kp F10 &kp F11
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &bt BT_NXT &bt BT_PRV &kp E &kp R   &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp SQT
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
-        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
-        //									 └────────┴────────┘                            		        └────────┴────────┘
-        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp TAB &kp SPC  &mo KEEB_LAYER_HOME &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
-        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
-        >;		
-		};
+    function_layer {
+        display-name = "FUN/BT";
+        /* Row 0 is F1-F12 (F12 first: it is the outer key of the row and the
+         * one you reach with the pinky next to the corner). Row 1's two inner
+         * keys switch BLE hosts. */
+        bindings = <
+            &kp F12   &kp F1  &kp F2  &kp F3  &kp F4  &kp F5         &kp F6   &kp F7   &kp F8   &kp F9   &kp F10  &kp F11
+            &kp GRAVE &bt BT_NXT &bt BT_PRV &kp E &kp R &kp T        &kp Y    &kp U    &kp I    &kp O    &kp P    &kp BSLH
+            KEEB_ROW_MODS
+            KEEB_ROW_LOWER
+            KEEB_ROW_CLUSTER
+            KEEB_THUMB_BACK  KEEB_THUMB_RIGHT
+        >;
+    };
 
     mouse_layer {
         display-name = "MOUSE";
+        /* The right home row is the pointer: J/K/L/; become down/up/left/right
+         * and the right thumb becomes scroll + clicks. The left thumb keeps
+         * its momentary layers so NAV and FUN stay reachable from MOUSE. */
         bindings = <
-        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     MS_D     MS_U     MS_L     MS_R   &kp SQT
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
-        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
-        //									 └────────┴────────┘                            		        └────────┴────────┘
-        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      TH_TAB    TH_SPC  TH_HOME  &kp END 		  &msc SCRL_UP &msc SCRL_DOWN &mkp LCLK &mkp RCLK
-        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
+            KEEB_ROW_TOP
+            KEEB_ROW_QWERTY
+            &kp ESC   HM_A    HM_S    HM_D    HM_F    &kp G          &kp H    MS_D     MS_U     MS_L     MS_R     &kp SQT
+            KEEB_ROW_LOWER
+            KEEB_ROW_CLUSTER
+            TH_TAB  TH_SPC  TH_HOME  &kp END   &msc SCRL_UP &msc SCRL_DOWN &mkp LCLK &mkp RCLK
         >;
     };
 
+    media_layer {
+        display-name = "MEDIA";
+        /* Placeholder: identical to HOME apart from the outer keys of row 3,
+         * so the layer is fully mapped while MEDIA is still unreachable.
+         * Reachable only through a &mo/&to/&tog binding added on the HOME row
+         * or from the configurator. */
+        bindings = <
+            KEEB_ROW_TOP
+            KEEB_ROW_QWERTY
+            KEEB_ROW_MODS
+            KEEB_ROW_LOWER
+            KEEB_ROW_CLUSTER
+            KEEB_THUMB_BACK  KEEB_THUMB_RIGHT
+        >;
+    };
 
-		media_layer {
-			display-name = "MEDIA";
-			bindings = <
-        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp SQT
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
-        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
-        //									 └────────┴────────┘                            		        └────────┴────────┘
-        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp TAB &kp SPC  &mo KEEB_LAYER_HOME &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
-        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
-        >;	
-		};
-
-		game_layer {
-			display-name = "GAME";
-			bindings = <
-        // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp TAB &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    &kp A   &kp S     &kp D    &kp F    &kp G     		&kp H     &kp J    &kp K   &kp L   &kp SEMI  &kp SQT
-        // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-           &kp LSHFT  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
-        // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
-        //									 └────────┴────────┘                            		        └────────┴────────┘
-        // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp LCTRL &kp SPC  &mo KEEB_LAYER_HOME &kp END 		&kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
-        // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
-        >;		
-		};
-	};
+    game_layer {
+        display-name = "GAME";
+        /* Plain keys instead of home-row hold-taps: a game wants modifiers held
+         * on their own keys, not a mod that has to survive a roll. TAB sits on
+         * GRAVE, where the left pinky already is, and the left pinky's outer
+         * row-3 key is a real LSHIFT instead of LCTRL. */
+        bindings = <
+            KEEB_ROW_TOP
+            &kp TAB   &kp Q   &kp W   &kp E   &kp R   &kp T          &kp Y    &kp U    &kp I    &kp O    &kp P    &kp BSLH
+            &kp ESC   &kp A   &kp S   &kp D   &kp F   &kp G          &kp H    &kp J    &kp K    &kp L    &kp SEMI &kp SQT
+            &kp LSHFT &kp Z   &kp X   &kp C   &kp V   &kp B          &kp N    &kp M    &kp COMMA &kp DOT &kp FSLH &kp RALT
+            KEEB_ROW_CLUSTER
+            &kp LCTRL &kp SPC &mo KEEB_LAYER_HOME &kp END  KEEB_THUMB_RIGHT
+        >;
+    };
+};
 
 	/* Hold both outer top corners (KEEB_POS_L_TOP_0 + KEEB_POS_R_TOP_0, i.e.
 	 * EQUAL + MINUS in HOME today) to clear ALL BLE host bonds/profiles
