@@ -8,6 +8,7 @@
  * Derived from the firmware's own sources:
  *   keeb-module/boards/shields/keeb/keeb.dtsi   token table, reserved positions, grid
  *   config/keeb.keymap                          stock layers and bindings
+ *   config/keeb.conf                            CONFIG_ZMK_KEYBOARD_NAME, the advertised name
  *   zmk/app/dts/behaviors/*.dtsi                binding cells, display names
  *   zmk/app/include/dt-bindings/zmk/*.h         keycodes and behavior arguments
  *
@@ -22,6 +23,7 @@ import type { GridCell, StockLayer, TokenDef } from './types.ts'
 export const GENERATED_FROM = {
   "dtsi": "keeb-module/boards/shields/keeb/keeb.dtsi",
   "keymap": "config/keeb.keymap",
+  "conf": "config/keeb.conf",
   "zmk": "../zmk",
   "headers": [
     "keys.h",
@@ -34,6 +36,15 @@ export const GENERATED_FROM = {
     "outputs.h"
   ]
 }
+
+/** CONFIG_ZMK_KEYBOARD_NAME: the name the keyboard advertises, and the only
+ * thing a Web Bluetooth chooser may filter this device by. ZMK advertises the
+ * HID service (0x1812) and Battery (0x180F), but 0x1812 is on the Web Bluetooth
+ * GATT blocklist - filtering by it is a SecurityError, not a narrowing. A name
+ * filter has to come from the firmware config or it stops matching the day the
+ * keyboard is renamed.
+ */
+export const KEYBOARD_NAME = "keeb"
 
 /** keeb,engine:tokens in devicetree order — token id === index. */
 export const TOKENS: TokenDef[] = [
@@ -285,7 +296,7 @@ export const KEY_COUNT = 60
 export const LAYER_CAPACITY = 6
 
 /** ZMK's layer names at boot (slot index === layer id before any reordering). */
-export const STOCK_LAYER_NAMES = ["HOME","NAV","FUN","MOUSE","MEDIA","GAME"]
+export const STOCK_LAYER_NAMES = ["HOME","NAV","FUN/BT","MOUSE","MEDIA","GAME"]
 
 /** The layout the firmware falls back to after DISCARD/RESET. */
 export const STOCK_LAYERS: StockLayer[] = [
@@ -294,7 +305,7 @@ export const STOCK_LAYERS: StockLayer[] = [
     "cells": [
       {
         "token": 0,
-        "param1": 34013230,
+        "param1": 458798,
         "param2": 0
       },
       {
@@ -409,7 +420,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -469,12 +480,12 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013232,
+        "param1": 458804,
         "param2": 0
       },
       {
         "token": 0,
-        "param1": 458976,
+        "param1": 458826,
         "param2": 0
       },
       {
@@ -529,7 +540,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 458982,
+        "param1": 458829,
         "param2": 0
       },
       {
@@ -544,7 +555,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -568,7 +579,7 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 458826
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458829,
         "param2": 0
       },
@@ -578,7 +589,7 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458830,
         "param2": 0
       },
@@ -599,7 +610,7 @@ export const STOCK_LAYERS: StockLayer[] = [
     "cells": [
       {
         "token": 0,
-        "param1": 34013230,
+        "param1": 458798,
         "param2": 0
       },
       {
@@ -714,7 +725,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -774,7 +785,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013232,
+        "param1": 458804,
         "param2": 0
       },
       {
@@ -849,7 +860,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -869,11 +880,11 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 3,
-        "param1": 458826,
+        "param1": 0,
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458829,
         "param2": 0
       },
@@ -883,7 +894,7 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458830,
         "param2": 0
       },
@@ -900,7 +911,7 @@ export const STOCK_LAYERS: StockLayer[] = [
     ]
   },
   {
-    "name": "FUN",
+    "name": "FUN/BT",
     "cells": [
       {
         "token": 0,
@@ -968,13 +979,13 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 0,
-        "param1": 458772,
+        "token": 14,
+        "param1": 1,
         "param2": 0
       },
       {
-        "token": 0,
-        "param1": 458778,
+        "token": 14,
+        "param1": 2,
         "param2": 0
       },
       {
@@ -1019,7 +1030,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -1079,7 +1090,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013232,
+        "param1": 458804,
         "param2": 0
       },
       {
@@ -1154,7 +1165,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -1174,11 +1185,11 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 3,
-        "param1": 458826,
+        "param1": 0,
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458829,
         "param2": 0
       },
@@ -1188,7 +1199,7 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458830,
         "param2": 0
       },
@@ -1209,7 +1220,7 @@ export const STOCK_LAYERS: StockLayer[] = [
     "cells": [
       {
         "token": 0,
-        "param1": 34013230,
+        "param1": 458798,
         "param2": 0
       },
       {
@@ -1324,7 +1335,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -1384,7 +1395,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013232,
+        "param1": 458804,
         "param2": 0
       },
       {
@@ -1459,7 +1470,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -1483,7 +1494,7 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 458826
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458829,
         "param2": 0
       },
@@ -1514,7 +1525,7 @@ export const STOCK_LAYERS: StockLayer[] = [
     "cells": [
       {
         "token": 0,
-        "param1": 34013230,
+        "param1": 458798,
         "param2": 0
       },
       {
@@ -1629,7 +1640,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -1689,7 +1700,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013232,
+        "param1": 458804,
         "param2": 0
       },
       {
@@ -1764,7 +1775,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -1784,11 +1795,11 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 3,
-        "param1": 458826,
+        "param1": 0,
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458829,
         "param2": 0
       },
@@ -1798,7 +1809,7 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458830,
         "param2": 0
       },
@@ -1819,7 +1830,7 @@ export const STOCK_LAYERS: StockLayer[] = [
     "cells": [
       {
         "token": 0,
-        "param1": 34013230,
+        "param1": 458798,
         "param2": 0
       },
       {
@@ -1934,7 +1945,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -1994,7 +2005,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013232,
+        "param1": 458804,
         "param2": 0
       },
       {
@@ -2069,7 +2080,7 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 0,
-        "param1": 34013231,
+        "param1": 458801,
         "param2": 0
       },
       {
@@ -2089,11 +2100,11 @@ export const STOCK_LAYERS: StockLayer[] = [
       },
       {
         "token": 3,
-        "param1": 458826,
+        "param1": 0,
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458829,
         "param2": 0
       },
@@ -2103,7 +2114,7 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 3,
+        "token": 0,
         "param1": 458830,
         "param2": 0
       },

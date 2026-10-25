@@ -3,7 +3,7 @@
  *
  * HOME is a full 12-column grid (6 left PLUS 6 right, split marked by the wider
  * gap): 4 alpha rows, a 4-key extra row (LBKT/RBKT on the left half,
- * LBRC/RBRC on the right), and an 8-key thumb row = 60 positions (0..59).
+ * BSLH/RBRC on the right), and an 8-key thumb row = 60 positions (0..59).
  * The other four layers are placeholders "for now": they duplicate the HOME
  * grid so every position is mapped while the matrix is brought up.
  *
@@ -13,9 +13,16 @@
  * this grid stays visually clean regardless of wiring.
  * Replace the placeholder layers with real per-layer content as needed.
  *
- * NOTE: the only working layer switches are &mo 1 (NAV) and &mo 2 (FUN) in the
- * thumb row, present in every layer. &to 3 / &to 4 were dropped by the HOME
- * copy, so MEDIA and GAME are defined but not yet reachable.
+ * NOTE: a layer behavior (&mo / &to / &lt / &tog) takes a layer *index*, not a
+ * key name. `&mo HOME` compiles happily, passes the HOME keycode (0x07004a) as
+ * the layer id, and the key silently does nothing - which is what these bindings
+ * used to be. Indices are the definition order below:
+ * HOME 0, NAV 1, FUN/BT 2, MOUSE 3, MEDIA 4, GAME 5.
+ *
+ * Reachable today: NAV and FUN from the HOME/MOUSE thumb hold-taps (TH_TAB
+ * &lt 1, TH_SPC &lt 2, TH_HOME &lt 3), HOME as &mo 0 from every other layer,
+ * GAME from the combo at positions 53+58 (&tog 5). MEDIA is defined but not yet
+ * reachable.
  *
  * Layer names double as the artwork lookup order for tools/gen_art.py.
  */
@@ -24,6 +31,7 @@
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/pointing.h>
+#include <dt-bindings/zmk/bt.h>
 
 // Home-row mods: left-hand A/S/D/F, right-hand J/K/L/;
 #define HM_A &hml LGUI A
@@ -36,7 +44,7 @@
 #define HM_K &hml RCTRL K
 #define HM_J &hml RSHFT J
 
-// Thumb hold-momentary layers
+// Thumb hold-momentary layers (layer indices, not names - see the NOTE above)
 #define TH_TAB &lt 1 TAB
 #define TH_SPC &lt 2 SPC
 #define TH_HOME &lt 3 HOME
@@ -90,18 +98,18 @@ keymap {
         display-name = "HOME";
         bindings = <
         // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp RBRC
+            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp SQT
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
+            &kp HOME  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp END
         // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
         //									 └────────┴────────┘                            		        └────────┴────────┘
         // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      TH_TAB    TH_SPC  TH_HOME  &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+												      TH_TAB    TH_SPC  TH_HOME  &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
         // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
         >;
     };
@@ -110,38 +118,38 @@ keymap {
 			display-name = "NAV";
 			bindings = <
         // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H    &kp DOWN  &kp UP &kp LEFT  &kp RIGHT &kp RBRC
+            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     	&kp LEFT &kp DOWN  &kp UP  &kp RIGHT &kp SEMI &kp SQT
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
             &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
         // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
         //									 └────────┴────────┘                            		        └────────┴────────┘
         // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp TAB &kp SPC  &mo HOME &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+												      &kp TAB &kp SPC  &mo 0 &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
         // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
         >;		
 		};
 
 		function_layer {
-			display-name = "FUN";
+			display-name = "FUN/BT";
 			bindings = <
         // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
             &kp F12  &kp F1   &kp F2   &kp F3    &kp F4  &kp F5     		&kp F6   &kp F7   &kp F8   &kp F9   &kp F10 &kp F11
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+            &kp GRAVE &bt BT_NXT &bt BT_PRV &kp E &kp R   &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp RBRC
+            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp SQT
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
             &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
         // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
         //									 └────────┴────────┘                            		        └────────┴────────┘
         // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp TAB &kp SPC  &mo HOME &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+												      &kp TAB &kp SPC  &mo 0 &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
         // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
         >;		
 		};
@@ -150,18 +158,18 @@ keymap {
         display-name = "MOUSE";
         bindings = <
         // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     MS_D     MS_U     MS_L     MS_R   &kp RBRC
+            &kp ESC    HM_A     HM_S     HM_D     HM_F    &kp G     		&kp H     MS_D     MS_U     MS_L     MS_R   &kp SQT
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
             &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
         // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
         //									 └────────┴────────┘                            		        └────────┴────────┘
         // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      TH_TAB    TH_SPC  TH_HOME  &mo END 		  &msc SCRL_UP &msc SCRL_DOWN &mkp LCLK &mkp RCLK
+												      TH_TAB    TH_SPC  TH_HOME  &kp END 		  &msc SCRL_UP &msc SCRL_DOWN &mkp LCLK &mkp RCLK
         // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
         >;
     };
@@ -171,18 +179,18 @@ keymap {
 			display-name = "MEDIA";
 			bindings = <
         // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+            &kp GRAVE &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp RBRC
+            &kp ESC    HM_A     HM_S     HM_D      HM_F    &kp G     		&kp H     HM_J     HM_K     HM_L     HM_SM   &kp SQT
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
             &kp LCTRL  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
         // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
         //									 └────────┴────────┘                            		        └────────┴────────┘
         // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp TAB &kp SPC  &mo HOME &mo END 		  &kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+												      &kp TAB &kp SPC  &mo 0 &kp END 		  &kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
         // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
         >;	
 		};
@@ -191,18 +199,18 @@ keymap {
 			display-name = "GAME";
 			bindings = <
         // ┌────────┬────────┬────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┬────────┬────────┐
-            &kp PLUS  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
+            &kp EQUAL  &kp N1   &kp N2   &kp N3    &kp N4  &kp N5     		&kp N6   &kp N7   &kp N8   &kp N9   &kp N0  &kp MINUS
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp TAB &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp LBRC
+            &kp TAB &kp Q    &kp W    &kp E    &kp R    &kp T      		&kp Y    &kp U    &kp I    &kp O    &kp P   &kp BSLH
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
-            &kp ESC    &kp A   &kp S     &kp D    &kp F    &kp G     		&kp H     &kp J    &kp K   &kp L   &kp SEMI  &kp RBRC
+            &kp ESC    &kp A   &kp S     &kp D    &kp F    &kp G     		&kp H     &kp J    &kp K   &kp L   &kp SEMI  &kp SQT
         // ├────────┼────────┼────────┼────────┼────────┼────────┤		├────────┼────────┼────────┼────────┼────────┼────────┤
            &kp LSHFT  &kp Z   &kp X   &kp C     &kp V    &kp B      		&kp N     &kp M  &kp COMMA &kp DOT &kp FSLH &kp RALT
         // └────────┴────────┼────────┼────────┼────────┴────────┘		└────────┴────────┼────────┼────────┼────────┴────────┘
-															&kp LBKT &kp RBKT																			     &kp LBRC &kp RBRC
+															&kp LBKT &kp RBKT																			     &kp BSLH &kp RBRC
         //									 └────────┴────────┘                            		        └────────┴────────┘
         // 									 ┌────────┬────────┬────────┬────────┐		┌────────┬────────┬────────┬────────┐
-												      &kp LCTRL &kp SPC  &mo HOME &mo END 		&kp PG_UP &mo PG_DN &kp BSPC &kp ENTER
+												      &kp LCTRL &kp SPC  &mo 0 &kp END 		&kp PG_UP &kp PG_DN &kp BSPC &kp ENTER
         // 									 └────────┴────────┴────────┴────────┘		└────────┴────────┴────────┴────────┘
         >;		
 		};
