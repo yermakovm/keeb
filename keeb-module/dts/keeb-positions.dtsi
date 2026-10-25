@@ -1,0 +1,122 @@
+/*
+ * keeb key position table - the single source of truth for key positions.
+ *
+ * A key position is an index into `map` on default_transform (see
+ * boards/shields/keeb/keeb.dtsi), which is also the slot order the keymap file
+ * draws. Nothing else in this repo may name a position with a bare number:
+ * a raw number is only correct while the transform's map order stays put, and
+ * the transform is wiring, not layout - it moves when the PCB does.
+ *
+ * Naming is mirror-symmetric, because the keyboard is split. Each half numbers
+ * its own matrix columns 0-5 (the right half is the same transform plus
+ * col-offset 6), so _0 is the same local column on both halves and the index
+ * grows toward the split: KEEB_POS_L_THUMB_1 and KEEB_POS_R_THUMB_1 are the same
+ * key of the two hands. The mirror is therefore "same local column" - global col
+ * c on the left, c+6 on the right - which is how every row of the map is wired.
+ * In the keymap drawing the left half reads outer-to-inner, the right half
+ * inner-to-outer.
+ *
+ *   row 0-3  alpha grid: 6 slots per half, positions 0-47
+ *   row 4    2 extra keys per half: left 48-49, right 50-51
+ *   row 5    4-key thumb cluster per half: left 52-55, right 56-59
+ *
+ * Consumers: the home-row hold-tap trigger lists and every combo in
+ * config/keeb.keymap, and reserved-positions on the keeb,engine node.
+ * app/scripts/gen-contract.mjs reads this file too and checks each list against
+ * the transform's map (halves disjoint and complete, right half mirrored), so a
+ * name that stops matching the wiring fails the build instead of rebinding a
+ * different key.
+ *
+ * NB: the stock bindings shown in the table below are what the keymap file
+ * happens to bind there today, not part of the naming. A layout change moves
+ * them; the names do not.
+ */
+
+#ifndef KEEB_DTS_KEEB_POSITIONS_DTSI
+#define KEEB_DTS_KEEB_POSITIONS_DTSI
+
+/* --------------------------------------------------------------------------
+ * Top row (row 0), outer -> inner on each half.
+ * Stock HOME: LEFT  EQUAL N1 N2 N3 N4 N5 | N6 N7 N8 N9 N0 MINUS  RIGHT
+ * -------------------------------------------------------------------------- */
+#define KEEB_POS_L_TOP_0 0   /* &kp EQUAL - left chord anchor */
+#define KEEB_POS_L_TOP_1 1   /* &kp N1 */
+#define KEEB_POS_L_TOP_2 2   /* &kp N2 */
+#define KEEB_POS_L_TOP_3 3   /* &kp N3 */
+#define KEEB_POS_L_TOP_4 4   /* &kp N4 */
+#define KEEB_POS_L_TOP_5 5   /* &kp N5 - inner, next to the split */
+
+#define KEEB_POS_R_TOP_0 11  /* &kp MINUS - right chord anchor */
+#define KEEB_POS_R_TOP_1 10  /* &kp N0 */
+#define KEEB_POS_R_TOP_2 9   /* &kp N9 */
+#define KEEB_POS_R_TOP_3 8   /* &kp N8 */
+#define KEEB_POS_R_TOP_4 7   /* &kp N7 */
+#define KEEB_POS_R_TOP_5 6   /* &kp N6 - inner, next to the split */
+
+/* --------------------------------------------------------------------------
+ * Row 4, the two extra keys per half, outer -> inner.
+ * Stock HOME: LEFT LBKT RBKT | BSLH RBRC RIGHT
+ * -------------------------------------------------------------------------- */
+#define KEEB_POS_L_EXTRA_0 48  /* &kp LBKT */
+#define KEEB_POS_L_EXTRA_1 49  /* &kp RBKT */
+#define KEEB_POS_R_EXTRA_0 51  /* &kp RBRC */
+#define KEEB_POS_R_EXTRA_1 50  /* &kp BSLH */
+
+/* --------------------------------------------------------------------------
+ * Row 5, the thumb cluster, outer -> inner.
+ * Stock HOME: LEFT TH_TAB TH_SPC TH_HOME END | PG_UP PG_DN BSPC ENTER RIGHT
+ * (TH_TAB/TH_SPC/TH_HOME are hold-taps onto NAV/FUN/MOUSE.)
+ * -------------------------------------------------------------------------- */
+#define KEEB_POS_L_THUMB_0 52  /* &lt 1 TAB  */
+#define KEEB_POS_L_THUMB_1 53  /* &lt 2 SPC  */
+#define KEEB_POS_L_THUMB_2 54  /* &lt 3 HOME */
+#define KEEB_POS_L_THUMB_3 55  /* &kp END    */
+
+#define KEEB_POS_R_THUMB_0 59  /* &kp ENTER  */
+#define KEEB_POS_R_THUMB_1 58  /* &kp BSPC   */
+#define KEEB_POS_R_THUMB_2 57  /* &kp PG_DN  */
+#define KEEB_POS_R_THUMB_3 56  /* &kp PG_UP  */
+
+/* --------------------------------------------------------------------------
+ * Groups. A hold-tap on one half triggers from the OTHER half's positions, so
+ * these two lists are the whole point of this file; the alpha rows are listed
+ * in map order, top row first.
+ * -------------------------------------------------------------------------- */
+#define KEEB_POS_L_ALPHA \
+	KEEB_POS_L_TOP_0 KEEB_POS_L_TOP_1 KEEB_POS_L_TOP_2 KEEB_POS_L_TOP_3 KEEB_POS_L_TOP_4 KEEB_POS_L_TOP_5 \
+	12 13 14 15 16 17 \
+	24 25 26 27 28 29 \
+	36 37 38 39 40 41
+
+#define KEEB_POS_R_ALPHA \
+	KEEB_POS_R_TOP_0 KEEB_POS_R_TOP_1 KEEB_POS_R_TOP_2 KEEB_POS_R_TOP_3 KEEB_POS_R_TOP_4 KEEB_POS_R_TOP_5 \
+	18 19 20 21 22 23 \
+	30 31 32 33 34 35 \
+	42 43 44 45 46 47
+
+#define KEEB_POS_L_EXTRA KEEB_POS_L_EXTRA_0 KEEB_POS_L_EXTRA_1
+#define KEEB_POS_R_EXTRA KEEB_POS_R_EXTRA_0 KEEB_POS_R_EXTRA_1
+
+#define KEEB_POS_L_THUMB \
+	KEEB_POS_L_THUMB_0 KEEB_POS_L_THUMB_1 KEEB_POS_L_THUMB_2 KEEB_POS_L_THUMB_3
+
+#define KEEB_POS_R_THUMB \
+	KEEB_POS_R_THUMB_0 KEEB_POS_R_THUMB_1 KEEB_POS_R_THUMB_2 KEEB_POS_R_THUMB_3
+
+#define KEEB_POS_LEFT_HALF KEEB_POS_L_ALPHA KEEB_POS_L_EXTRA KEEB_POS_L_THUMB
+#define KEEB_POS_RIGHT_HALF KEEB_POS_R_ALPHA KEEB_POS_R_EXTRA KEEB_POS_R_THUMB
+
+/* --------------------------------------------------------------------------
+ * Layers, by definition order in config/keeb.keymap. A layer behavior takes an
+ * index, never a name: `&mo HOME` compiles, passes the HOME keycode (0x07004a)
+ * as the layer id, and the key silently does nothing. Named constants plus the
+ * generator's guard are what keep that from coming back.
+ * -------------------------------------------------------------------------- */
+#define KEEB_LAYER_HOME 0
+#define KEEB_LAYER_NAV 1
+#define KEEB_LAYER_FUN 2
+#define KEEB_LAYER_MOUSE 3
+#define KEEB_LAYER_MEDIA 4
+#define KEEB_LAYER_GAME 5
+
+#endif /* KEEB_DTS_KEEB_POSITIONS_DTSI */

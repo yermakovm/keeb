@@ -7,6 +7,7 @@
  *
  * Derived from the firmware's own sources:
  *   keeb-module/boards/shields/keeb/keeb.dtsi   token table, reserved positions, grid
+ *   keeb-module/dts/keeb-positions.dtsi        key position names, layer indices
  *   config/keeb.keymap                          stock layers and bindings
  *   config/keeb.conf                            CONFIG_ZMK_KEYBOARD_NAME, the advertised name
  *   zmk/app/dts/behaviors/*.dtsi                binding cells, display names
@@ -23,6 +24,7 @@ import type { GridCell, StockLayer, TokenDef } from './types.ts'
 export const GENERATED_FROM = {
   "dtsi": "keeb-module/boards/shields/keeb/keeb.dtsi",
   "keymap": "config/keeb.keymap",
+  "positions": "keeb-module/dts/keeb-positions.dtsi",
   "conf": "config/keeb.conf",
   "zmk": "../zmk",
   "headers": [
@@ -459,22 +461,22 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458981,
         "param2": 458765
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458980,
         "param2": 458766
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458982,
         "param2": 458767
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458983,
         "param2": 458803
       },
@@ -1069,22 +1071,22 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458981,
         "param2": 458765
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458980,
         "param2": 458766
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458982,
         "param2": 458767
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458983,
         "param2": 458803
       },
@@ -1679,22 +1681,22 @@ export const STOCK_LAYERS: StockLayer[] = [
         "param2": 0
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458981,
         "param2": 458765
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458980,
         "param2": 458766
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458982,
         "param2": 458767
       },
       {
-        "token": 23,
+        "token": 24,
         "param1": 458983,
         "param2": 458803
       },

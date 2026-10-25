@@ -57,8 +57,8 @@ make -C zmk-config flash-right     # or flash-left
 ```
 
 One half connected at a time, and it must be in the bootloader first: both
-halves mount the same `XIAO-SENSE` drive. Enter it by chord (`MINUS`+`7` =
-right, `PLUS`+`2` = left, hold `MINUS`+`6`/`PLUS`+`1` to just reboot) or by
+halves mount the same `XIAO-SENSE` drive. Enter it by chord (`MINUS`+`N7` =
+right, `EQUAL`+`N2` = left, hold `MINUS`+`N6`/`EQUAL`+`N1` to just reboot) or by
 double-tapping RESET. Equivalent manual copy:
 
 ```sh
@@ -139,8 +139,9 @@ token means. Behaviors whose driver was dropped by Kconfig stay in devicetree
 and are reported as unavailable, so a write can never be answered with a token
 the firmware cannot execute.
 
-**Escape hatch.** `reserved-positions` on the `keeb,engine` node (currently
-positions 0 and 11, the outer top corners: `&kp PLUS` / `&kp MINUS`) are refused
+**Escape hatch.** `reserved-positions` on the `keeb,engine` node (`KEEB_POS_L_TOP_0`
+and `KEEB_POS_R_TOP_0` in `keeb-module/dts/keeb-positions.dtsi` — positions 0 and 11,
+the outer top corners, `&kp EQUAL` / `&kp MINUS` in the stock keymap) are refused
 by the engine (`KEEB_ERR_RESERVED_POSITION`), so a layout from the configurator
 can never take away the revert chord. Holding *all* reserved positions for
 `revert-hold-ms` (3 s) runs `keeb_keymap_discard()`, i.e. ZMK's

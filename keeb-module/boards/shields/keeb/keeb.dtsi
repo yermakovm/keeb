@@ -3,6 +3,10 @@
 #include <dt-bindings/pinctrl/nrf-pinctrl.h>
 #include <dt-bindings/zmk/matrix_transform.h>
 
+/* Key position names and layer indices. This map is what defines those numbers,
+ * so the names and the map live in the same module on purpose. */
+#include <keeb-positions.dtsi>
+
 / {
 	chosen {
 		zephyr,display = &nice_view;
@@ -24,17 +28,25 @@
 		compatible = "zmk,matrix-transform";
 		columns = <12>;
 		rows = <6>;
-		/* Keymap positions run in map order; a row's line may list fewer
-		 * than 12 entries (unlisted grid slots have no switch and no
-		 * keymap position), and each keymap layer must carry exactly as
-		 * many bindings as this map has RC() entries (ZMK_KEYMAP_LEN,
-		 * see matrix.h). Global columns: left half 0-5, right half
-		 * 6-11 (the right half adds col-offset 6).
+		/* Key positions are named in dts/keeb-positions.dtsi; this map is what
+		 * defines those numbers, so keep the two in step - app/scripts/gen-contract.mjs
+		 * checks every named group against this map, so a name that stops matching
+		 * the wiring fails the build instead of silently rebinding another key.
+		 *
+		 * A row's line may list fewer than 12 entries: an unlisted grid slot has no
+		 * switch and no keymap position. Each keymap layer must carry exactly as many
+		 * bindings as this map has RC() entries (ZMK_KEYMAP_LEN, see matrix.h).
+		 * Global columns: left half 0-5, right half 6-11 (keeb_right.overlay adds
+		 * col-offset 6). Each half numbers its own columns 0-5 the same way, so a
+		 * key's mirror on the other half is the same local column: global c on the
+		 * left, c+6 on the right. Every row here obeys that - alpha 0-5, the extras
+		 * 2-3, the thumb cluster 2-5, on both halves.
 		 *   rows 0-3   full alpha grid, both halves
-		 *   row  4     2 extra keys per half, mirror-placed (mirror of
-		 *              global col c is 11-c): LBKT left col 2 / LBRC
-		 *              right col 9, RBKT left col 3 / RBRC right col 8
-		 *   row  5     thumb cluster: left cols 0-3, right cols 6-9 */
+		 *   row  4     2 extra keys per half, local cols 2-3
+		 *   row  5     thumb cluster, local cols 2-5
+		 * The right half is listed inner-to-outer (11 down to 6) so the keymap drawing
+		 * reads left-to-right on both halves: position 6 is the right half's innermost
+		 * top key, position 11 its outermost. */
 		map = <
 			RC(0,0) RC(0,1) RC(0,2) RC(0,3) RC(0,4) RC(0,5)   RC(0,11) RC(0,10) RC(0,9)  RC(0,8)  RC(0,7) RC(0,6)
 			RC(1,0) RC(1,1) RC(1,2) RC(1,3) RC(1,4) RC(1,5)   RC(1,11) RC(1,10) RC(1,9)  RC(1,8)  RC(1,7) RC(1,6)
@@ -268,11 +280,12 @@ mcp23017_0: gpio@20 {
  * conditional layers are separate devicetree nodes, not bindings, so they are
  * not reachable here - they stay whatever the keymap file says.
  *
- * reserved-positions are the two outer top corners (PLUS and MINUS in the
- * keymap file). The engine refuses to rebind them over TLV, and holding both
- * for revert-hold-ms discards the saved keymap and returns to the keymap file.
- * That chord is detected on raw key positions, so no layout, and no bad or
- * missing layout, can lock the configurator out.
+ * reserved-positions are the two outer top corners of the grid - KEEB_POS_L_TOP_0
+ * and KEEB_POS_R_TOP_0, which the stock keymap binds to &kp EQUAL and &kp MINUS.
+ * The engine refuses to rebind them over TLV, and holding both for revert-hold-ms
+ * discards the saved keymap and returns to the keymap file. That chord is detected
+ * on raw key positions, so no layout, and no bad or missing layout, can lock the
+ * configurator out.
  */
 / {
 	keeb_engine: engine {
@@ -303,7 +316,7 @@ mcp23017_0: gpio@20 {
 			&layer_art &right_reset &right_boot
 		>;
 
-		reserved-positions = <0 11>;
+		reserved-positions = <KEEB_POS_L_TOP_0 KEEB_POS_R_TOP_0>;
 		revert-hold-ms = <3000>;
 	};
 };

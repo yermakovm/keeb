@@ -38,6 +38,7 @@ const ZMK = resolve(process.env.ZMK_DIR ?? join(REPO, '..', 'zmk'))
 
 const DTSI = join(REPO, 'keeb-module/boards/shields/keeb/keeb.dtsi')
 const KEYMAP = join(REPO, 'config/keeb.keymap')
+const POSITIONS = join(REPO, 'keeb-module/dts/keeb-positions.dtsi')
 const CONF = join(REPO, 'config/keeb.conf')
 const ZMK_BEHAVIORS = join(ZMK, 'app/dts/behaviors')
 const ZMK_DT = join(ZMK, 'app/include/dt-bindings/zmk')
@@ -354,6 +355,71 @@ const dtsi = stripComments(readFileSync(DTSI, 'utf8'))
 const keymapSrc = readFileSync(KEYMAP, 'utf8')
 const keymap = stripComments(keymapSrc)
 
+/* keeb-positions.dtsi is the keymap's own include: key position names (53 ->
+ * KEEB_POS_L_THUMB_1) and layer indices (&lt KEEB_LAYER_NAV rather than &lt 1).
+ * The generator has to read it too, or every named binding in the keymap and
+ * every named position in keeb.dtsi would parse as an unknown token. */
+const positionMacros = parseDefines(stripComments(readFileSync(POSITIONS, 'utf8')))
+
+/** Expand a position or layer name into the numbers it stands for. */
+function numberList(text, seen = new Set()) {
+  const out = []
+
+  for (const tok of text.match(/[A-Za-z_][A-Za-z0-9_]*|-?\d+/g) ?? []) {
+    if (/^-?\d+$/.test(tok)) {
+      out.push(Number(tok))
+      continue
+    }
+
+    const def = positionMacros.get(tok)
+
+    if (!def || def.params) {
+      throw new Error(`keeb-positions.dtsi: ${tok} is not a position or layer name`)
+    }
+
+    if (seen.has(tok)) {
+      throw new Error(`keeb-positions.dtsi: ${tok} expands to itself`)
+    }
+
+    out.push(...numberList(def.body, new Set(seen).add(tok)))
+  }
+
+  return out
+}
+
+/** A devicetree list of positions: literals and named groups mixed together. */
+function expandPositionList(text) {
+  const out = []
+
+  for (const tok of text.trim().split(/[\s,]+/).filter(Boolean)) {
+    if (/^-?\d+$/.test(tok)) {
+      out.push(Number(tok))
+    } else if (positionMacros.has(tok) && !positionMacros.get(tok).params) {
+      out.push(...numberList(positionMacros.get(tok).body))
+    } else {
+      out.push(NaN)
+    }
+  }
+
+  return out
+}
+
+/** One binding argument: a literal, a dt-bindings keycode, or a named constant
+ * that stands for exactly one number. */
+function resolveArg(name) {
+  if (/^-?\d+$/.test(name)) {
+    return Number(name) >>> 0
+  }
+
+  if (keycodes.has(name)) {
+    return keycodes.get(name)
+  }
+
+  const list = positionMacros.has(name) && !positionMacros.get(name).params ? numberList(positionMacros.get(name).body) : null
+
+  return list && list.length === 1 ? list[0] >>> 0 : null
+}
+
 /* CONFIG_ZMK_KEYBOARD_NAME is what the keyboard puts in its advertisement
  * (ZMK advertises with BT_LE_ADV_OPT_USE_NAME | FORCE_NAME_IN_AD). It belongs
  * in the generated contract because it is also the only thing a Web Bluetooth
@@ -436,7 +502,7 @@ tokens.forEach((t, id) => (t.id = id))
 
 const expectedTokenHash = tokenHash(tokens)
 const reservedMatch = /reserved-positions\s*=\s*<([^>]*)>/.exec(dtsi)
-const reservedPositions = reservedMatch ? intList(reservedMatch[1]) : []
+const reservedPositions = reservedMatch ? expandPositionList(reservedMatch[1]) : []
 const revertHoldMs = Number((/revert-hold-ms\s*=\s*<(\d+)>/.exec(dtsi) ?? [])[1] ?? 3000)
 
 /* --------------------------------------------------------------------------
@@ -573,6 +639,12 @@ const KEEB_TOKEN_UNKNOWN = 0xfffe
 
 const stockLayers = []
 
+/* Behaviors whose first argument is a layer index. A name in that slot is the
+ * bug the keymap header describes: `&mo HOME` compiles, carries the HOME keycode
+ * as the layer id, and the key silently does nothing. */
+const LAYER_BEHAVIORS = new Set(['mo', 'lt', 'to', 'tog', 'layer_momentary', 'layer_toggle', 'layer_move'])
+const layerRefs = []
+
 for (const m of keymapBody.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\{([^{}]*)\}/g)) {
   const block = m[2]
   const bindingsMatch = /bindings\s*=\s*<([\s\S]*)>/.exec(block)
@@ -601,8 +673,21 @@ for (const m of keymapBody.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\{([^{}]*)\}/g))
         args.push(Number(a) >>> 0)
       } else if (keycodes.has(a)) {
         args.push(keycodes.get(a))
+      } else if (resolveArg(a) !== null) {
+        args.push(resolveArg(a))
+
+        if (LAYER_BEHAVIORS.has(label)) {
+          layerRefs.push({ layer: displayName, pos: cells.length, label, arg: a, value: args[args.length - 1] })
+        }
       } else {
         problems.push(`unknown argument ${a} after &${label} in layer ${displayName}`)
+
+        if (LAYER_BEHAVIORS.has(label)) {
+          /* NaN so guard 6a can report it: an argument that resolves to nothing
+           * is the same class of mistake as a name in a layer slot. */
+          layerRefs.push({ layer: displayName, pos: cells.length, label, arg: a, value: Number.NaN })
+        }
+
         args.push(0)
       }
     }
@@ -626,6 +711,213 @@ for (const m of keymapBody.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*\{([^{}]*)\}/g))
   stockLayers.push({ key: m[1], name: displayName, cells })
 }
 
+
+/* --------------------------------------------------------------------------
+ * 6. Guards — the checks that keep the keymap, the position table and the
+ *    matrix transform describing the same keyboard. All three drift separately
+ *    and none of them produces a warning at compile time, so they fail here.
+ * -------------------------------------------------------------------------- */
+
+const guardFailures = []
+
+/* 6a. A layer argument must be an index that exists, written as one. */
+for (const r of layerRefs) {
+  if (!/^-?\d+$/.test(r.arg) && !/^KEEB_LAYER_[A-Z0-9_]+$/.test(r.arg)) {
+    guardFailures.push(
+      `&${r.label} in layer ${r.layer} takes "${r.arg}" where a layer index belongs — a name compiles, carries a keycode as the layer id, and the key does nothing`,
+    )
+  } else if (!Number.isInteger(r.value) || r.value < 0 || r.value >= stockLayers.length) {
+    guardFailures.push(
+      `&${r.label} in layer ${r.layer} points at layer ${r.value}, but the keymap defines ${stockLayers.length} (0..${stockLayers.length - 1})`,
+    )
+  }
+}
+
+/* 6b. Every layer the keymap defines has a named index, and that name matches
+ * its definition order. Reorder a layer without updating the table and this
+ * fails, instead of quietly rebinding every &mo / &lt / &to / &tog in the file. */
+const layerConstants = new Map()
+
+for (const [name, def] of positionMacros) {
+  if (!/^KEEB_LAYER_[A-Z0-9]+$/.test(name) || def.params) {
+    continue
+  }
+
+  layerConstants.set(name, numberList(def.body)[0])
+}
+
+for (const [i, layer] of stockLayers.entries()) {
+  const [short] = layer.name.split(/[^A-Za-z0-9]/) /* FUN/BT -> FUN */
+  const name = `KEEB_LAYER_${short.toUpperCase()}`
+
+  if (!layerConstants.has(name)) {
+    guardFailures.push(`keeb-positions.dtsi has no ${name} for layer ${layer.name} (index ${i})`)
+    continue
+  }
+
+  if (layerConstants.get(name) !== i) {
+    guardFailures.push(`${name} is ${layerConstants.get(name)}, but ${layer.name} is layer index ${i} — the keymap's definition order moved`)
+  }
+}
+
+for (const [name, value] of layerConstants) {
+  if (value < 0 || value >= stockLayers.length) {
+    guardFailures.push(`${name} is ${value}, but the keymap defines layers 0..${stockLayers.length - 1}`)
+  }
+}
+
+const namedGroup = (name) => {
+  const def = positionMacros.get(name)
+
+  if (!def || def.params) {
+    guardFailures.push(`keeb-positions.dtsi has no group named ${name}`)
+    return []
+  }
+
+  return numberList(def.body)
+}
+
+const posBySide = { L: [], R: [] }
+
+for (const cell of grid) {
+  posBySide[cell.side].push(cell.pos)
+}
+
+const byRow = (side, row) => grid.filter((c) => c.side === side && c.row === row).map((c) => c.pos)
+
+/* 6c. The position table against the transform's map: the names only mean what
+ * this wiring says they mean. */
+for (const [name, expected] of Object.entries({
+  KEEB_POS_L_ALPHA: byRow('L', 0).concat(byRow('L', 1), byRow('L', 2), byRow('L', 3)),
+  KEEB_POS_R_ALPHA: byRow('R', 0).concat(byRow('R', 1), byRow('R', 2), byRow('R', 3)),
+  KEEB_POS_L_EXTRA: byRow('L', 4),
+  KEEB_POS_R_EXTRA: byRow('R', 4),
+  KEEB_POS_L_THUMB: byRow('L', 5),
+  KEEB_POS_R_THUMB: byRow('R', 5),
+  KEEB_POS_LEFT_HALF: posBySide.L,
+  KEEB_POS_RIGHT_HALF: posBySide.R,
+})) {
+  const actual = namedGroup(name)
+
+  if (actual.length !== expected.length || actual.some((p) => !expected.includes(p))) {
+    guardFailures.push(`${name} is [${actual.join(', ')}] but on this wiring the matrix transform puts it at [${expected.join(', ')}]`)
+  }
+}
+
+const leftHalf = namedGroup('KEEB_POS_LEFT_HALF')
+const rightHalf = namedGroup('KEEB_POS_RIGHT_HALF')
+const overlap = leftHalf.filter((p) => rightHalf.includes(p))
+
+if (overlap.length) {
+  guardFailures.push(`KEEB_POS_LEFT_HALF and KEEB_POS_RIGHT_HALF both claim ${overlap.join(', ')}`)
+}
+
+if (leftHalf.length + rightHalf.length !== grid.length) {
+  guardFailures.push(`the two halves cover ${leftHalf.length + rightHalf.length} of ${grid.length} positions — the position table is not the whole keyboard`)
+}
+
+/* 6d. The names are mirror-symmetric: _L_THUMB_1 and _R_THUMB_1 are the same key
+ * of the two hands, which is what makes a trigger list reviewable. */
+for (const name of positionMacros.keys()) {
+  const m = /^KEEB_POS_L_(.+)_([0-9]+)$/.exec(name)
+
+  if (!m) {
+    continue
+  }
+
+  const mirror = `KEEB_POS_R_${m[1]}_${m[2]}`
+
+  if (!positionMacros.has(mirror)) {
+    guardFailures.push(`${name} has no mirror ${mirror}`)
+    continue
+  }
+
+  const ca = grid[numberList(positionMacros.get(name).body)[0]]
+  const cb = grid[numberList(positionMacros.get(mirror).body)[0]]
+
+  if (!ca || !cb) {
+    guardFailures.push(`${name} / ${mirror} point outside the ${grid.length}-position grid`)
+    continue
+  }
+
+  /* "Same key of the two hands" is the same LOCAL column: each half numbers its
+   * own columns 0-5 and keeb_right.overlay adds col-offset 6, so the mirror of
+   * global col c is c+6. Every row of this map obeys that. */
+  if (ca.row !== cb.row || ca.col % 6 !== cb.col % 6) {
+    guardFailures.push(
+      `${name} (row ${ca.row}, col ${ca.col}) and ${mirror} (row ${cb.row}, col ${cb.col}) are not the same column of their own half`,
+    )
+  }
+}
+
+const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
+const halves = { L: leftHalf, R: rightHalf }
+const triggeredHalves = new Set()
+
+/* 6e. A positional hold-tap triggers from a whole half, named as one. This is
+ * the pair that used to be two hand-copied number lists, one of them wired to
+ * the wrong behavior. */
+for (const m of keymap.matchAll(/([A-Za-z_][A-Za-z0-9_]*):\s*[A-Za-z_][A-Za-z0-9_]*\s*\{([^{}]*)\}/g)) {
+  const trigger = /hold-trigger-key-positions\s*=\s*<([^>]*)>/.exec(m[2])
+
+  if (!trigger) {
+    continue
+  }
+
+  const listed = expandPositionList(trigger[1])
+  const side = sameSet(listed, halves.L) ? 'L' : sameSet(listed, halves.R) ? 'R' : null
+
+  if (!side) {
+    guardFailures.push(`hold-tap ${m[1]} triggers from [${listed.join(', ')}], which is not one whole half — write KEEB_POS_LEFT_HALF or KEEB_POS_RIGHT_HALF`)
+    continue
+  }
+
+  triggeredHalves.add(side)
+}
+
+if (triggeredHalves.size === 1) {
+  guardFailures.push(`only the ${[...triggeredHalves][0]} half triggers a hold anywhere in the keymap — a mirrored pair of home-row mods needs both`)
+}
+
+/* 6f. A behavior declared in the keymap file exists to be used by the keymap
+ * file. &hmr was declared, correct, and bound by nothing for as long as the
+ * config existed. A behavior meant only for TLV rebind belongs in keeb.dtsi's
+ * token table, not here. */
+const behaviorsBlock = (() => {
+  const i = keymap.search(/\bbehaviors\s*\{/)
+
+  if (i < 0) {
+    return ''
+  }
+
+  const start = keymap.indexOf('{', i)
+  let depth = 0
+
+  for (let p = start; p < keymap.length; p++) {
+    if (keymap[p] === '{') {
+      depth++
+    } else if (keymap[p] === '}') {
+      depth--
+
+      if (depth === 0) {
+        return keymap.slice(start + 1, p)
+      }
+    }
+  }
+
+  return ''
+})()
+
+for (const [, label] of behaviorsBlock.matchAll(/^\s*([A-Za-z_][A-Za-z0-9_]*):/gm)) {
+  if (!new RegExp(`&${label}\\b`).test(keymap)) {
+    guardFailures.push(`behavior node ${label} is declared in the keymap file but no binding in it uses &${label}`)
+  }
+}
+
+if (guardFailures.length) {
+  throw new Error(`keeb contract does not hold:\n  ${guardFailures.join('\n  ')}`)
+}
+
 /* --------------------------------------------------------------------------
  * Emit
  * -------------------------------------------------------------------------- */
@@ -641,6 +933,7 @@ const ts = `/*
  *
  * Derived from the firmware's own sources:
  *   keeb-module/boards/shields/keeb/keeb.dtsi   token table, reserved positions, grid
+ *   keeb-module/dts/keeb-positions.dtsi        key position names, layer indices
  *   config/keeb.keymap                          stock layers and bindings
  *   config/keeb.conf                            CONFIG_ZMK_KEYBOARD_NAME, the advertised name
  *   zmk/app/dts/behaviors/*.dtsi                binding cells, display names
@@ -654,7 +947,7 @@ const ts = `/*
 
 import type { GridCell, StockLayer, TokenDef } from './types.ts'
 
-export const GENERATED_FROM = ${JSON.stringify({ dtsi: 'keeb-module/boards/shields/keeb/keeb.dtsi', keymap: 'config/keeb.keymap', conf: 'config/keeb.conf', zmk: rel(ZMK), headers: ZMK_HEADERS }, null, 2)}
+export const GENERATED_FROM = ${JSON.stringify({ dtsi: 'keeb-module/boards/shields/keeb/keeb.dtsi', keymap: 'config/keeb.keymap', positions: 'keeb-module/dts/keeb-positions.dtsi', conf: 'config/keeb.conf', zmk: rel(ZMK), headers: ZMK_HEADERS }, null, 2)}
 
 /** CONFIG_ZMK_KEYBOARD_NAME: the name the keyboard advertises, and the only
  * thing a Web Bluetooth chooser may filter this device by. ZMK advertises the

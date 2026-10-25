@@ -189,8 +189,9 @@ survive reboot — **not verified yet** (hardware).
 ## Phase 2 — safety & consistency
 
 - [x] Reserved positions come from devicetree (`reserved-positions` on
-      `keeb,engine`, currently positions 0 and 11 = the outer top corners,
-      `&kp PLUS` / `&kp MINUS` in the keymap file). Writes to them are refused
+      `keeb,engine`, written as `KEEB_POS_L_TOP_0` / `KEEB_POS_R_TOP_0` = positions
+      0 and 11 = the outer top corners, `&kp EQUAL` / `&kp MINUS` in the stock
+      keymap). Writes to them are refused
       with `KEEB_ERR_RESERVED_POSITION` in firmware; the app cannot be trusted
       for this and does not get a vote.
 - [x] Revert chord: a `zmk_position_state_changed` listener tracks how long
@@ -250,9 +251,11 @@ App side as built (`app/`, now TypeScript throughout):
 - [x] Live grid editor on stock positions, layer slots with rename / reorder /
       add / remove / restore, live read-back on every notification.
 - [x] Grid drawn in the transform's **map order**, not by column number: the
-      left half lists cols 0-5 outer edge → gap, the right half lists 11-6 gap
-      → outer edge, so sorting each half by column mirrors the entire right
-      hand and puts the outer top-right corner (position 11) beside the split.
+      left half draws cols 0-5 (outer edge → gap), the right half draws 11-6
+      (gap → outer edge), so position 6 lands beside the split and position 11 is
+      the outer top-right corner — the same left-to-right reading as the keymap
+      file, and the same "same local column on both halves" mirror
+      `keeb-positions.dtsi` names by.
       `gridHalf()` in `app/src/stores/keymap.ts` reproduces the map, short rows
       keep their columns, unmapped grid slots render dashed, and a
       "positions" overlay prints the stock position number in every cap.
