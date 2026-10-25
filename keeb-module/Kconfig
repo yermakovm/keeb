@@ -54,6 +54,29 @@ config KBEEB_UI_ART
 	  is pushed from the central half, which is what keeps the two displays
 	  in sync without duplicating ZMK's keymap state.
 
+config KBEEB_UI_CENTRAL_ART
+	bool "Layer artwork on the central display"
+	default n
+	help
+	  Let the central half's panel draw KEEB_WID_ART widgets, i.e. the active
+	  layer's artwork. Off by default: the generated stencils are tens of
+	  kilobytes of flash, and the central's panel is readouts, not pictures.
+	  With it off, the TLV channel refuses an ART widget on this half
+	  (KEEB_ERR_BAD_WIDGET) instead of drawing a blank, and keeb_display_info
+	  reports the limit up front.
+
+config KBEEB_UI_PERIPHERAL_PRESET
+	int "Peripheral panel preset at boot"
+	depends on ZMK_SPLIT && ZMK_SPLIT_ROLE_CENTRAL=n
+	default 0
+	help
+	  Which built-in widget table the peripheral half starts with. 0 is the
+	  layer artwork with a connected-device strip beneath it; 1 is the
+	  connected device alone. The central half can edit its own panel over
+	  the TLV channel; the peripheral's table is fixed in the image because
+	  the peripheral holds no host connection (see README: the relay of
+	  *edits* to the right half is not implemented).
+
 config KBEEB_LAYER_LED_INDICATE
 	bool "Layer colour indication on the RGB status LED"
 	depends on ZMK_STATUS_LED

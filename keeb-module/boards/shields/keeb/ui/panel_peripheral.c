@@ -3,9 +3,17 @@
  *
  * SPDX-License-Identifier: MIT
  *
- * Peripheral (right) panel: the same rounded frame on every layer, with the
- * active layer's artwork inside. No battery, no link indicator - the left half
- * owns all status readouts, so this panel only ever changes its artwork.
+ * Peripheral (right) panel.
+ *
+ * The peripheral has no host connection and no keymap state of its own: ZMK
+ * sends it behaviour invocations and nothing else. So everything on this panel
+ * arrives through the keeb,layer-art push (see ui/layer_sync.c on the central):
+ * param1 is the active layer's artwork to show, param2 is the device the
+ * central is talking to. Both land here as atomics and are read at draw time.
+ *
+ * The layout itself is the compiled-in preset in ui/widget_model.c - preset 0
+ * is the artwork with a connected-device strip, preset 1 is the device alone
+ * (CONFIG_KBEEB_UI_PERIPHERAL_PRESET).
  */
 
 #include <zephyr/kernel.h>
@@ -18,10 +26,14 @@
 #include "keeb_ui.h"
 #include "panel_peripheral.h"
 #include "panels.h"
+#include "widget_model.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static atomic_t art_layer;
+static atomic_t device_id;
+
+static struct keeb_ui_state state;
 
 void keeb_art_select(uint8_t layer) {
 	if (atomic_get(&art_layer) == (int)layer) {
@@ -34,28 +46,28 @@ void keeb_art_select(uint8_t layer) {
 	keeb_ui_request_draw();
 }
 
-void keeb_panel_draw(struct keeb_ctx *ctx) {
-	keeb_frame(ctx, 0, 0, ctx->w, ctx->h, 4);
-
-	const lv_image_dsc_t *art = keeb_layer_art(atomic_get(&art_layer));
-	if (!art) {
+void keeb_device_select(uint8_t id) {
+	if (atomic_get(&device_id) == (int)id) {
 		return;
 	}
 
-	/* Artwork is authored for the area inside the frame; centre it and let
-	 * the canvas clip anything larger. */
-	const int16_t x = (int16_t)((ctx->w - (int16_t)art->header.w) / 2);
-	const int16_t y = (int16_t)((ctx->h - (int16_t)art->header.h) / 2);
+	LOG_DBG("device id %u", id);
 
-	lv_area_t coords = {x, y, x + (int16_t)art->header.w - 1, y + (int16_t)art->header.h - 1};
+	atomic_set(&device_id, id);
+	keeb_ui_request_draw();
+}
 
-	/* The artwork is a stencil: LVGL blends it as a mask in the current ink
-	 * colour, so CONFIG_ZMK_DISPLAY_INVERT flips it along with the frame. */
-	lv_draw_image_dsc_t dsc;
-	lv_draw_image_dsc_init(&dsc);
-	dsc.src = art;
-	dsc.recolor = KBEEB_INK;
-	dsc.recolor_opa = LV_OPA_COVER;
+void keeb_panel_draw(struct keeb_ctx *ctx) {
+	memset(&state, 0, sizeof(state));
 
-	lv_draw_image(&ctx->layer, &dsc, &coords);
+	state.layer = (uint8_t)atomic_get(&art_layer);
+	state.art_layer = state.layer;
+	state.device_id = (uint8_t)atomic_get(&device_id);
+
+	/* No battery, no link, no host readouts on this half: the left half owns
+	 * them, and an invalid flag draws "--" rather than a wrong number. */
+	state.left_valid = false;
+	state.right_valid = false;
+
+	keeb_ui_render(ctx, &state);
 }

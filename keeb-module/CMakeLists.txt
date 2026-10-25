@@ -21,6 +21,7 @@ if(CONFIG_KBEEB_UI)
   list(APPEND KEEB_SOURCES
     ${KEEB_UI_DIR}/keeb_ui.c
     ${KEEB_UI_DIR}/status_screen.c
+    ${KEEB_UI_DIR}/widget_model.c
     ${KEEB_UI_DIR}/behavior_layer_art.c
     ${KEEB_UI_DIR}/display_sleep.c
     ${KEEB_UI_DIR}/art/layer_art.c
@@ -62,6 +63,10 @@ if(CONFIG_KBEEB_ENGINE)
     engine/keeb_engine.c
     keymap/keeb_tokens.c
     keymap/keeb_keymap.c
+    # The panel's protocol face: validates a payload before the widget model
+    # applies it, and owns the "keebui" settings subtree. Compiled with the
+    # engine, and it answers KEEB_ERR_NOT_SUPPORTED when there is no panel.
+    display/keeb_display.c
   )
 
   if(CONFIG_KBEEB_ENGINE_BLE)

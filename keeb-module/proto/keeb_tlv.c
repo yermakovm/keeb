@@ -19,12 +19,6 @@
 /* Local MIN: Zephyr's MIN lives in compiler.h, which is not in scope here. */
 #define KEEB_MIN(a, b) ((uint16_t)((a) < (b) ? (a) : (b)))
 
-/* Smallest fragment the sender falls back to. 20 bytes is the BLE minimum
- * connection MTU (23) minus 3 for the ATT opcode and handle, so the sender
- * never has to learn the real negotiated value.
- */
-#define KEEB_TLV_FRAG_MIN 20
-
 static void put_le16(uint8_t *p, uint16_t v)
 {
 	p[0] = (uint8_t)(v & 0xffu);
@@ -357,16 +351,23 @@ int keeb_tlv_tx_pump(struct keeb_tlv_tx *tx)
 
 	if (err == KEEB_TX_MTU) {
 		/* The peer's MTU is smaller than the transport advertised.
-		 * Offset-based reassembly makes re-sending the same offset
-		 * legal, so shrinking needs no coordination with the receiver:
-		 * halve the fragment and retry the same bytes.
+		 * Offset-based reassembly makes re-sending the same bytes legal,
+		 * so shrinking needs no coordination with the receiver: halve the
+		 * fragment and retry the same offset.
 		 */
-		if (tx->frag > KEEB_TLV_FRAG_MIN) {
-			tx->frag = (uint16_t)(tx->frag / 2);
+		if (tx->frag <= KEEB_TLV_FRAG_MIN) {
+			/* Already at the floor and the peer still cannot carry
+			 * the packet: this link cannot run the protocol. Saying so
+			 * beats retrying the same fragment every 20 ms.
+			 */
+			tx->busy = 0;
+			return -1;
+		}
 
-			if (tx->frag < KEEB_TLV_FRAG_MIN) {
-				tx->frag = KEEB_TLV_FRAG_MIN;
-			}
+		tx->frag = (uint16_t)(tx->frag / 2);
+
+		if (tx->frag < KEEB_TLV_FRAG_MIN) {
+			tx->frag = KEEB_TLV_FRAG_MIN;
 		}
 
 		return 1;

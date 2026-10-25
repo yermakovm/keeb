@@ -38,6 +38,9 @@
 
 #include "../engine/keeb_engine.h"
 #include "../proto/keeb_tlv.h"
+#if IS_ENABLED(CONFIG_KBEEB_UI)
+#include "../display/keeb_display.h"
+#endif
 #include "keeb_keymap.h"
 #include "keeb_tokens.h"
 
@@ -602,13 +605,24 @@ static void revert_fire(struct k_work *work)
 	revert_armed = false;
 	held_mask = 0;
 
-	LOG_WRN("revert chord held %u ms: discarding saved keymap", KEEB_REVERT_HOLD_MS);
+	LOG_WRN("revert chord held %u ms: discarding saved keymap and saved panel",
+		KEEB_REVERT_HOLD_MS);
 
 	int err = keeb_keymap_discard();
 
 	if (err) {
 		LOG_ERR("revert failed (%d)", -err);
 	}
+
+#if IS_ENABLED(CONFIG_KBEEB_UI)
+	/* The panel is the other thing a config channel can wreck, and the chord
+	 * is the only recovery path that does not need that channel. */
+	err = keeb_display_discard();
+
+	if (err) {
+		LOG_ERR("panel revert failed (%d)", -err);
+	}
+#endif
 }
 
 static uint8_t reserved_all_mask(void)

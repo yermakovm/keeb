@@ -32,6 +32,7 @@
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/keymap.h>
 
+#include "../display/keeb_display.h"
 #include "../keymap/keeb_keymap.h"
 #include "../keymap/keeb_tokens.h"
 #include "../proto/keeb_tlv.h"
@@ -132,9 +133,15 @@ static bool tx_send(struct keeb_tlv_msg *msg, uint16_t msg_id, uint8_t flags)
 		return false;
 	}
 
+	/* One line per message this side puts on the wire, so a host-side trace and
+	 * this one describe the same traffic.
+	 */
+	LOG_INF("tx msg %u: %u bytes flags 0x%02x", msg_id, (uint16_t)msg->len, flags);
+
 	int r = keeb_tlv_tx_pump(&tx);
 
 	if (r == 1) {
+		LOG_DBG("tx msg %u: fragments still queued", msg_id);
 		return false; /* remaining fragments go through the work item */
 	}
 
@@ -197,6 +204,7 @@ static void handle_sys(uint16_t type, const uint8_t *data, uint16_t len, struct 
 		struct keeb_info info;
 
 		keeb_keymap_info(&info);
+		info.flags |= keeb_display_capabilities();
 
 		if (keeb_tlv_rec_add_struct(msg, KEEB_T_INFO, &info, sizeof(info))) {
 			ack_err(ack, KEEB_ERR_TOO_BIG);
@@ -458,6 +466,163 @@ static void handle_keymap(uint16_t type, const uint8_t *data, uint16_t len,
 	ack_ok(ack, detail, 0);
 }
 
+static void handle_display(uint16_t type, const uint8_t *data, uint16_t len,
+			   struct keeb_tlv_msg *msg, struct keeb_ack *ack)
+{
+	switch (type) {
+	case KEEB_T_DISPLAY_INFO: {
+		/* Limits first, then the preset names: the configurator sizes its
+		 * editor from the reply instead of hard-coding the firmware's
+		 * capacities. */
+		struct keeb_display_info info;
+
+		keeb_display_info(&info);
+
+		if (keeb_tlv_rec_add_struct(msg, KEEB_T_DISPLAY_INFO, &info, sizeof(info))) {
+			ack_err(ack, KEEB_ERR_TOO_BIG);
+			return;
+		}
+
+		if (keeb_display_names(msg)) {
+			ack_err(ack, KEEB_ERR_TOO_BIG);
+		}
+
+		return;
+	}
+
+	case KEEB_T_DISPLAY_GET: {
+		int err = keeb_display_dump(msg);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_DISPLAY_SET: {
+		uint16_t applied = 0;
+		int err = keeb_display_set_table(data, len, &applied);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		struct keeb_display_set_notify {
+			uint8_t count;
+			uint8_t flags;
+		} __packed payload = { .count = (uint8_t)applied,
+				       .flags = keeb_display_dirty() ? KEEB_DISPLAY_F_DIRTY : 0 };
+
+		keeb_engine_notify(KEEB_EV_DISPLAY_SET, &payload, sizeof(payload));
+
+		ack_ok(ack, applied, 0);
+		return;
+	}
+
+	case KEEB_T_WIDGET_SET: {
+		int err = keeb_display_set_widget(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		ack_ok(ack, 0, 0);
+		return;
+	}
+
+	case KEEB_T_TEXT_SET: {
+		int err = keeb_display_set_text(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		if (len >= sizeof(struct keeb_text_slot)) {
+			uint8_t slot = data[0];
+
+			keeb_engine_notify(KEEB_EV_TEXT_SET, &slot, sizeof(slot));
+		}
+
+		ack_ok(ack, 0, 0);
+		return;
+	}
+
+	case KEEB_T_VALUE_SET: {
+		int err = keeb_display_set_value(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		ack_ok(ack, 0, 0);
+		return;
+	}
+
+	case KEEB_T_PRESET_SET: {
+		int err = keeb_display_preset(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		ack_ok(ack, 0, 0);
+		return;
+	}
+
+	case KEEB_T_DISPLAY_SAVE: {
+		int err = keeb_display_save();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		keeb_engine_notify(KEEB_EV_DISPLAY_SAVED, NULL, 0);
+		return;
+	}
+
+	case KEEB_T_DISPLAY_DISCARD: {
+		int err = keeb_display_discard();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_DISPLAY_RESET: {
+		int err = keeb_display_reset();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_DISPLAY_BLANK: {
+		int err = keeb_display_blank();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	default:
+		ack_err(ack, KEEB_ERR_UNKNOWN_TYPE);
+		return;
+	}
+}
+
 static void dispatch(uint16_t msg_id)
 {
 	struct keeb_tlv_msg msg;
@@ -482,6 +647,8 @@ static void dispatch(uint16_t msg_id)
 
 	keeb_tlv_iter_init(&it, rx.buf, rx_msg_len);
 
+	uint16_t records = 0;
+
 	for (;;) {
 		uint16_t type;
 		const uint8_t *data;
@@ -498,6 +665,10 @@ static void dispatch(uint16_t msg_id)
 			break;
 		}
 
+		records++;
+
+		LOG_DBG("rx msg %u: record 0x%04x (%u bytes)", msg_id, type, data_len);
+
 		switch (type >> 12) {
 		case KEEB_NS_SYS:
 			handle_sys(type, data, data_len, &msg, ack);
@@ -505,11 +676,21 @@ static void dispatch(uint16_t msg_id)
 		case KEEB_NS_KEYMAP:
 			handle_keymap(type, data, data_len, &msg, ack);
 			break;
+		case KEEB_NS_DISPLAY:
+			handle_display(type, data, data_len, &msg, ack);
+			break;
 		default:
 			ack_err(ack, KEEB_ERR_UNKNOWN_TYPE);
 			break;
 		}
 	}
+
+	/* The answer this reply carries, logged with the request it answers: the
+	 * host-side trace shows the same pair, which is what makes a refused write
+	 * traceable from either end.
+	 */
+	LOG_INF("rx msg %u: %u record(s) -> ack status %u err 0x%02x detail %u", msg_id, records,
+		ack->status, ack->err_code, ack->detail);
 
 	if (!tx_send(&msg, msg_id, KEEB_PKT_F_REPLY)) {
 		/* Still in flight (or refused). Keep the dispatch state until
@@ -596,6 +777,8 @@ static void send_error_ack(uint16_t msg_id, uint8_t err_code)
 	ack->err_code = err_code;
 	ack->detail = 0;
 	ack->extra = 0;
+
+	LOG_WRN("err ack for msg %u: 0x%02x", msg_id, err_code);
 
 	tx_send(&msg, msg_id, KEEB_PKT_F_REPLY);
 }

@@ -8,23 +8,14 @@
 
 #include "keeb_ui.h"
 
-/** Longest layer name the central panel prints (ZMK's own limit is 10). */
+/** Longest layer name the central panel prints (ZMK's own limit is 20). */
 #define KBEEB_LAYER_NAME_MAX 16
-
-/** Snapshot of everything the central (left) panel displays. */
-struct keeb_panel_info {
-	uint8_t layer;
-	char layer_name[KBEEB_LAYER_NAME_MAX];
-	uint8_t left_level;
-	uint8_t right_level;
-	bool right_present;
-	bool peer_connected;
-	bool host_connected;
-	bool charging;
-};
 
 /**
  * Implemented by exactly one panel file, selected by the split role:
  * panel_central.c on the central half, panel_peripheral.c on the peripheral.
+ *
+ * Both fill a `struct keeb_ui_state` from ZMK and hand it to keeb_ui_render(),
+ * which paints the widget table (see ui/widget_model.c).
  */
 void keeb_panel_draw(struct keeb_ctx *ctx);

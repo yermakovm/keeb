@@ -226,6 +226,7 @@ struct fake_link {
 	uint16_t delivered;
 	int completed; /* 1 = whole message, else the protocol rejection code */
 	int mtu_budget; /* shrink to this once, -1 to disable */
+	int mtu_hard;   /* hard ceiling: refuses every packet larger, -1 to disable */
 	int busy_budget; /* return BUSY this many times first */
 	int drop_at; /* drop this send index (write-no-response loss) */
 	int crc_corrupt; /* corrupt one byte before delivering */
@@ -255,6 +256,10 @@ static int fake_send(void *user, const uint8_t *pkt, uint16_t pkt_len)
 	if (link->busy_budget > 0) {
 		link->busy_budget--;
 		return KEEB_TX_BUSY;
+	}
+
+	if (link->mtu_hard > 0 && pkt_len > (uint16_t)link->mtu_hard) {
+		return KEEB_TX_MTU; /* a peer that really cannot carry this size */
 	}
 
 	if (link->mtu_budget > 0 && pkt_len > (uint16_t)link->mtu_budget) {
@@ -337,7 +342,7 @@ static void test_loopback(void)
 
 	link.dev.send = fake_send;
 	link.dev.user = &link;
-	link.dev.max_frag = 62; /* BLE: MTU 65 minus 3 */
+	link.dev.max_frag = 46; /* BLE: MTU 65 - 3 (ATT opcode+handle) - 16 (KEEB header) */
 	link.rx = (struct keeb_tlv_rx)KEEB_TLV_RX_INIT;
 	link.mtu_budget = -1;
 	link.busy_budget = 0;
@@ -367,8 +372,8 @@ static void test_loopback(void)
 	 */
 	CHECK_EQ(link.received_len, msg.len, "received length matches the message");
 	CHECK(memcmp(link.received, tx_buf, msg.len) == 0, "received bytes match");
-	CHECK(link.sent >= (msg.len + KEEB_PKT_HDR_SIZE - 1) / 62,
-	      "a %u byte message needs many 62 byte fragments (%u sent)", (uint16_t)msg.len,
+	CHECK(link.sent >= (msg.len + KEEB_PKT_HDR_SIZE - 1) / 46,
+	      "a %u byte message needs many 46 byte fragments (%u sent)", (uint16_t)msg.len,
 	      link.sent);
 }
 
@@ -393,7 +398,7 @@ static void test_fragment_failure_modes(void)
 	memset(&tx, 0, sizeof(tx));
 	link.dev.send = fake_send;
 	link.dev.user = &link;
-	link.dev.max_frag = 62;
+	link.dev.max_frag = 46;
 	link.rx = (struct keeb_tlv_rx)KEEB_TLV_RX_INIT;
 	link.mtu_budget = 40; /* first oversized fragment triggers the shrink */
 	link.drop_at = -1;
@@ -412,7 +417,7 @@ static void test_fragment_failure_modes(void)
 	memset(&tx, 0, sizeof(tx));
 	link.dev.send = fake_send;
 	link.dev.user = &link;
-	link.dev.max_frag = 62;
+	link.dev.max_frag = 46;
 	link.rx = (struct keeb_tlv_rx)KEEB_TLV_RX_INIT;
 	link.mtu_budget = -1;
 	link.busy_budget = 3;
@@ -435,7 +440,7 @@ static void test_fragment_failure_modes(void)
 	memset(&tx, 0, sizeof(tx));
 	link.dev.send = fake_send;
 	link.dev.user = &link;
-	link.dev.max_frag = 62;
+	link.dev.max_frag = 46;
 	link.rx = (struct keeb_tlv_rx)KEEB_TLV_RX_INIT;
 	link.mtu_budget = -1;
 	link.drop_at = 2; /* third fragment vanishes */
@@ -457,6 +462,34 @@ static void test_fragment_failure_modes(void)
 	CHECK(pump_until_done(&tx, 400) == 0, "restart completes");
 	CHECK_EQ(link.completed, 1, "restart delivered a whole message");
 	CHECK(memcmp(link.received, tx_buf, msg.len) == 0, "restart bytes match");
+
+	/* Case D: the peer's MTU cannot carry even the smallest fragment the
+	 * sender is willing to use. Halving further is not a recovery, so the
+	 * sender must give up and report it - the alternative is the engine
+	 * re-arming the same fragment every KEEB_TX_RETRY_MS forever, which is
+	 * what a real board shows as an endless "No buffer available to send
+	 * notification" log.
+	 */
+	memset(&link, 0, sizeof(link));
+	memset(&tx, 0, sizeof(tx));
+	link.dev.send = fake_send;
+	link.dev.user = &link;
+	link.dev.max_frag = 46;
+	link.rx = (struct keeb_tlv_rx)KEEB_TLV_RX_INIT;
+	link.mtu_budget = -1;
+	link.mtu_hard = KEEB_PKT_HDR_SIZE + KEEB_TLV_FRAG_MIN - 1; /* one byte short */
+	link.drop_at = -1;
+
+	keeb_tlv_msg_init(&msg, tx_buf, sizeof(tx_buf));
+	keeb_tlv_rec_add_struct(&msg, KEEB_T_CELLS, payload, sizeof(payload));
+
+	keeb_tlv_tx_start(&tx, &link.dev, tx_pkt, sizeof(tx_pkt), tx_buf, (uint16_t)msg.len, 12,
+			  KEEB_PKT_F_REPLY);
+	r = pump_until_done(&tx, 400);
+
+	CHECK(r < 0 && r != -1000, "a link too small for the protocol is reported, not retried");
+	CHECK(!tx.busy, "the dropped message releases the tx so the next request can be served");
+	CHECK_EQ(link.completed, 0, "nothing was completed on a link that cannot carry it");
 }
 
 static void test_input_rejections(void)
@@ -471,7 +504,7 @@ static void test_input_rejections(void)
 	memset(&tx, 0, sizeof(tx));
 	link.dev.send = fake_send;
 	link.dev.user = &link;
-	link.dev.max_frag = 62;
+	link.dev.max_frag = 46;
 	link.rx = (struct keeb_tlv_rx)KEEB_TLV_RX_INIT;
 	link.mtu_budget = -1;
 	link.drop_at = -1;

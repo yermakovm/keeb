@@ -3,18 +3,29 @@
  *
  * SPDX-License-Identifier: MIT
  *
- * keeb,layer-art - "show layer N's artwork on the other half".
+ * keeb,layer-art - "the other half should show layer N's artwork, on device D".
  *
  * ZMK does not replicate active layer state to the peripheral: the peripheral
- * only ever sees behaviour invocations. The trick used here is a behaviour
- * with BEHAVIOR_LOCALITY_GLOBAL - when the central invokes it,
+ * only ever sees behaviour invocations. The trick is a behaviour with
+ * BEHAVIOR_LOCALITY_GLOBAL - when the central invokes it,
  * zmk_behavior_invoke_binding() ships it to every peripheral over the split
  * transport, which is exactly the channel the right hand display needs.
  *
- * layer_sync.c (central) is what invokes it; the peripheral receives the
- * invocation and remembers the layer index. The node exists on both halves so
- * that the central can resolve and invoke the behaviour locally as a no-op.
+ * layer_sync.c (central) is what invokes it. The peripheral receives the
+ * invocation and remembers param1 (the layer whose artwork to show) and
+ * param2 (the device the central is talking to).
+ *
+ * The node lives in the shared keeb.dtsi, so it exists on both halves - which
+ * is why the central's own copy of this driver is a deliberate no-op: an
+ * invocation the central makes is also run locally, and this half's panel reads
+ * its layer from ZMK directly. Calling the peripheral panel code here would not
+ * even link: panel_peripheral.c is only compiled on the peripheral.
  */
+
+/* Without this the DT_INST macros below match nothing and the driver is
+ * silently never instantiated - which is exactly how this behaviour shipped
+ * broken: the split relay looked wired up and never ran. */
+#define DT_DRV_COMPAT keeb_layer_art
 
 #include <zephyr/device.h>
 #include <zephyr/logging/log.h>
@@ -22,7 +33,13 @@
 #include <drivers/behavior.h>
 #include <zmk/behavior.h>
 
-#if IS_ENABLED(CONFIG_KBEEB_UI_ART)
+#if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
+#define LAYER_ART_CENTRAL 1
+#else
+#define LAYER_ART_CENTRAL 0
+#endif
+
+#if !LAYER_ART_CENTRAL
 #include "panel_peripheral.h"
 #endif
 
@@ -34,14 +51,20 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 static int layer_art_binding_pressed(struct zmk_behavior_binding *binding,
 				     struct zmk_behavior_binding_event event) {
-	LOG_DBG("layer art -> %u (position %d)", binding->param1, event.position);
+#if LAYER_ART_CENTRAL
+	ARG_UNUSED(binding);
+	ARG_UNUSED(event);
+#else
+	LOG_DBG("layer art -> %u (device %u, position %d)", binding->param1, binding->param2,
+		event.position);
 
-#if IS_ENABLED(CONFIG_KBEEB_UI_ART)
 	keeb_art_select(binding->param1);
+	keeb_device_select(binding->param2);
 #endif
+
 #if IS_ENABLED(CONFIG_KBEEB_LAYER_LED_INDICATE)
 	/* The same push that carries artwork to the peripheral also drives
-	 * the per-half RGB layer indication (see layer_indicate.c). */
+	 * each half's RGB layer indication (see layer_indicate.c). */
 	keeb_layer_indicate(binding->param1);
 #endif
 

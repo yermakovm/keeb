@@ -16,9 +16,10 @@
  * Framing
  * ---------------------------------------------------------------------------
  * A *message* is a flat list of TLV records. Because the transport is BLE GATT
- * (and the notification MTU here is CONFIG_BT_L2CAP_TX_MTU = 65, i.e. 62 bytes
- * of payload per notification), a message is split into *packets*, each one
- * carrying a byte range of the message:
+ * (and a notification can carry at most CONFIG_BT_L2CAP_TX_MTU = 65 bytes of
+ * ATT PDU, i.e. 65 - 3 for the ATT opcode and handle - 16 for this packet
+ * header = 46 bytes of message payload), a message is split into *packets*,
+ * each one carrying a byte range of the message:
  *
  *   packet = keeb_pkt_hdr (16 B) | fragment payload (frag_len bytes)
  *   message = keeb_tlv_rec (4 B) | value, repeated  (<= KEEB_TLV_MSG_MAX)
@@ -82,11 +83,18 @@
 #define KEEB_PKT_HDR_SIZE 16
 
 /* Largest fragment payload a sender uses. The BLE transport asks for less
- * (62 bytes, MTU 65 minus 3 for the ATT opcode and handle), but the staging
- * buffer is sized from this constant so a transport with a bigger MTU never
- * overruns it.
+ * (46 bytes: MTU 65 minus 3 for the ATT opcode and handle, minus the 16 byte
+ * packet header the notification also has to carry), but the staging buffer is
+ * sized from this constant so a transport with a bigger MTU never overruns it.
  */
 #define KEEB_TLV_FRAG_MAX 128
+
+/* Smallest fragment payload a sender falls back to when a peer cannot carry the
+ * current one. Under this, stopping is better than halving: a link whose ATT
+ * MTU cannot carry KEEB_PKT_HDR_SIZE + KEEB_TLV_FRAG_MIN + 3 cannot run this
+ * protocol at all, and keeb_tlv_tx_pump says so instead of retrying forever.
+ */
+#define KEEB_TLV_FRAG_MIN 20
 
 /* Bit 0: this is a reply/unsolicited message from the keyboard.
  * Bit 1: the message is an event notification (see KEEB_T_NOTIFY).
@@ -100,6 +108,7 @@
 #define KEEB_INFO_F_RESERVED_FROZEN 0x00000001u /* reserved positions are pinned */
 #define KEEB_INFO_F_REORDERING 0x00000002u      /* layer reorder/add/remove live */
 #define KEEB_INFO_F_PERSISTENT 0x00000004u      /* changes survive reboot */
+#define KEEB_INFO_F_DISPLAY 0x00000008u         /* DISPLAY namespace is compiled in */
 
 /* --------------------------------------------------------------------------
  * Namespaces and record types
@@ -107,7 +116,7 @@
 
 #define KEEB_NS_SYS 0x0u
 #define KEEB_NS_KEYMAP 0x1u
-#define KEEB_NS_DISPLAY 0x2u    /* unused yet: panel/image selection */
+#define KEEB_NS_DISPLAY 0x2u    /* status-screen widget table + its readouts */
 #define KEEB_NS_SETTINGS 0x3u   /* unused yet: sleep timeout and friends */
 #define KEEB_NS_IMAGE 0x4u      /* unused yet: chunked artwork upload */
 
@@ -141,6 +150,33 @@
 #define KEEB_T_APPLY_COMMIT KEEB_TLV_TYPE(KEEB_NS_KEYMAP, 0x0e)
 #define KEEB_T_APPLY_CANCEL KEEB_TLV_TYPE(KEEB_NS_KEYMAP, 0x0f)
 
+/* DISPLAY - the status screen's widget table.
+ *
+ * The panel is not a live LVGL widget tree: the firmware keeps a bounded table
+ * of drawing primitives (see struct keeb_widget) and a draw pass that paints
+ * that table from a snapshot of ZMK's state. These records edit the table, the
+ * fixed strings it can print, and the numbers a host can push into it. The
+ * ZMK-owned readouts (layer, battery, link, charging, connected device) stay
+ * owned by the firmware: a widget chooses *which* one appears *where*, it can
+ * never fake one.
+ */
+#define KEEB_T_DISPLAY_INFO KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x01)
+#define KEEB_T_DISPLAY_GET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x02)
+#define KEEB_T_DISPLAY KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x03)
+#define KEEB_T_DISPLAY_SET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x04)
+#define KEEB_T_WIDGET_SET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x05)
+#define KEEB_T_TEXT_SET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x06)
+#define KEEB_T_VALUE_SET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x07)
+#define KEEB_T_PRESET_SET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x08)
+#define KEEB_T_DISPLAY_SAVE KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x09)
+#define KEEB_T_DISPLAY_DISCARD KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x0a)
+#define KEEB_T_DISPLAY_RESET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x0b)
+#define KEEB_T_DISPLAY_BLANK KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x0c)
+/* Sent by the board after KEEB_T_DISPLAY_INFO, one per built-in preset, so the
+ * configurator labels presets with the firmware's own names instead of "0/1/2".
+ */
+#define KEEB_T_PRESET_NAME KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x0d)
+
 /* --------------------------------------------------------------------------
  * Status and error codes
  * -------------------------------------------------------------------------- */
@@ -167,6 +203,7 @@ enum keeb_status {
 #define KEEB_ERR_NO_SPACE 13
 #define KEEB_ERR_NOT_SUPPORTED 14
 #define KEEB_ERR_BUSY 15
+#define KEEB_ERR_BAD_WIDGET 16 /* kind/source unknown, or geometry outside the panel */
 
 /* --------------------------------------------------------------------------
  * Tokens: the behaviors a host may bind
@@ -244,6 +281,174 @@ struct KEEB_PACKED keeb_notify {
 #define KEEB_EV_SAVED 0x0003u       /* payload: none */
 #define KEEB_EV_DISCARDED 0x0004u   /* payload: none (revert chord too) */
 #define KEEB_EV_LAYER_CHANGED 0x0005u /* payload: uint8_t layer id */
+#define KEEB_EV_DISPLAY_SET 0x0006u   /* payload: uint8_t count, uint8_t flags */
+#define KEEB_EV_TEXT_SET 0x0007u      /* payload: uint8_t slot */
+#define KEEB_EV_DISPLAY_SAVED 0x0008u /* payload: none */
+
+/* --------------------------------------------------------------------------
+ * Display model: widget kinds, data sources, geometry
+ * --------------------------------------------------------------------------
+ * These enums are part of the wire format: struct keeb_widget stores a kind and
+ * a source, so the values are fixed here rather than in the UI code. Adding a
+ * kind or a source is a firmware change; the configurator learns the real set
+ * from keeb_display_info rather than assuming it.
+ */
+
+/* struct keeb_widget.kind */
+enum keeb_widget_kind {
+	KEEB_WID_NONE = 0,  /* empty slot: draws nothing */
+	KEEB_WID_FRAME = 1, /* rounded 1px outline, style = radius */
+	KEEB_WID_RECT = 2,  /* filled rect, style: 0 = ink, 1 = paper */
+	KEEB_WID_RULE = 3,  /* horizontal 1px line */
+	KEEB_WID_TEXT = 4,  /* style: bits 0-1 font, bits 2-3 align */
+	KEEB_WID_BAR = 5,   /* percent bar, source gives the percentage */
+	KEEB_WID_BATTERY = 6, /* battery glyph, source gives the percentage */
+	KEEB_WID_PIPS = 7,  /* layer pips, style = pip geometry preset */
+	KEEB_WID_BOLT = 8,  /* charge bolt, drawn only while charging */
+	KEEB_WID_ART = 9,   /* the active layer's artwork, centred in the box */
+	KEEB_WID_COUNT = 10
+};
+
+/* struct keeb_widget.source. A source is a value the firmware reads from ZMK at
+ * draw time; KBEEB_SRC_TEXT_BASE+i and KBEEB_SRC_VALUE_BASE+i are the slots a
+ * host may write. A widget may not name a value the firmware cannot produce.
+ */
+enum keeb_widget_source {
+	KEEB_SRC_NONE = 0,
+	KEEB_SRC_LAYER_INDEX = 1,   /* "01" .. "NN" */
+	KEEB_SRC_LAYER_NAME = 2,    /* active layer's name */
+	KEEB_SRC_LAYER_POS = 3,     /* "LAYER 2 / 5" */
+	KEEB_SRC_LAYER_PIPS = 4,    /* pip row: active index + layer count */
+	KEEB_SRC_LAYER_ART = 5,     /* artwork of the active layer */
+	KEEB_SRC_BATT_LEFT = 6,     /* percentage, for BAR/BATTERY */
+	KEEB_SRC_BATT_LEFT_PCT = 7, /* "86%", for TEXT */
+	KEEB_SRC_BATT_RIGHT = 8,
+	KEEB_SRC_BATT_RIGHT_PCT = 9,
+	KEEB_SRC_LINK = 10,   /* "LINK: OK" / "LINK: --" */
+	KEEB_SRC_LINK_SHORT = 11, /* "LINK" / "--" */
+	KEEB_SRC_HOST = 12,   /* "HOST: READY" / "HOST: --" */
+	KEEB_SRC_CHARGING = 13, /* "CHARGING" when powered, else the host text */
+	KEEB_SRC_DEVICE_ID = 14, /* connected host: "1".."N", "U" for USB, "--" */
+	KEEB_SRC_DEVICE_NAME = 15, /* peer name the firmware knows, else "--" */
+	KEEB_SRC_TEXT_BASE = 0x20, /* + slot: a string the host wrote */
+	KEEB_SRC_VALUE_BASE = 0x40 /* + slot: a number the host wrote */
+};
+
+/* struct keeb_widget.style, kind-specific halves. */
+#define KEEB_STYLE_FONT(s) ((uint8_t)((s) & 0x3u))    /* 0 small, 1 body, 2 digit */
+#define KEEB_STYLE_ALIGN(s) ((uint8_t)(((s) >> 2) & 0x3u)) /* 0 left, 1 centre, 2 right */
+#define KEEB_TEXT_STYLE(font, align) (uint8_t)(((font) & 0x3u) | (((align) & 0x3u) << 2))
+#define KEEB_RECT_PAPER 1u /* KEEB_WID_RECT: fill with paper instead of ink */
+
+/* KEEB_WID_PIPS pip geometry presets: (pip_w, pip_h, gap). */
+#define KEEB_PIPS_SMALL 0  /* 6 x 3, gap 2  - fits 10 pips in 152 px */
+#define KEEB_PIPS_LARGE 1  /* 7 x 4, gap 3  - the portrait panel */
+#define KEEB_PIPS_TINY 2   /* 5 x 3, gap 2 */
+
+/* struct keeb_widget.style for KEEB_WID_ART: how the artwork is fitted. */
+#define KEEB_ART_CENTRE 0 /* centre inside the box, clip what overflows */
+#define KEEB_ART_BOTTOM 1 /* align to the bottom edge of the box */
+
+/* KEEB_SRC_DEVICE_ID values the firmware reports (also the split relay's
+ * param2 on the keeb,layer-art push). */
+#define KEEB_DEV_NONE 0u
+#define KEEB_DEV_USB 0x80u
+
+/* --------------------------------------------------------------------------
+ * Display payloads
+ * --------------------------------------------------------------------------
+ */
+
+/** One entry of the widget table. 7 bytes, and the same struct the firmware
+ * keeps in RAM and writes to settings - so the settings blob, the wire record
+ * and the configurator's model are one layout, not three.
+ */
+struct KEEB_PACKED keeb_widget {
+	uint8_t kind;   /* enum keeb_widget_kind */
+	uint8_t source; /* enum keeb_widget_source */
+	uint8_t x;
+	uint8_t y;
+	uint8_t w;
+	uint8_t h;
+	uint8_t style; /* see KEEB_STYLE_* / KEEB_RECT_PAPER / KEEB_PIPS_* */
+};
+
+/** KEEB_T_DISPLAY_INFO - the panel's real limits, so the configurator never
+ * hard-codes them. Coordinates are in the *logical* UI space: the panel is
+ * 160x68, but a portrait-rotated build lays out 68x160 and rotates the result.
+ */
+struct KEEB_PACKED keeb_display_info {
+	uint8_t editable;    /* 0 = this half's table is fixed (no host writes) */
+	uint8_t preset_count;
+	uint8_t widget_max;  /* entries the firmware can hold */
+	uint8_t text_slots;
+	uint8_t text_max;    /* bytes per text slot, excluding NUL */
+	uint8_t value_slots;
+	uint8_t kind_max;    /* enum keeb_widget_kind values below this are known */
+	uint8_t source_max;  /* highest enum keeb_widget_source value */
+	uint16_t logical_w;
+	uint16_t logical_h;
+	uint16_t panel_w;
+	uint16_t panel_h;
+	uint16_t rotation;   /* degrees the composed UI is rotated by */
+	uint8_t widget_size; /* sizeof(struct keeb_widget): layout guard */
+	uint8_t flags;     /* KEEB_DISPLAY_INFO_F_* */
+	uint8_t layers;    /* how many pips a KEEB_WID_PIPS row draws, i.e.
+	                    * KBEEB_LAYER_COUNT: the configurator needs it to
+	                    * check a pip row fits the panel before it writes */
+};
+
+/* This half links the layer artwork, so KEEB_WID_ART is accepted here. On the
+ * central it is a Kconfig (CONFIG_KBEEB_UI_CENTRAL_ART): the artwork is ~54 KB
+ * of A8 stencils, and a panel that only shows readouts should not pay for it. */
+#define KEEB_DISPLAY_INFO_F_ART 0x01u
+
+/** KEEB_T_DISPLAY header, then `count` keeb_widget entries, then the text
+ * slots as KEEB_T_TEXT_SET records and the values as KEEB_T_VALUE_SET records.
+ * Also the header of a KEEB_T_DISPLAY_SET payload (same layout, host -> board).
+ */
+struct KEEB_PACKED keeb_display_hdr {
+	uint8_t count;  /* widgets that follow */
+	uint8_t preset; /* preset the table was derived from */
+	uint8_t flags;  /* KEEB_DISPLAY_F_* */
+	uint8_t rsvd;
+};
+
+#define KEEB_DISPLAY_F_DIRTY 0x01u /* not yet saved to settings */
+#define KEEB_DISPLAY_F_FIXED 0x02u /* read-only table (peripheral half) */
+
+/** KEEB_T_WIDGET_SET: uint8_t index, then one keeb_widget. */
+struct KEEB_PACKED keeb_widget_set {
+	uint8_t index;
+	uint8_t rsvd;
+};
+
+/** KEEB_T_TEXT_SET: header, then `len` bytes of UTF-8 (no NUL on the wire). */
+struct KEEB_PACKED keeb_text_slot {
+	uint8_t slot;
+	uint8_t len;
+};
+
+/** KEEB_T_VALUE_SET: one number a host pushed into a slot. */
+struct KEEB_PACKED keeb_value_slot {
+	uint8_t slot;
+	uint8_t rsvd;
+	int16_t value;
+};
+
+/** KEEB_T_PRESET_SET / KEEB_T_DISPLAY_RESET payload: the preset id. A zero-length
+ * payload means preset 0.
+ */
+struct KEEB_PACKED keeb_preset_set {
+	uint8_t preset;
+	uint8_t rsvd;
+};
+
+/** KEEB_T_PRESET_NAME: header, then `name_len` bytes of the preset's name. */
+struct KEEB_PACKED keeb_preset_name {
+	uint8_t preset;
+	uint8_t name_len;
+};
 
 /** One cell of a dump (KEEB_T_CELLS). */
 struct KEEB_PACKED keeb_cell {

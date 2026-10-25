@@ -7,7 +7,8 @@
  *
  * Two jobs:
  *   - push the active layer whenever it changes (&keeb_layer_art is a
- *     BEHAVIOR_LOCALITY_GLOBAL behaviour, so ZMK forwards it to the peripheral),
+ *     BEHAVIOR_LOCALITY_GLOBAL behaviour, so ZMK forwards it to the
+ *     peripheral), together with the device this keyboard is connected to,
  *   - poll the split transport for the peer link state, because ZMK raises no
  *     central-side event when a peripheral connects. On the connect edge the
  *     current layer is pushed again, otherwise a peripheral that connects
@@ -22,13 +23,21 @@
 
 #include <zmk/behavior.h>
 #include <zmk/display.h>
+#include <zmk/endpoints.h>
 #include <zmk/event_manager.h>
+#include <zmk/events/endpoint_changed.h>
 #include <zmk/events/layer_state_changed.h>
 #include <zmk/events/position_state_changed.h>
+#include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/keymap.h>
 #include <zmk/matrix.h>
 #include <zmk/split/transport/central.h>
 #include <zmk/split/transport/types.h>
+
+#if IS_ENABLED(CONFIG_ZMK_BLE)
+#include <zmk/ble.h>
+#include <zmk/events/ble_active_profile_changed.h>
+#endif
 
 #include "keeb_ui.h"
 #include "layer_sync.h"
@@ -52,10 +61,29 @@ static atomic_t peer_connected;
 
 bool keeb_layer_sync_peer_connected(void) { return atomic_get(&peer_connected) != 0; }
 
+uint8_t keeb_split_device_id(void) {
+	struct zmk_endpoint_instance endpoint = zmk_endpoint_get_selected();
+
+	switch (endpoint.transport) {
+	case ZMK_TRANSPORT_USB:
+		return KEEB_DEV_USB;
+	case ZMK_TRANSPORT_BLE:
+		/* Profiles are 0-based in ZMK and 1-based on the panel: "device 2"
+		 * is the second profile, which is what OUT_TOG keys are named for. */
+		return (endpoint.ble.profile_index < 0)
+			       ? KEEB_DEV_NONE
+			       : (uint8_t)(endpoint.ble.profile_index + 1);
+	default:
+		return KEEB_DEV_NONE;
+	}
+}
+
 static void push_active_layer(void) {
 	struct zmk_behavior_binding binding = {
 		.param1 = zmk_keymap_highest_layer_active(),
-		.param2 = 0,
+		/* The same push carries the connected device to the right half:
+		 * one split message, both readouts, no extra traffic. */
+		.param2 = keeb_split_device_id(),
 		.behavior_dev = LAYER_ART_DEV,
 	};
 	struct zmk_behavior_binding_event event = {
@@ -121,6 +149,11 @@ static int layer_changed_cb(const zmk_event_t *eh) {
 
 ZMK_LISTENER(keeb_layer_sync, layer_changed_cb);
 ZMK_SUBSCRIPTION(keeb_layer_sync, zmk_layer_state_changed);
+ZMK_SUBSCRIPTION(keeb_layer_sync, zmk_endpoint_changed);
+ZMK_SUBSCRIPTION(keeb_layer_sync, zmk_usb_conn_state_changed);
+#if IS_ENABLED(CONFIG_ZMK_BLE)
+ZMK_SUBSCRIPTION(keeb_layer_sync, zmk_ble_active_profile_changed);
+#endif
 
 static int keeb_layer_sync_init(void) {
 	k_timer_start(&poll_timer, K_MSEC(CONFIG_KBEEB_UI_LAYER_SYNC_POLL_MS),

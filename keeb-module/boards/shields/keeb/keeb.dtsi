@@ -8,6 +8,16 @@
 		zephyr,display = &nice_view;
 		zmk,kscan = &kscan0;
 		zmk,matrix-transform = &default_transform;
+    zmk,battery = &vbatt;
+	};
+
+	/* Switch to the direct ADC driver to bypass ZMK's hardcoded divider assumptions */
+	vbatt: vbatt {
+		compatible = "zmk,battery-voltage-divider";
+		label = "BATTERY";
+		io-channels = <&adc 2>; /* Channel 2 = AIN2 = P0.04 */
+		output-ohms = <2000000>; 
+		full-ohms = <2806000>;   /* Correct scaling resistor math for this board clone */
 	};
 
 	default_transform: keymap_transform_0 {
@@ -137,31 +147,29 @@
 	};
 };
 
-/* Battery sense: using the board file's default divider for now
- * (xiao_ble_zmk.dts: 1M/510k, ratio ~2.96). The custom ratio previously
- * measured for this Super nRF52840 clone (~7.0: 900k top / 150k bottom,
- * same AIN7 / P0.31 tap and P0.14 active-low gate as the genuine XIAO,
- * only the resistor values differ) is left commented out below.
- *
- * The driver scales the ADC pin reading by full/output, so the ratio is
- * the only thing that matters for the SoC math. Expectation if the clone
- * divider really is ~7.0: with the default ratio a ~4.0V cell computes as
- * ~1.4-1.7V and the lithium SoC curve reads 0%. If the readout instead
- * lands on a sane voltage, the clone's divider is closer to 2.96 and the
- * default is correct. See config/keeb.conf "Battery monitoring".
- */
-/* &vbatt {
- *	output-ohms = <150000>;
- *	full-ohms = <1050000>;
- * }; */
-
 &uart0 {
        status = "disabled";
 };
 
-&i2c1 {
+&adc {
+	status = "okay";
+};
+
+&reg0 {
+	status = "disabled"; /* VDDH stage: disabled = DCDCEN1 off = LDO */
+};
+
+&reg1 {
+	regulator-initial-mode = <0>; /* core stage: LDO */
+};
+
+
+&i2c0 {
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
+    pinctrl-0 = <&i2c0_default>;
+    pinctrl-1 = <&i2c0_sleep>;
+    pinctrl-names = "default", "sleep";
 
 mcp23017_0: gpio@20 {
 		compatible = "microchip,mcp23017";
@@ -185,20 +193,29 @@ mcp23017_0: gpio@20 {
  * LDO is the only mode that regulates on this hardware: VDD ~3.0V on
  * battery and USB alike. Cost: the LDO burns the VDDH-VDD drop as
  * heat (2V x ~25mA = ~50mW on USB - mild, and in-spec). */
-&reg0 {
-	status = "disabled"; /* VDDH stage: disabled = DCDCEN1 off = LDO */
-};
-
-&reg1 {
-	regulator-initial-mode = <0>; /* core stage: LDO */
-};
-
 /* The board's spi2 pinctrl (xiao_ble-pinctrl.dtsi) claims P1.14 (XIAO D9)
  * as SPIM_MISO. The nice!view panel is write-only and D9 is matrix row 5
  * (see kscan0), so re-point spi2 at trimmed pinctrl states that stop
  * claiming MISO - otherwise every pinctrl (re-)application would steal
  * the pin back from the matrix. */
 &pinctrl {
+
+    i2c0_default: i2c0_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 19)>,   /* P0.02 */
+                    <NRF_PSEL(TWIM_SCL, 0, 5)>;   /* P0.03 */
+            bias-pull-up;
+        };
+    };
+
+    i2c0_sleep: i2c0_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 19)>,   /* P0.02 */
+                    <NRF_PSEL(TWIM_SCL, 0, 5)>;   /* P0.03 */
+            low-power-enable;
+        };
+    };
+
 	keeb_spi2_default: spi2_default_no_miso {
 		group1 {
 			psels =
