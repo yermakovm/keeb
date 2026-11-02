@@ -31,12 +31,18 @@
 # Kconfig symbol becomes "undefined"). If it is ever set in a parent shell, unset it.
 unset EXTRA_ZEPHYR_MODULES
 #
-# If the workspace moves, edit ZMK_WS (or export it before sourcing).
-
-export ZMK_WS="${ZMK_WS:-/Users/mykhailoyermakov/src/keyboard-zmk}"
-# Derived from ZMK_WS, not from $0/BASH_SOURCE: when this file is *sourced* from
-# zsh, $0 is the shell, so self-locating picks the wrong directory.
-export ZMK_REPO="${ZMK_REPO:-$ZMK_WS/zmk-config}"
+# Self-locate (works when sourced in bash, zsh, or executed directly).
+# ZMK_REPO is this repo; ZMK_WS is the parent workspace directory.
+if [ -n "${BASH_SOURCE[0]}" ]; then
+    _env_sh_here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+elif [ -n "$ZSH_VERSION" ]; then
+    _env_sh_here="$(cd "$(dirname "${(%):-%x}")" && pwd)"
+else
+    _env_sh_here="$(cd "$(dirname "$0")" && pwd)"
+fi
+export ZMK_REPO="${ZMK_REPO:-$_env_sh_here}"
+export ZMK_WS="${ZMK_WS:-$(dirname "$ZMK_REPO")}"
+unset _env_sh_here
 
 export PATH="$HOME/.venv-zephyr/bin:$PATH"
 export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
