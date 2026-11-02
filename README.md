@@ -1,24 +1,31 @@
 # keeb split keyboard
+
+This repo is the keyboard's authored code (keymap, shield, drivers, web UI).
+It lives inside a Zephyr workspace; upstream (ZMK + Zephyr + vendor HALs) is
+downloaded by `west` into the workspace root, never into this repo.
+
 ```
-keyboard-zmk/                       west workspace — NOT a repo, disposable
-├── .west/ zephyr/ zmk/ modules/ optional/   upstream (pinned ZMK + Zephyr 4.1
-│                                            + vendor modules), never edited
-├── out/                            build trees: out/left, out/right
-├── env.sh                          one-line forwarder -> zmk-config/env.sh
-└── zmk-config/                     THIS REPO
-    ├── config/                     keeb.keymap + keeb.conf   (ZMK user config)
-    ├── keeb-module/                keeb shield, behaviors, bindings, status
-    │                               screen, art, tools   (Zephyr module)
-    ├── status-led/                 RGB status LED driver (Zephyr module)
-    ├── west.yml                    manifest (ZMK only; the two modules above
-    │                               are passed via -DZMK_EXTRA_MODULES)
-    ├── Makefile  env.mk            build + flash entry points
-    ├── env.sh                      shell env (SDK, west, ZMK_CONFIG, module paths)
-    ├── build.sh                    build one half, show errors + memory usage
-    ├── docs/                       presentation deck (Marp slides, Ukrainian),
-    │                               theme/keeb.css, build.mjs (merges <n>_*.md
-    │                               into one deck), assets/
-    └── package.json                deck toolchain (marp-cli devDependency)
+keyboard-zmk/                        west workspace root (not a git repo)
+├── .west/config                     manifest.path = zmk-config
+├── zephyr/                          west project (not in git)
+├── zmk/                             west project (not in git)
+├── modules/                         west projects (not in git)
+├── optional/                        west projects (not in git)
+├── out/                             build trees: out/left, out/right
+└── zmk-config/                      THIS REPO
+    ├── config/                      keeb.keymap + keeb.conf   (ZMK user config)
+    ├── keeb-module/                 keeb shield, behaviors, bindings, status
+    │                                screen, art, tools   (Zephyr module)
+    ├── status-led/                  RGB status LED driver (Zephyr module)
+    ├── buzzer/                      active buzzer driver + behavior (Zephyr module)
+    ├── west.yml                     manifest (ZMK; local modules via ZMK_EXTRA_MODULES)
+    ├── Makefile  env.mk             build + flash entry points
+    ├── env.sh                       shell env (SDK, west, ZMK_CONFIG, module paths)
+    ├── build.sh                     build one half, show errors + memory usage
+    ├── docs/                        presentation deck (Marp slides, Ukrainian),
+    │                                theme/keeb.css, build.mjs (merges <n>_*.md
+    │                                into one deck), assets/
+    └── package.json                 deck toolchain (marp-cli devDependency)
 ```
 
 ## Build
@@ -32,9 +39,9 @@ and the memory-usage table). A raw `west build` works too:
 
 ```sh
 source zmk-config/env.sh
-west build -s zmk/app -b xiao_ble//zmk -d out/left -- \
+west build -s zmk/app -b nice_nano@2.0.0//zmk -d out/left -- \
      -DSHIELD=keeb_left -DZMK_CONFIG="$ZMK_CONFIG" \
-     -DZMK_EXTRA_MODULES="$KEEB_MODULE;$STATUS_LED"
+     -DZMK_EXTRA_MODULES="$KEEB_MODULE;$STATUS_LED;$BUZZER"
 ```
 
 ## Flash (UF2)
