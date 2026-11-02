@@ -2,9 +2,10 @@
 # Build one half and print only errors / memory usage.
 #   ./build.sh right|left [extra make args]
 #
-# No module sync step: the shield/behaviors live in this repo as module/
-# (plus status-led/), both handed to ZMK through -DZMK_EXTRA_MODULES (see
-# env.sh / env.mk), so whatever is in module/ today is what gets built.
+# No module sync step: the shield/behaviors live in this repo as keeb-module/
+# (plus status-led/ and buzzer/), all handed to ZMK through -DZMK_EXTRA_MODULES
+# (see env.sh / env.mk), so whatever is in those directories today is what gets
+# built.
 set -e
 cd "$(dirname "$0")"
 . ./env.sh

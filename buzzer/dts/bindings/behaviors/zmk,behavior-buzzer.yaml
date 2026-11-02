@@ -1,0 +1,73 @@
+# Copyright (c) 2025 The keeb keyboard authors
+# SPDX-License-Identifier: MIT
+
+description: |
+  Play a buzzer tune, then - if a `target` is given - invoke that behavior once
+  the tone has finished.
+
+  Example (keeb.dtsi, used by the left-half reset chord in keeb.keymap):
+
+    behaviors {
+        buzzer_reset: buzzer_reset {
+            compatible = "zmk,behavior-buzzer";
+            target = <&sys_reset>;
+            #binding-cells = <0>;
+        };
+
+        buzzer_boot: buzzer_boot {
+            compatible = "zmk,behavior-buzzer";
+            target = <&bootloader>;
+            tune = "bootloader";
+            #binding-cells = <0>;
+        };
+    };
+
+    /* in the keymap's combos { } */
+    left_reset_combo {
+        key-positions = <KEEB_POS_L_TOP_0 KEEB_POS_L_TOP_1>;
+        bindings = <&buzzer_reset>;
+    };
+
+  Why it is one behavior and not two bindings: a ZMK combo holds a single
+  behavior binding, and &sys_reset reboots inside its own callback - so a chord
+  bound to &sys_reset is dead before it could beep. This behavior starts the
+  tone asynchronously and re-invokes the target on a work item after the tone
+  ends (plus CONFIG_ZMK_BUZZER_LEAD_MS), which is what makes the sound land
+  *before* the action without blocking ZMK's behavior queue.
+
+  Without `target` the behavior is a pure sound and can be bound to any key.
+
+  Requires a `zmk,buzzer` device on this half; on a half without one the tone
+  reports "no buzzer" and the target runs immediately.
+
+compatible: "zmk,behavior-buzzer"
+
+include: zero_param.yaml
+
+properties:
+  tune:
+    type: string
+    required: false
+    default: random
+    enum:
+      - random
+      - layer_on
+      - layer_off
+      - bootloader
+      - update_ok
+      - update_fail
+      - wake
+    description: |
+      Which tune to play. `random` (the default) draws a fresh rhythm and pitch per
+      press, which is the right choice when a sound only has to say "this happened";
+      a named tune says *which* one - see buzzer/README.md for what each one sounds
+      like and why. A name outside this list is a build error.
+
+  target:
+    type: phandle
+    required: false
+    description: |
+      Behavior node to invoke after the tone finishes, e.g. <&sys_reset> or
+      <&bootloader>. A phandle carries no parameters, so a target that needs
+      them has to be a dedicated node with its own binding (the way
+      keeb,remote-reset wraps &sys_reset for the right half).

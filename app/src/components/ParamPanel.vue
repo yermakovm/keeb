@@ -199,19 +199,24 @@ async function resetSettings(): Promise<void> {
 .group { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .btn {
-  padding: 6px 12px; border-radius: 7px;
+  padding: 6px 12px; border-radius: 0;
   border: 1px solid var(--border); background: var(--bg-raised);
   font-size: 12px; color: var(--text-dim);
 }
-.btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.btn:disabled { opacity: 0.45; }
-.btn.primary { border-color: var(--accent); color: var(--accent); }
+.btn:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
+.btn:disabled { opacity: 0.62; }
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
 .btn.push { border-color: var(--ok); color: var(--ok); }
 .btn.danger:hover:not(:disabled) { border-color: var(--err); color: var(--err); }
 
 .toggle {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: 7px;
+  padding: 6px 10px; border-radius: 0;
   border: 1px solid var(--border); font-size: 12px; color: var(--text-faint);
   cursor: pointer;
 }

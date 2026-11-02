@@ -6,6 +6,7 @@
 #   config/      keeb.keymap + keeb.conf   -> ZMK user config (what the keys do)
 #   keeb-module/ shield, behaviors, status screen -> Zephyr module
 #   status-led/  RGB status LED driver     -> Zephyr module (was zmk-status-led/)
+#   buzzer/      active buzzer driver + behavior -> Zephyr module
 # Everything upstream (zephyr/, zmk/, modules/, optional/) stays in the west
 # workspace as a sibling, never inside this repo. Build trees go to ../out/.
 #
@@ -18,9 +19,10 @@ WS   ?= $(abspath $(HERE)/..)
 # EXTRA_ZEPHYR_MODULES env var - env.sh explains why that breaks Zephyr 4.1).
 KEEB_MODULE ?= $(HERE)/keeb-module
 STATUS_LED  ?= $(HERE)/status-led
+BUZZER      ?= $(HERE)/buzzer
 ZMK_CONFIG  ?= $(HERE)/config
 OUT         ?= $(WS)/out
-export KEEB_MODULE STATUS_LED ZMK_CONFIG OUT
+export KEEB_MODULE STATUS_LED BUZZER ZMK_CONFIG OUT
 
 # venv with west; prepended so an already-sourced env.sh changes nothing.
 PATH := $(HOME)/.venv-zephyr/bin:$(PATH)

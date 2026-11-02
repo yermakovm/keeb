@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600" width="480" height="600" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
   <!--
     Placeholder for the keyboard photo. Aspect ratio 480:600 = the right half
     of a 16:9 slide (576x720), so `contain` fills that region exactly.

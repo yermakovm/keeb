@@ -149,12 +149,12 @@ export function describeWidget(
   const kindName = KIND_LABELS[kind] ?? `kind ${kind}`
 
   if (isTextSlot(source, textBase, textSlots)) {
-    return `${kindName} ← text ${slotIndexOf(source, textBase)}`
+    return `${kindName} · text ${slotIndexOf(source, textBase)}`
   }
 
   if (source >= valueBase && source < valueBase + 4) {
-    return `${kindName} ← value ${source - valueBase}`
+    return `${kindName} · value ${source - valueBase}`
   }
 
-  return `${kindName} ← ${SOURCE_LABELS[source] ?? `source ${source}`}`
+  return `${kindName} · ${SOURCE_LABELS[source] ?? `source ${source}`}`
 }

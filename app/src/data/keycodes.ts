@@ -41,7 +41,7 @@ export const MISSING_CATALOG_NAMES = missing
 
 export const CATALOG = {
   letters: 'QWERTYUIOPASDFGHJKLZXCVBNM'.split('').map((c) => mk(c)),
-  numbers: '1234567890'.split('').map((d) => mk(`N${d}`)),
+  numbers: '1234567890'.split('').map((d) => mk(`N${d}`, d)),
   symbols: [
     /* Unshifted usages only. In ZMK, LBRC/RBRC are LS(...) — they send { and }
      * — so the brackets are LBKT/RBKT, and the backslash is BSLH: ZMK has no
@@ -76,7 +76,10 @@ export const CATALOG = {
   ],
   keypad: [
     mk('KP_ENTER', '⏎'), mk('KP_DIVIDE', '/'), mk('KP_ASTERISK', '*'), mk('KP_PLUS', '+'),
-    mk('KP_MINUS', '−'), mk('KP_DOT', '.'), mk('KP_N1', '1'), mk('KP_N2', '2'), mk('KP_N3', '3'),
+    mk('KP_MINUS', '−'), mk('KP_DOT', '.'),
+    mk('KP_N0', '0'), mk('KP_N1', '1'), mk('KP_N2', '2'), mk('KP_N3', '3'),
+    mk('KP_N4', '4'), mk('KP_N5', '5'), mk('KP_N6', '6'),
+    mk('KP_N7', '7'), mk('KP_N8', '8'), mk('KP_N9', '9'),
   ],
   mouseButtons: [
     mk('LCLK', 'LClick'), mk('RCLK', 'RClick'), mk('MCLK', 'MClick'), mk('MB4', 'B4'), mk('MB5', 'B5'),
@@ -109,15 +112,76 @@ const SHORT_LABELS: Record<string, string> = {
   K_VOLUME_UP: '🔉+', K_VOLUME_DOWN: '🔉−',
 }
 
-/** value -> ZMK name. Several names can encode the same usage (LS(N1) and
- * EXCLAMATION); the shortest one is the one worth printing. */
+/* --------------------------------------------------------------------------
+ * Display labels: code value → what to print on a cap.  This is decoupled
+ * from ZMK naming aliases so a cryptic abbreviation like SQT or GRAV never
+ * leaks into the UI as the primary label.
+ * -------------------------------------------------------------------------- */
+
+const DISPLAY_LABELS: Record<number, string | undefined> = {}
+
+function registerLabel(code: number, label: string): void {
+  if (DISPLAY_LABELS[code] === undefined) {
+    DISPLAY_LABELS[code] = label
+  }
+}
+
+for (const [name, label] of Object.entries(SHORT_LABELS)) {
+  const code = KEYCODES[name]
+
+  if (code !== undefined) {
+    registerLabel(code, label)
+  }
+}
+
+for (const group of Object.values(CATALOG)) {
+  for (const item of group) {
+    registerLabel(item.code, item.label)
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Name lookup: value → ZMK name.  Several names can encode the same usage
+ * (LS(N1) and EXCLAMATION); we prefer names that are known in SHORT_LABELS
+ * or CATALOG so the shortest cryptic alias (GRAV vs GRAVE) is not the one
+ * used for hints.
+ * -------------------------------------------------------------------------- */
+
+const KNOWN_NAMES = new Set<string>([
+  ...Object.keys(SHORT_LABELS),
+  ...Object.values(CATALOG).flatMap((g) => g.map((i) => i.name)),
+])
+
 const nameByCode = new Map<number, string>()
+const preferredNameByCode = new Map<number, string>() // readable / known name
 
 for (const [name, value] of Object.entries(KEYCODES)) {
   const existing = nameByCode.get(value)
 
-  if (!existing || name.length < existing.length) {
+  if (!existing) {
     nameByCode.set(value, name)
+    if (KNOWN_NAMES.has(name)) preferredNameByCode.set(value, name)
+    continue
+  }
+
+  const existingKnown = KNOWN_NAMES.has(existing)
+  const newKnown = KNOWN_NAMES.has(name)
+
+  if (newKnown && !existingKnown) {
+    nameByCode.set(value, name)
+    preferredNameByCode.set(value, name)
+  } else if (newKnown && existingKnown && name.length < existing.length) {
+    nameByCode.set(value, name)
+    preferredNameByCode.set(value, name)
+  } else if (!newKnown && !existingKnown && name.length < existing.length) {
+    nameByCode.set(value, name)
+  }
+
+  if (newKnown) {
+    const preferred = preferredNameByCode.get(value)
+    if (!preferred || name.length < preferred.length) {
+      preferredNameByCode.set(value, name)
+    }
   }
 }
 
@@ -125,23 +189,22 @@ export function keyNameFor(code: number): string | null {
   return nameByCode.get(code) ?? null
 }
 
+/** A readable canonical ZMK name for tooltips and hints. */
+export function keyHint(code: number): string | null {
+  return preferredNameByCode.get(code) ?? nameByCode.get(code) ?? null
+}
+
 export function keyLabel(code: number): string {
+  const direct = DISPLAY_LABELS[code]
+
+  if (direct !== undefined) {
+    return direct
+  }
+
   const name = nameByCode.get(code)
 
   if (!name) {
     return `0x${code.toString(16)}`
-  }
-
-  if (SHORT_LABELS[name]) {
-    return SHORT_LABELS[name]
-  }
-
-  for (const group of Object.values(CATALOG)) {
-    for (const item of group) {
-      if (item.name === name) {
-        return item.label === name ? name : item.label
-      }
-    }
   }
 
   return name.replace(/^K_|^C_/, '')

@@ -1,5 +1,6 @@
 /*
- * keeb power diagnostics: NologoTech "Super nRF52840" (XIAO nRF52840 clone).
+ * keeb power diagnostics: NologoTech "Super nRF52840" clones (the same clone
+ * family in XIAO nRF52840 and now Pro Micro / nice!nano footprint).
  *
  * These boards have no regulator documentation. Measured GPIO-high tracks
  * the battery (4.0V fresh, 3.6V settled) instead of a regulated rail, and

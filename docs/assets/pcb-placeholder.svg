@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+<!-- Placeholder for a 3D model render or schematic of the matrix boards.
+     Keep ~16:10 so it fits the left column, like assets/hw-demo-placeholder.svg.
+     Replace the <img src> in docs/7_1_pcb.md with assets/pcb-3d.png when the render exists. -->
+<rect width="640" height="400" fill="#0b0e11"/>
+<rect x="14" y="14" width="612" height="372" rx="14" fill="none" stroke="#2b343c" stroke-width="3" stroke-dasharray="16 11"/>
+
+<!-- two halves, curved toward the palm (keywell) -->
+<g stroke="#4c5a66" stroke-width="2.5" fill="none">
+  <path d="M70 120 q-18 70 26 120 l150 26 q26 4 30 -22 l10 -110 q2 -26 -24 -24 z"/>
+  <path d="M570 120 q18 70 -26 120 l-150 26 q-26 4 -30 -22 l-10 -110 q-2 -26 24 -24 z"/>
+</g>
+
+<!-- switch wells: dotted key fields inside the curve -->
+<g fill="none" stroke="#394853" stroke-width="1.5" stroke-dasharray="4 5">
+  <path d="M104 148 q-12 60 24 96 l126 22"/>
+  <path d="M536 148 q12 60 -24 96 l-126 22"/>
+</g>
+
+<!-- flexible tails between the controller wing and the well -->
+<g stroke="#6ee7a0" stroke-width="2.5" fill="none" opacity="0.6">
+  <path d="M286 118 q40 8 46 44 q6 36 -14 62"/>
+  <path d="M354 118 q-40 8 -46 44 q-6 36 14 62"/>
+</g>
+
+<!-- controller wings + screen strips -->
+<g stroke="#4c5a66" stroke-width="2" fill="none">
+  <rect x="286" y="86" width="68" height="30" rx="5"/>
+  <rect x="286" y="122" width="68" height="18" rx="4"/>
+</g>
+<g fill="#97a3af" font-size="12">
+  <text x="320" y="106" text-anchor="middle">контролер</text>
+  <text x="320" y="136" text-anchor="middle">екран</text>
+  <text x="176" y="292" text-anchor="middle">ліва платина матриці</text>
+  <text x="464" y="292" text-anchor="middle">права платина матриці</text>
+</g>
+<g fill="#4c5a66" font-size="12">
+  <text x="320" y="196" text-anchor="middle">гнучкий перехід</text>
+</g>
+
+<g fill="#97a3af" font-size="19" text-anchor="middle">
+  <text x="320" y="340">3D-модель або схема: платини, перехід, кріплення</text>
+</g>
+<text x="320" y="368" fill="#4c5a66" font-size="14" text-anchor="middle">docs/assets/pcb-3d.png</text>
+</svg>

@@ -1,0 +1,122 @@
+# zmk-buzzer - options.
+#
+# The device side is one PWM output and a tone/pattern generator; the behavior
+# side (zmk,behavior-buzzer) is what makes a "sound, then do X" chord possible.
+
+config ZMK_BUZZER
+	bool "Buzzer feedback (passive piezo on a hardware PWM output)"
+	default n
+	# sys_rand32_get() for the random pattern needs an entropy device. The
+	# nRF52840 has one (rng / CONFIG_ENTROPY_NRF5_RNG) and the build already
+	# selects this; selecting it here keeps the module self-contained.
+	select ENTROPY_GENERATOR
+	# CONFIG_PWM has no default y, and the nrfx PWM driver lives behind it, so
+	# a board that only gets the buzzer module would build the driver's calls
+	# with no driver. On a half with no enabled nordic,nrf-pwm node (the keeb
+	# right half) this costs nothing: PWM_NRFX depends on that node existing.
+	select PWM
+	help
+	  Drives a PASSIVE buzzer module (KY-006 / HW-508 piezo) from one hardware
+	  PWM output. A static HIGH is silence on a passive piezo - it needs a square
+	  wave, and the frequency of that wave is the pitch. So a "sound" here is a
+	  rhythm (pulse count, on-time, gap) AND a pitch, both random.
+
+	  Also plays the named tunes (zmk_buzzer_tune): fixed rhythms with fixed
+	  pitches, for events that should be recognisable by ear - entering and
+	  leaving a layer, the bootloader chord, an accepted or refused update over
+	  the TLV config engine, and a wake from ZMK sleep.
+
+	  The module is driven straight from the signal pin (S to the PWM pad, - to
+	  GND, the middle pin is NC): a piezo is a small capacitive load, so no
+	  transistor is needed. See README.md for the wiring and for the current
+	  limits worth knowing.
+
+	  Requires a zmk,buzzer node with a `pwms` specifier and an enabled
+	  nordic,nrf-pwm controller whose pinctrl points at the buzzer pin.
+
+if ZMK_BUZZER
+
+config ZMK_BUZZER_FREQ_MIN_HZ
+	int "Lowest pitch of a random beep (Hz)"
+	default 1800
+	# 200 Hz keeps a mistyped value from becoming a division by a silly number;
+	# the driver clamps everything it is asked to play to 200..8000 Hz.
+	range 200 8000
+	help
+	  The KY-006 is useful over roughly 1.5-2.5 kHz and loudest at its ~2 kHz
+	  resonance. Below ~1.5 kHz the disc is barely audible rather than quieter.
+
+config ZMK_BUZZER_FREQ_MAX_HZ
+	int "Highest pitch of a random beep (Hz)"
+	default 2400
+	range 200 8000
+	help
+	  A value below FREQ_MIN is clamped up by the pattern generator.
+
+config ZMK_BUZZER_DUTY_PERCENT
+	int "Tone duty cycle (%)"
+	default 50
+	range 1 99
+	help
+	  50% is the balanced drive a piezo wants; lowering it only makes the tone
+	  quieter, since the pitch comes from the frequency.
+
+config ZMK_BUZZER_TUNE_BASE_HZ
+	int "Base pitch of the named tunes (Hz)"
+	default 2000
+	range 500 4000
+	help
+	  Every named tune (layer_on, bootloader, update_ok, ...) is written as a
+	  set of pitches relative to this one value, so moving it re-tunes the whole
+	  vocabulary to the piezo actually on the board instead of rewriting the
+	  tunes. 2000 Hz is the KY-006's resonance; a module that is loudest a little
+	  higher wants 2200-2400.
+
+	  The random pattern does not use it: it draws each beep from
+	  ZMK_BUZZER_FREQ_MIN_HZ..MAX_HZ directly.
+
+
+config ZMK_BUZZER_PULSES_MIN
+	int "Minimum beeps in a random pattern"
+	range 1 8
+	default 2
+
+config ZMK_BUZZER_PULSES_MAX
+	int "Maximum beeps in a random pattern"
+	range 1 8
+	default 3
+	help
+	  Also sizes the pattern buffer. A value below PULSES_MIN is clamped up by
+	  the driver.
+
+config ZMK_BUZZER_ON_MS_MIN
+	int "Minimum beep length (ms)"
+	range 10 1000
+	default 45
+
+config ZMK_BUZZER_ON_MS_MAX
+	int "Maximum beep length (ms)"
+	range 10 1000
+	default 120
+
+config ZMK_BUZZER_GAP_MS_MIN
+	int "Minimum gap between beeps (ms)"
+	range 10 1000
+	default 40
+
+config ZMK_BUZZER_GAP_MS_MAX
+	int "Maximum gap between beeps (ms)"
+	range 10 1000
+	default 90
+
+config ZMK_BUZZER_LEAD_MS
+	int "Extra pause between the end of a tone and the follow-on behavior"
+	range 0 3000
+	default 60
+	help
+	  Only used by zmk,behavior-buzzer with a `target`: the target behavior runs
+	  this many ms after the last beep stops. 0 makes the sound and the action
+	  back-to-back; a small pause is what makes the tone audible as its own event
+	  rather than as noise inside the action.
+
+endif # ZMK_BUZZER

@@ -28,9 +28,16 @@
 
 #include <string.h>
 
+#include <zephyr/sys/atomic.h>
+
 #include <zmk/event_manager.h>
 #include <zmk/events/layer_state_changed.h>
+#include <zmk/events/position_state_changed.h>
 #include <zmk/keymap.h>
+
+#if IS_ENABLED(CONFIG_ZMK_BUZZER)
+#include <zmk/buzzer.h>
+#endif
 
 #include "../display/keeb_display.h"
 #include "../keymap/keeb_keymap.h"
@@ -52,6 +59,10 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
  * -------------------------------------------------------------------------- */
 
 static const struct keeb_tlv_tx_dev *tx_dev;
+
+/* Tester mode: 1 while the keyboard should report every switch it sees. Read
+ * from ZMK's event thread, written from the engine's work queue. */
+static atomic_t test_mode;
 
 static struct keeb_tlv_rx rx = KEEB_TLV_RX_INIT;
 static uint8_t tx_buf[KEEB_TLV_MSG_MAX];
@@ -457,6 +468,18 @@ static void handle_keymap(uint16_t type, const uint8_t *data, uint16_t len,
 		ack_err(ack, KEEB_ERR_NOT_SUPPORTED);
 		return;
 
+	case KEEB_T_TEST_SET: {
+		if (len < 1) {
+			ack_err(ack, KEEB_ERR_BAD_LEN);
+			return;
+		}
+
+		atomic_set(&test_mode, data[0] ? 1 : 0);
+
+		ack_ok(ack, (uint16_t)atomic_get(&test_mode), 0);
+		return;
+	}
+
 	default:
 		ack_err(ack, KEEB_ERR_UNKNOWN_TYPE);
 		return;
@@ -623,6 +646,42 @@ static void handle_display(uint16_t type, const uint8_t *data, uint16_t len,
 	}
 }
 
+#if IS_ENABLED(CONFIG_ZMK_BUZZER)
+/* Which records count as an "update" worth a tone: everything that changes what
+ * the keyboard does, or throws the changes away.
+ *
+ * Reads (CELLS_GET, LAYERS_GET, DISPLAY_INFO...) are silent - a beep per query
+ * would make the board sound busy all session. So are the display's live-preview
+ * writes (DISPLAY_SET, WIDGET_SET, TEXT_SET...): those already answer on screen,
+ * and the configurator sends them as fast as you drag a widget. What does get a
+ * tone is the moment the keyboard itself changed (CELLS_SET, the layer verbs) or
+ * the moment it was persisted or thrown away (SAVE, DISCARD, RESET), plus every
+ * refusal in this namespace - a rejected write is exactly the thing a user
+ * cannot see from across a Bluetooth link.
+ */
+static bool keeb_type_is_update(uint16_t type) {
+	switch (type) {
+	case KEEB_T_CELLS_SET:
+	case KEEB_T_SAVE:
+	case KEEB_T_DISCARD:
+	case KEEB_T_RESET:
+	case KEEB_T_LAYER_NAME_SET:
+	case KEEB_T_LAYER_MOVE:
+	case KEEB_T_LAYER_ADD:
+	case KEEB_T_LAYER_REMOVE:
+	case KEEB_T_LAYER_RESTORE:
+	case KEEB_T_APPLY_COMMIT:
+	case KEEB_T_APPLY_CANCEL:
+	case KEEB_T_DISPLAY_SAVE:
+	case KEEB_T_DISPLAY_DISCARD:
+	case KEEB_T_DISPLAY_RESET:
+		return true;
+	default:
+		return false;
+	}
+}
+#endif /* CONFIG_ZMK_BUZZER */
+
 static void dispatch(uint16_t msg_id)
 {
 	struct keeb_tlv_msg msg;
@@ -648,6 +707,9 @@ static void dispatch(uint16_t msg_id)
 	keeb_tlv_iter_init(&it, rx.buf, rx_msg_len);
 
 	uint16_t records = 0;
+#if IS_ENABLED(CONFIG_ZMK_BUZZER)
+	bool saw_update = false;
+#endif
 
 	for (;;) {
 		uint16_t type;
@@ -668,6 +730,12 @@ static void dispatch(uint16_t msg_id)
 		records++;
 
 		LOG_DBG("rx msg %u: record 0x%04x (%u bytes)", msg_id, type, data_len);
+
+#if IS_ENABLED(CONFIG_ZMK_BUZZER)
+		if (keeb_type_is_update(type)) {
+			saw_update = true;
+		}
+#endif
 
 		switch (type >> 12) {
 		case KEEB_NS_SYS:
@@ -691,6 +759,24 @@ static void dispatch(uint16_t msg_id)
 	 */
 	LOG_INF("rx msg %u: %u record(s) -> ack status %u err 0x%02x detail %u", msg_id, records,
 		ack->status, ack->err_code, ack->detail);
+
+#if IS_ENABLED(CONFIG_ZMK_BUZZER)
+	/* The board's own answer to the question the host just asked it, heard
+	 * instead of read: the tune is chosen from the same ACK the configurator
+	 * receives, so what you hear and what the app reports cannot disagree. It
+	 * starts a few microseconds before the reply leaves the board, which is
+	 * invisible next to a 100 ms tone.
+	 *
+	 * Non-blocking by construction - this runs on the system work queue and the
+	 * buzzer driver owns its own timing. A burst of update messages does not
+	 * machine-gun: each play restarts the pattern, so a rapid series collapses
+	 * into the last tune. */
+	if (saw_update) {
+		(void)zmk_buzzer_play_tune(ack->status == KEEB_STATUS_OK ? ZMK_BUZZER_TUNE_UPDATE_OK
+								: ZMK_BUZZER_TUNE_UPDATE_FAIL,
+							     NULL);
+	}
+#endif
 
 	if (!tx_send(&msg, msg_id, KEEB_PKT_F_REPLY)) {
 		/* Still in flight (or refused). Keep the dispatch state until
@@ -893,6 +979,12 @@ void keeb_engine_rx(const uint8_t *pkt, uint16_t pkt_len)
 void keeb_engine_set_transport(const struct keeb_tlv_tx_dev *dev)
 {
 	tx_dev = dev;
+
+	/* A keyboard attached to nobody must not keep streaming key events: the
+	 * next connection would inherit a tester session nobody asked for. */
+	if (!dev) {
+		atomic_set(&test_mode, 0);
+	}
 }
 
 bool keeb_engine_tx_ready(void)
@@ -924,6 +1016,74 @@ static int layer_state_listener(const zmk_event_t *eh)
 
 ZMK_LISTENER(keeb_engine, layer_state_listener);
 ZMK_SUBSCRIPTION(keeb_engine, zmk_layer_state_changed);
+
+/* --------------------------------------------------------------------------
+ * Tester mode
+ * --------------------------------------------------------------------------
+ * ZMK reports a switch as a position and a state, which is exactly the pair a
+ * configurator needs to light a cap: the position is the number a CELLS record
+ * carries. The layer travels with the event because the event manager gives no
+ * ordering guarantee between a press and a layer change, and a tester that
+ * guessed the layer from its own copy would sometimes light the wrong row.
+ *
+ * The keycode is deliberately absent. The keyboard resolves a press through
+ * hold/tap, layers and sticky state; a report of that resolution would be a
+ * different fact from "position 12 closed on layer 0", which is the thing a
+ * layout is checked against.
+ */
+
+struct KEEB_PACKED keeb_key_event {
+	uint8_t pos;
+	uint8_t pressed;
+	uint8_t layer;
+};
+
+/** The id of the highest layer the keyboard is on right now. */
+static uint8_t active_layer_id(void)
+{
+	uint32_t state = zmk_keymap_layer_state();
+	uint8_t id = 0;
+
+	for (uint8_t index = 0; index < 32; index++) {
+		if (!(state & BIT(index))) {
+			continue;
+		}
+
+		int mapped = zmk_keymap_layer_index_to_id(index);
+
+		if (mapped >= 0) {
+			id = (uint8_t)mapped;
+		}
+	}
+
+	return id;
+}
+
+static int key_event_listener(const zmk_event_t *eh)
+{
+	if (!tx_dev || !atomic_get(&test_mode)) {
+		return 0;
+	}
+
+	struct zmk_position_state_changed *ev = as_zmk_position_state_changed(eh);
+
+	if (!ev) {
+		return 0;
+	}
+
+	struct keeb_key_event key = {
+		.pos = ev->position,
+		.pressed = ev->state ? 1 : 0,
+		.layer = active_layer_id(),
+	};
+
+	keeb_engine_notify(KEEB_EV_KEY, &key, sizeof(key));
+
+	return 0;
+}
+
+ZMK_LISTENER(keeb_engine_test, key_event_listener);
+ZMK_SUBSCRIPTION(keeb_engine_test, zmk_position_state_changed);
 
 static int keeb_engine_init(void)
 {

@@ -340,6 +340,47 @@ export const useKeymapStore = defineStore('keymap', () => {
   const makeTransparent = (slot: number, pos: number) => setBinding(slot, pos, { token: TRANSPARENT_TOKEN, param1: 0, param2: 0 })
   const makeDisabled = (slot: number, pos: number) => setBinding(slot, pos, { token: NONE_TOKEN, param1: 0, param2: 0 })
 
+  /**
+   * Unstage one cell.
+   *
+   * The staged value overwrote the local copy of the keyboard's cell, so the
+   * only honest way back is to ask the keyboard what it has - which is also what
+   * `revertEdits` does for a whole layer. The rest of the layer's staged edits
+   * are re-applied on top of the answer, because dropping one key must not
+   * quietly drop the others.
+   */
+  async function revertCell(slot: number, pos: number): Promise<{ ok: boolean; reason?: string }> {
+    const id = order.value[slot]
+
+    if (id === LAYER_ID_INVALID) {
+      return { ok: false, reason: 'slot is empty' }
+    }
+
+    const pending = dirty.value[id]
+
+    if (!pending?.has(pos)) {
+      return { ok: false, reason: 'nothing staged at this position' }
+    }
+
+    pending.delete(pos)
+
+    if (pending.size === 0) {
+      dropDirty(id)
+    }
+
+    if (device.connected) {
+      await refreshLayer(id)
+    }
+
+    const list = cellList(id)
+
+    for (const [p, b] of pending.entries()) {
+      list[p] = { pos: p, token: b.token, param1: b.param1, param2: b.param2, flags: 0 }
+    }
+
+    return { ok: true }
+  }
+
   function dropDirty(layerId: number): void {
     delete dirty.value[layerId]
   }
@@ -665,7 +706,7 @@ export const useKeymapStore = defineStore('keymap', () => {
     editingSlot, editingId, editingName, slots, editableSlots, dirtyTotal, isDirty, loading,
     isReserved, layerName, tokenName, tokenLabel, tokenDef, isPending,
     applyLayers, applyCells, cellList, loadAll, refreshLayer, ownCell, resolve,
-    setBinding, makeTransparent, makeDisabled, commitLayer, commitAll, dropDirty, revertEdits,
+    setBinding, makeTransparent, makeDisabled, commitLayer, commitAll, dropDirty, revertEdits, revertCell,
     renameLayer, moveLayer, addLayer, removeLayer, restoreLayer,
     save, discard, resetSettings, setAutosave, persistAfterWrite, bindEvents,
   }

@@ -6,6 +6,10 @@
  * keyboard override the LED with a solid layer-indication color while a
  * non-default layer is active.
  *
+ * Every lit color is driven at CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT
+ * (default 50%), so this API picks which channels are lit, not how bright
+ * they are.
+ *
  * Priority: battery ERROR (red) always wins; the layer color takes over
  * the connected-flash / advertising-pulse states; OFF restores them.
  * The color is latched while the keyboard sleeps or during boot blinks

@@ -329,3 +329,48 @@ test('a layer rename persists like a cell write, and does not without autosave',
 
   assert.equal(manual.keymap.slots[0].name, original, 'an unsaved rename is gone')
 })
+
+test('unstaging one cell brings back the keyboard’s own binding and leaves the rest staged', async () => {
+  const { keymap } = await loaded()
+
+  const original = keymap.ownCell(0, 12)!.param1
+
+  keymap.setBinding(0, 12, { token: kp, param1: KEYCODES.B, param2: 0 })
+  keymap.setBinding(0, 13, { token: kp, param1: KEYCODES.C, param2: 0 })
+
+  assert.equal(keymap.dirtyTotal, 2)
+
+  const r = await keymap.revertCell(0, 12)
+
+  assert.equal(r.ok, true)
+  assert.equal(keymap.dirtyTotal, 1)
+  assert.equal(keymap.ownCell(0, 12)?.param1, original, 'the staged value is gone, the keyboard’s is back')
+  assert.equal(keymap.ownCell(0, 13)?.param1, KEYCODES.C, 'unstaking one key must not drop the other')
+  assert.equal(keymap.isPending(0, 12), false)
+  assert.equal(keymap.isPending(0, 13), true)
+})
+
+test('unstaging a cell that was never staged is refused', async () => {
+  const { keymap } = await loaded()
+
+  const r = await keymap.revertCell(0, 12)
+
+  assert.equal(r.ok, false)
+  assert.match(r.reason ?? '', /nothing staged/)
+  assert.equal(keymap.dirtyTotal, 0)
+})
+
+test('unstaging from an empty slot is refused before anything is reloaded', async () => {
+  const { keymap } = await loaded()
+
+  await keymap.removeLayer(1)
+
+  const empty = keymap.slots.findIndex((s) => s.id === LAYER_ID_INVALID)
+
+  assert.notEqual(empty, -1)
+
+  const r = await keymap.revertCell(empty, 12)
+
+  assert.equal(r.ok, false)
+  assert.equal(r.reason, 'slot is empty')
+})

@@ -1,13 +1,19 @@
 description: |
   Three-channel (RGB) status LED driven by the zmk-status-led module.
 
-  Example:
+  The three properties point at Zephyr LED devices, i.e. children of a
+  `gpio-leds` or a `pwm-leds` node. Which one decides whether the palette can
+  be dimmed: `pwm-leds` channels get a real duty cycle from
+  CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT, `gpio-leds` channels are on/off
+  and ignore it.
+
+  Example (dimmable, SoC PWM outputs):
 
     leds {
-        compatible = "gpio-leds";
-        led_r: led_r { gpios = <&expander 5 GPIO_ACTIVE_HIGH>; };
-        led_g: led_g { gpios = <&expander 6 GPIO_ACTIVE_HIGH>; };
-        led_b: led_b { gpios = <&expander 7 GPIO_ACTIVE_HIGH>; };
+        compatible = "pwm-leds";
+        led_r: led_r { pwms = <&pwm1 0 PWM_USEC(2000) PWM_POLARITY_NORMAL>; };
+        led_g: led_g { pwms = <&pwm1 1 PWM_USEC(2000) PWM_POLARITY_NORMAL>; };
+        led_b: led_b { pwms = <&pwm1 2 PWM_USEC(2000) PWM_POLARITY_NORMAL>; };
     };
 
     status_led_device {
@@ -17,13 +23,53 @@ description: |
         led-b = <&led_b>;
     };
 
-  where led-r/g/b are gpio-leds children. The channels may live anywhere
-  the GPIO API reaches - e.g. directly on SoC pins or on an I2C expander
-  like the MCP23017 (on/off only: no PWM/brightness control).
+    /* nRF52 PWM outputs are routed to the pads through PSEL, so the
+     * controller needs default + sleep pinctrl states (the sleep state with
+     * low-power-enable is what drops the pads on a PM suspend): */
+    &pinctrl {
+        status_led_pwm_default: status_led_pwm_default {
+            group1 {
+                psels = <NRF_PSEL(PWM_OUT0, 0, 2)>,
+                        <NRF_PSEL(PWM_OUT1, 0, 29)>,
+                        <NRF_PSEL(PWM_OUT2, 0, 31)>;
+            };
+        };
+        status_led_pwm_sleep: status_led_pwm_sleep {
+            group1 {
+                psels = <NRF_PSEL(PWM_OUT0, 0, 2)>,
+                        <NRF_PSEL(PWM_OUT1, 0, 29)>,
+                        <NRF_PSEL(PWM_OUT2, 0, 31)>;
+                low-power-enable;
+            };
+        };
+    };
+
+    &pwm1 {
+        status = "okay";
+        pinctrl-0 = <&status_led_pwm_default>;
+        pinctrl-1 = <&status_led_pwm_sleep>;
+        pinctrl-names = "default", "sleep";
+    };
+
+  Example (on/off only, plain GPIO or an I2C expander):
+
+    leds {
+        compatible = "gpio-leds";
+        led_r: led_r { gpios = <&expander 5 GPIO_ACTIVE_HIGH>; };
+        led_g: led_g { gpios = <&expander 6 GPIO_ACTIVE_HIGH>; };
+        led_b: led_b { gpios = <&expander 7 GPIO_ACTIVE_HIGH>; };
+    };
+
+  Use one PWM instance for all three channels: the nRF52 PWM peripheral has
+  three output channels and they share a single period, so the whole RGB set
+  must agree on it. Keep that instance away from any other user of PWM that
+  changes its period (a buzzer tone is the period), and keep the period short
+  enough not to flicker - 2 ms is the value the keeb wiring uses.
 
   State palette (see src/status_led.c): red = battery error (solid),
   green = profile connected (150 ms flash), blue = advertising (slow
-  pulse), white = boot blinks.
+  pulse), white = boot blinks. All lit signals run at
+  CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT.
 
 compatible: "zmk,status-led"
 
@@ -31,12 +77,12 @@ properties:
   led-r:
     type: phandle
     required: true
-    description: Red channel (a gpio-leds child).
+    description: Red channel (a gpio-leds or pwm-leds child).
   led-g:
     type: phandle
     required: true
-    description: Green channel (a gpio-leds child).
+    description: Green channel (a gpio-leds or pwm-leds child).
   led-b:
     type: phandle
     required: true
-    description: Blue channel (a gpio-leds child).
+    description: Blue channel (a gpio-leds or pwm-leds child).

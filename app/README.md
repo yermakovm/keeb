@@ -7,9 +7,10 @@ keyboard stays the source of truth.
 
 ```
 app/
-├── scripts/gen-contract.mjs   ← generates src/proto/zmk.gen.ts from the repo
-├── src/proto/                 ← the protocol, mirrored from keeb-module/proto/keeb_tlv.h
-│   ├── constants.ts           ← every constant, flag, type id, error code, event
+├── scripts/gen-contract.mjs   ← generates src/proto/zmk.gen.ts and src/proto/protocol.gen.ts from the repo
+├── src/proto/                 ← the protocol; its numbers come from keeb-module/proto/keeb_tlv_*.h
+│   ├── protocol.gen.ts        ← GENERATED: every constant, flag, type id, error code, event, plus each wire struct's size and field offsets
+│   ├── constants.ts           ← re-exports that, plus what a generator cannot see: the function-like macros, the BLE MTU arithmetic, the UUIDs, the error-text table
 │   ├── types.ts               ← the packed structs as interfaces + UI models
 │   ├── crc32.ts               ← bitwise CRC-32/IEEE, identical to the C implementation
 │   ├── tlv.ts                 ← builder, reassembly, fragmentation, payload readers
@@ -23,7 +24,7 @@ app/
 │   └── keymap.ts              ← slots, ids, live model, pending edits
 ├── src/model/cap.ts           ← {token, param1, param2} → what a keycap shows
 ├── src/data/keycodes.ts       ← curated picker catalog over the generated table
-└── tests/                     ← codec, session, store tests (node --test, no runner)
+└── tests/                     ← codec, wire-layout, session, store tests (node --test, no runner)
 ```
 
 ## Run
@@ -149,13 +150,91 @@ Reading can work without a bond (the `evt` CCCD is writable unencrypted); a
 write cannot. If the link's MTU cannot carry even the smallest KEEB packet the
 transport reports it instead of re-sending the same fragment forever.
 
+## The arrangement on the screen
+
+The grid is drawn from a **layout preset** (`src/model/layouts.ts`), selected in
+the keyboard header. A preset says only which column slots of each row hold a
+switch — never what a key does; position numbers still come from the firmware's
+matrix transform.
+
+- **cosmotyl** (the default) is not hand-drawn: it is read back out of `GRID`, so
+  the preset and the board the configurator is talking to cannot drift apart. Its
+  thumb row states both halves explicitly, because that row is not
+  mirror-symmetric.
+- `corne`, `sofle` and `grid6` are real boards, offered anyway. A preset that does
+  not match the keyboard is a **mismatch the view reports**, not something dropped
+  silently: `overflow` names the positions with nowhere to draw, `empty` counts the
+  slots drawn with no switch in them. `tests/layouts.test.ts` pins both.
+- The caps stay interleaved row by row — left half, right half, next row — because
+  that is the order the transform lists positions in. The half outlines are drawn
+  over that grid rather than wrapping it, and the SSR smoke test fails if the cap
+  order stops matching the map order.
+- The case is one outline around both halves plus one per half, and `positions`
+  prints the stock number in each cap's corner for matching a cap to a `CELLS` record.
+- The split is **two key widths wide**, because that is where the status panels
+  are drawn: one vertical strip per half, each **one key wide** (the footprint of
+  two keys stacked), against the inner column — next to `T`·`G` on the left,
+  `Y`·`H` on the right — labelled `screen 1` / `screen 2`. They are buttons.
+  Clicking one is how a panel is edited; there is no displays page.
+- Everything that positions something *inside* the case (`--half-w`, `--frame-w`,
+  `--split`, `--panel-w`) is declared on the case, after `--cell` is clamped. A
+  custom property is substituted where it is **declared**, so declaring them
+  against the fallback cell size measures the halves at 46px while the grid draws
+  them smaller — which is how one screen ended up exactly on top of the other.
+- The menu is `keymap`, `tester`, `settings`. Layers and panels are edited where
+  they are drawn, so they are not menu items.
+- Below the board is one slot that holds whatever the board is pointing at: the
+  **keycode palette** for a key, the **widget table** for a panel, the **event
+  log** for the tester.
+
+Dark and light are the same layout with the ground inverted, flipped by the
+header button and remembered per browser (`localStorage` key `keeb.theme`).
+Everything is rectangular and monospace by construction — `border-radius: 0` is
+set globally in `src/styles/theme.css`.
+
+**The page is grey on purpose.** The accent is reserved for the controls that
+*send something to the keyboard* — `save to device`, `connect`, the picker's
+`apply`, the panel's `apply panel` — and for the footer mode block while it reads
+`EDIT`, which means exactly that something staged has not been sent. The grid,
+the tabs, the nav and the log say themselves in grey, in weight, or by inverting
+ground and ink: a cap defined on this layer gets a stronger grey border, a staged
+cell gets a thick inner ring, a selected cap inverts. A keycap and a write
+button must never be confused for each other.
+
 ## Editing
 
-- Click a cap → token picker (categories, greyed out if the firmware has no
-  driver for it) → parameters → **Apply**. Keycodes are searchable; layers are
-  chosen by name and sent as ids; mouse/BT/output tokens have their own editors.
-  **Apply** stages the binding and closes the picker - the grid is where the
-  result is checked, and **Inherit** / **Disable** do the same in one click.
+- Click a cap to **select** it — the cap inverts, ground and ink swapped, the way
+  a vim visual selection reads. A key and a panel cannot both be selected: the
+  bottom section and the sidebar can only speak about one thing at a time.
+- The **bottom palette** (`src/components/KeyPalette.vue`) is the mouse route to a
+  keycode: choose a category, and **every group in it is drawn with its keys** —
+  no step that hides them, no empty panel waiting for input. The wrapper is chosen
+  by which key you click (`&kp` / `&kt` / `&sk`), so no text field is needed to
+  repair a keyboard that cannot type. The search field is on the surface and
+  filters the same list as you type (by name or by label); typing without choosing
+  a category searches the whole catalog. It is a shortcut, never the only path.
+  Mouse bindings are not filled in by that wrapper choice — `&mkp`, `&mmv` and
+  `&msc` take vectors and masks rather than a keycode, so they belong to the
+  **advanced binding** group below. (The palette's *mouse* category still offers
+  them as `&kp` chips; that gap is open — see `docs/tasks.md`.)
+- The **sidebar** carries the properties of the selected key: `&trans`, `&none`,
+  `unstage`, and one `&mo` chip per layer slot.
+- Bindings with more than one argument — hold/tap, mouse vectors, BT commands,
+  output — are the **advanced binding** group in that same column: the token
+  picker (categories, greyed out if the firmware has no driver for it) with its
+  own parameter editors. It is a `[+]` group like **state** and **session** are,
+  not a button and not a popup — the popup hid the grid the write was for.
+  **unstage** drops one cell's staged binding and re-reads that layer, so the
+  keyboard's own binding for that position comes back without touching the
+  other staged keys on the layer.
+- **What the sidebar hides.** Only what gets rebound every session is on the
+  surface: the search, the `&mo` chips, `&trans` / `&none` / `unstage`.
+  `&kt` and `&sk`, `&to` / `&tog` / `&sl`, the no-argument behaviors, the
+  advanced binding picker, the cap-state diagnostics and the autosave preference
+  sit behind
+  `[+]` group headers that start closed (`src/components/Disclosure.vue`) —
+  `ssr-smoke` asserts they are not in the markup until opened, and that the only
+  layer chips on the surface are the momentary ones.
 - Selecting a key only **stages** it (green corner dot on the cap). Nothing
   reaches the keyboard until **Apply changes**, which sends one `CELLS_SET` per
   dirty layer (the firmware applies it all-or-nothing), then re-reads that layer.
@@ -175,12 +254,13 @@ transport reports it instead of re-sending the same fragment forever.
   as Discard today, so it does not clear a saved layout either).
 - Layer tabs show slot → id, live/locked state from the keyboard, and a dirty
   count. Rename, move, add, remove, restore map straight to firmware requests.
-- **status panel** (the tab next to the keymap) edits the screen on the halves.
-  The left column is the firmware's logical space drawn from the table the
-  keyboard reported — `68×160` rotated 90° into the `160×68` glass on this build
-  — and clicking a shape selects the widget that drew it. The right column is
-  the table: kind, source, geometry, and the style control that kind actually
-  uses (radius, font + alignment, pip size, fill mode, art anchor).
+- **status panels** are edited where they are drawn. Clicking `screen 1` / `screen 2`
+  on the board puts the widget table in the bottom slot and the panel's properties
+  in the sidebar. The left column is the firmware's logical space drawn from the
+  table the keyboard reported — `68×160` rotated 90° into the `160×68` glass on
+  this build — and clicking a shape selects the widget that drew it. The right
+  column is the table: kind, source, geometry, and the style control that kind
+  actually uses (radius, font + alignment, pip size, fill mode, art anchor).
   - **Apply panel** sends one `DISPLAY_SET` with the whole table; the firmware
     validates every entry before drawing any of it, and the same rules are
     checked here first so a control cannot offer a widget the panel refuses.
@@ -202,6 +282,35 @@ transport reports it instead of re-sending the same fragment forever.
   when the token table, the pairing, or the advertising is the problem. Esc or a
   click outside closes it.
 
+## Testing the switches
+
+The `tester` view draws the same board as the keymap and lights the switches the
+keyboard says are closed, in the same inversion a selected cap uses. It exists
+because "row 3 is dead" is a question about the matrix, not about bindings.
+
+A keyboard does not report keypresses by default, so it is a mode the app asks
+for and gives back:
+
+- `TEST_SET` (`src/proto/protocol.gen.ts`, `KEEB_T_TEST_SET`) turns reporting on
+  or off; the keyboard answers with the mode it ended up in, and the store keeps
+  the **confirmed** value rather than the requested one.
+- While it is on, the firmware's position listener (`keeb-module/engine/keeb_engine.c`,
+  `zmk_position_state_changed`) sends `EV_KEY` with `pos`, `pressed` and the
+  active `layer` — the position the transform assigned, not a matrix row/col the
+  host would have to guess.
+- The mode is cleared when the transport detaches, and when the tester view
+  closes. A configurator that left it set would keep a keyboard streaming
+  keystrokes nobody is reading.
+- `src/stores/tester.ts` keeps the pressed set (for the caps), a bounded ring of
+  events (for the log), press/release counts, which positions have ever reported,
+  and the last error. The log names time, position, the row and column that
+  position sits on, its side, the layer id and name, whether the switch closed or
+  opened, and what binding is there — which is enough to tell a dead switch from a
+  dead row.
+- On the simulated keyboard, clicking a cap presses its switch for 220 ms through
+  the same notification path real hardware uses, so the tester is testable and
+  tested without a board (`tests/tester.test.ts`).
+
 ## Debugging the channel
 
 Every message is traced, on both sides.
@@ -222,6 +331,16 @@ browser so the tests and the SSR render stay readable. The same history is kept
 in `device.traceLog` for anything that wants to render it, and record names come
 from the mirrored constants (`KEEB_T_*` / `KEEB_EV_*`), so the trace cannot drift
 from the protocol it names.
+
+**In the page** (`src/stores/log.ts`, `src/components/LogPanel.vue`): the `log`
+button in the status line opens a bottom-right panel holding the same lines —
+`tx` / `ack` / `evt` / `err` straight from the trace, plus every line the
+configurator said out loud (`ui`). It is a **second reader** of the trace, not a
+replacement for it: the transport is not pointed at the store, so it cannot
+refuse to write. Attaching backfills what already happened, the ring keeps the
+last 400 lines, the button carries an error count while the panel is closed, and
+Esc closes it. The button is useful with no keyboard at all — a failed pair
+leaves lines here that the console also got.
 
 **Firmware** (`keeb-module/engine/keeb_engine.c`, `CONFIG_ZMK_LOG_LEVEL_DBG=y`):
 `tx msg N: <bytes> flags …` for every reply it puts on the wire, `rx msg N: <n>

@@ -12,6 +12,7 @@ import { renderToString } from '@vue/server-renderer'
 
 import App from '../src/App.vue'
 import KeyPicker from '../src/components/KeyPicker.vue'
+import KeyReadout from '../src/components/KeyReadout.vue'
 import PanelEditor from '../src/components/PanelEditor.vue'
 import { useDeviceStore } from '../src/stores/device.ts'
 import { useDisplayStore } from '../src/stores/display.ts'
@@ -94,11 +95,32 @@ if (display.widgets.length !== 18) {
 
 const html = await renderToString(app)
 
+/* The sidebar alone: the grid legitimately spells out tokens like &to and
+ * caps_word in the caps it draws, so a claim about what the sidebar hides has
+ * to be measured on the sidebar. It is the right column of the main area, so the
+ * slice runs from that column to the end of <main>. */
+const asideStart = html.indexOf('class="main-right"')
+const aside = asideStart < 0 ? '' : html.slice(asideStart, html.indexOf('</main>', asideStart))
+
+/* The menu alone, for the same reason: the words it must not contain appear
+ * elsewhere on the page legitimately. */
+const nav = html.slice(html.indexOf('<nav'), html.indexOf('</nav>'))
+
+/* The palette under the board, sliced for the same reason as the sidebar. */
+const palette = html.slice(
+  html.indexOf('class="palette"'),
+  html.indexOf('</section>', html.indexOf('class="palette"')),
+)
+
 const panel = await renderToString(createApp(PanelEditor).use(pinia))
 
 const picker = await renderToString(
   createApp(KeyPicker, { pos: 12, reserved: false }).use(pinia),
 )
+
+/* The tester's variant of the same properties: it reads the keyboard, so it
+ * must not carry an input or a write. */
+const readout = await renderToString(createApp(KeyReadout, { pos: 12 }).use(pinia))
 
 const checks: Array<[string, boolean]> = [
   ['keyboard grid', html.includes('class="row"')],
@@ -108,11 +130,78 @@ const checks: Array<[string, boolean]> = [
    * to its outer corner, so position 11 lands last, not first. A view that
    * sorted each half by column number would flip the whole right hand. */
   ['caps render in matrix-transform map order', capsDrawnInMapOrder(html)],
-  ['6 layer tabs', (html.match(/class="tab/g) ?? []).length === 6],
+  /* `tab[ "]` and not `tab`: the wrapper around the tabs is class="tabs", and a
+   prefix match would count it as a seventh tab. */
+  ['6 layer tabs', (html.match(/class="tab[ "]/g) ?? []).length === 6],
+  /* The arrangement is a preset, and the case is drawn as an outline around both
+   * halves. The default preset is the board itself, so it must be the one the
+   * page draws and the one the select marks. */
+  ['case outline drawn', html.includes('class="case"') && html.includes('data-layout="cosmotyl"')],
+  ['layout presets selectable', html.includes('value="cosmotyl"') && html.includes('value="corne"')],
+  ['log panel reachable from the footer', html.includes('term-btn')],
+  /* The sidebar is where a key gets rebound, so it has to carry the binding
+   * editor and the layer list it binds against. */
+  ['sidebar carries the binding editor', aside.includes('class="bind') && aside.includes('&amp;mo')],
+  /* One binding chip per layer slot the keyboard has, in the behaviour the
+   * surface offers. Measured on the sidebar: the grid spells out layer tokens
+   * too, and a whole-page match would pass even with nothing in the aside. */
+  ['sidebar lists every layer slot as a binding', [0, 1, 2, 3, 4, 5].every((id) => aside.includes(`&amp;mo ${id}`))],
+  /* What a person rebinds every session is on the surface; what they rebind once
+   * in a build is behind a group that starts closed. The closed groups are not in
+   * the markup at all, so this is a real assertion about the default state and
+   * not about styling. */
+  [
+    'everyday bindings are on the surface',
+    ['&amp;trans', '&amp;none', 'unstage'].every((s) => aside.includes(s)),
+  ],
+  /* The multi-argument picker is a group in this column, the same kind of group
+   * the state and the session are: no button opens it, and nothing is fixed over
+   * the page. */
+  [
+    'the advanced picker is a group in the sidebar',
+    aside.includes('advanced binding') && !html.includes('advanced…') && !html.includes('class="overlay"'),
+  ],
+  [
+    'occasional bindings start closed',
+    ['&amp;kt', '&amp;sk', '&amp;to', '&amp;tog', '&amp;sl'].every((s) => !aside.includes(s)),
+  ],
+  /* Only the momentary row is drawn: one staged-binding chip per layer slot, and
+   * none for the three behaviors behind the group header. */
+  ['only momentary layer chips are on the surface', (aside.match(/stage &amp;mo /g) ?? []).length === keymap.slots.length],
+  /* A group is a button that says it is closed. Counting the buttons and the
+   * marks separately catches a group that claims to be closed but is drawn open,
+   * and a mark with no button behind it. */
+  [
+    'closed groups say they can be opened',
+    (aside.match(/aria-expanded="false"/g) ?? []).length >= 3
+      && (aside.match(/\[\+\]/g) ?? []).length === (aside.match(/aria-expanded="false"/g) ?? []).length
+      && !aside.includes('aria-expanded="true"'),
+  ],
+  /* The board is the page: the things you do to it are views of it, not rooms.
+   * A tester is a second view of the same board; the panels and the layer list
+   * are edited where they are drawn. */
+  [
+    'the menu holds the board, not a room per feature',
+    ['keymap', 'tester', 'settings'].every((s) => nav.includes(s))
+      && ['displays', 'macros', 'layers'].every((s) => !nav.includes(`>${s}<`)),
+  ],
+  ['the status panels are drawn on the board as a display icon', (html.match(/class="panel (left|right)/g) ?? []).length === 2
+    /* The name and the widget count are no longer printed inside a one-key-wide
+     * strip: they are what the control says it is, and the glyph is what it
+     * looks like. */
+    && html.includes('aria-label="screen 1: 18/24"')
+    && !html.includes('plabel')],
+  /* The palette under the board: the search sits on the surface rather than
+   * behind a group that has to be opened first, and the category step — not an
+   * empty list waiting for typing — is what is drawn before anything is typed. */
+  [
+    'the keycode palette is reachable without typing',
+    palette.includes('type="search"') && palette.includes('letters · numbers') && !palette.includes('class="disc"'),
+  ],
   ['layer names', ['HOME', 'NAV', 'FUN', 'MOUSE', 'MEDIA', 'GAME'].every((n) => html.includes(n))],
   ['the edited keycap', html.includes('A')],
   ['reserved position is marked', (html.match(/class="cap[^"]*reserved/g) ?? []).length === 2],
-  ['token picker renders', picker.includes('Inherit') && picker.includes('Disable')],
+  ['token picker renders its token step', picker.includes('position 12') && picker.includes('choose a token')],
   ['picker groups tokens by category', (picker.match(/class="cat"/g) ?? []).length >= 5 && (picker.match(/class="token"/g) ?? []).length > 0],
   /* The legend moved behind the ? button, so the page must keep the route to it
    * while losing the wall of text under the grid.
@@ -125,6 +214,15 @@ const checks: Array<[string, boolean]> = [
   ['panel preview shapes match the table', (panel.match(/<g class="w/g) ?? []).length === display.widgets.length],
   ['every widget has a hit area', (panel.match(/class="hit"/g) ?? []).length === display.widgets.length],
   ['pip row uses the keyboard layer count', display.layerCount === 6],
+  /* The read-out is the same resolved binding the cap is drawn from, and the
+   * only control in it is the one that leaves the tester rather than writing. */
+  [
+    'the tester read-out is read-only',
+    readout.includes('>12</b>')
+      && readout.includes('never reported')
+      && !readout.includes('<input')
+      && readout.includes('go to the keymap view'),
+  ],
 ]
 
 /* The other half of the shell: with no keyboard the page must not draw a layout
@@ -138,7 +236,7 @@ offlineApp.use(offlinePinia)
 const offlineHtml = await renderToString(offlineApp)
 
 checks.push(
-  ['no keyboard shows the Connect card', offlineHtml.includes('No keyboard connected')],
+  ['no keyboard shows the Connect card', offlineHtml.includes('connect-card')],
   ['Connect is the biggest control', /class="btn connect"/.test(offlineHtml)],
   ['no keycaps are drawn without a keyboard', !offlineHtml.includes('class="cap')],
 )

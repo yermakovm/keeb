@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+<!-- Placeholder for a small photo of the parts: Pro Micro-сумісна плата, KY-модулі, екрани.
+     Keep ~16:10 so it fits the column, like assets/hw-demo-placeholder.svg.
+     Replace the <img src> in docs/7_2_components.md with assets/components.png. -->
+<rect width="640" height="400" fill="#0b0e11"/>
+<rect x="14" y="14" width="612" height="372" rx="14" fill="none" stroke="#2b343c" stroke-width="3" stroke-dasharray="16 11"/>
+
+<!-- Pro Micro board -->
+<g stroke="#4c5a66" stroke-width="2.5" fill="none">
+  <rect x="60" y="70" width="220" height="96" rx="6"/>
+  <rect x="88" y="84" width="30" height="14" rx="2"/>
+  <rect x="88" y="138" width="30" height="14" rx="2"/>
+  <rect x="222" y="84" width="30" height="14" rx="2"/>
+  <rect x="222" y="138" width="30" height="14" rx="2"/>
+  <rect x="150" y="100" width="56" height="36" rx="3"/>
+</g>
+<g fill="#97a3af" font-size="12">
+  <text x="170" y="122" text-anchor="middle">nRF52840</text>
+  <text x="170" y="190" text-anchor="middle">Pro Micro плата</text>
+</g>
+
+<!-- nice!view screen -->
+<g stroke="#4c5a66" stroke-width="2.5" fill="none">
+  <rect x="330" y="70" width="150" height="96" rx="6"/>
+  <rect x="348" y="86" width="114" height="64" rx="3"/>
+</g>
+<g fill="#6ee7a0" opacity="0.5"><rect x="356" y="96" width="40" height="8" rx="2"/><rect x="356" y="112" width="70" height="8" rx="2"/></g>
+<g fill="#97a3af" font-size="12"><text x="405" y="190" text-anchor="middle">nice!view 160×68</text></g>
+
+<!-- KY modules -->
+<g stroke="#4c5a66" stroke-width="2.5" fill="none">
+  <rect x="510" y="70" width="90" height="60" rx="6"/>
+  <circle cx="534" cy="100" r="9"/><circle cx="556" cy="100" r="9"/><circle cx="578" cy="100" r="9"/>
+  <rect x="510" y="146" width="90" height="44" rx="6"/>
+  <circle cx="555" cy="168" r="14"/>
+</g>
+<g fill="#97a3af" font-size="12"><text x="555" y="210" text-anchor="middle">KY-016 · базер</text></g>
+
+<!-- switch + hotswap row -->
+<g stroke="#4c5a66" stroke-width="2" fill="none">
+  <rect x="60" y="236" width="200" height="60" rx="6"/>
+  <g stroke-dasharray="4 5"><rect x="76" y="250" width="40" height="32" rx="3"/><rect x="124" y="250" width="40" height="32" rx="3"/><rect x="172" y="250" width="40" height="32" rx="3"/></g>
+</g>
+<g fill="#97a3af" font-size="12"><text x="160" y="316" text-anchor="middle">MX світчі в hot-swap сокетах</text></g>
+
+<!-- 3d printed case outline -->
+<g stroke="#4c5a66" stroke-width="2" fill="none">
+  <path d="M330 236 h270 q20 0 20 20 v40 q0 20 -20 20 h-270 q-20 0 -20 -20 v-40 q0 -20 20 -20 z"/>
+  <path d="M455 236 v80" stroke-dasharray="4 5"/>
+</g>
+<g fill="#97a3af" font-size="12"><text x="465" y="316" text-anchor="middle">корпус: 3D-друк</text></g>
+
+<g fill="#97a3af" font-size="19" text-anchor="middle">
+  <text x="320" y="356">Фото компонентів: плата, KY-модулі, екрани</text>
+</g>
+<text x="320" y="378" fill="#4c5a66" font-size="14" text-anchor="middle">docs/assets/components.png</text>
+</svg>

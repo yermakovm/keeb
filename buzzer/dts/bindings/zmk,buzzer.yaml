@@ -1,0 +1,82 @@
+# Copyright (c) 2025 The keeb keyboard authors
+# SPDX-License-Identifier: MIT
+
+description: |
+  One PASSIVE buzzer module (KY-006 / HW-508 piezo) driven by a hardware PWM
+  output.
+
+  A passive piezo has no onboard oscillator: a static HIGH on the signal line is
+  silence. It sounds only when the line is driven with a square wave, and the
+  frequency of that wave is the pitch - which is why this binding takes a PWM
+  specifier instead of a GPIO, and why the driver can randomize pitch as well as
+  rhythm.
+
+  Example (keeb left half, keeb_left.overlay, which also enables &pwm0 and
+  routes its channel 0 to P1.01):
+
+    buzzer_dev: buzzer {
+        compatible = "zmk,buzzer";
+        pwms = <&pwm0 0 PWM_USEC(500) PWM_POLARITY_NORMAL>;  /* 2 kHz base */
+    };
+
+  The period cell is a base tone period, not a limit: every beep sets its own
+  period (its own pitch) at runtime from CONFIG_ZMK_BUZZER_FREQ_MIN_HZ/MAX_HZ,
+  and silence is 0% duty. The period cell is only the reference used for the
+  silence calls and for the log line at boot.
+
+  KY-006 numbers that matter here: usable ~1.5-2.5 kHz, loudest at its ~2 kHz
+  resonance, 3.3-5 V supply, <25 mA.
+
+  The driver parks the output at 0% duty on boot and on the SLEEP activity
+  state, and the PWM controller node is expected to carry a `sleep` pinctrl
+  state (low-power-enable), because the nRF52840 retains pad state through
+  System OFF.
+
+  The optional event properties below make this node sound on its own for things
+  it can see by itself (a layer turning on or off, a wake from sleep). Anything
+  triggered by a key chord is a `zmk,behavior-buzzer` node instead, and anything
+  that happens inside another module (the TLV config engine's update results)
+  calls zmk_buzzer_play_tune() from its own source.
+
+compatible: "zmk,buzzer"
+
+include: base.yaml
+
+properties:
+  pwms:
+    type: phandle-array
+    required: true
+    description: PWM specifier driving the module's signal (S) pin. Channel 0 is what
+      the keeb shield wires. Period in nanoseconds, polarity normal.
+
+  beep-layers:
+    type: array
+    description: |
+      Layer indices this buzzer announces: each one gets the `layer_on` tune when it
+      turns on and `layer_off` when it turns off (two rising notes vs. the same two
+      notes upside down). Absent means the driver does not subscribe to layer events
+      at all.
+
+      A layer index, not a layer node - the same number `&mo`/`&to`/`&tog` take, so
+      on the keeb board this is written as <KEEB_LAYER_GAME> from
+      keeb-module/dts/keeb-positions.dtsi.
+
+      Momentary layers (&mo / &lt) are worth leaving out: they beep twice per use.
+      Layer 0 works but beeps at every boot, because ZMK turns the default layer on
+      at boot.
+
+  beep-on-wake:
+    type: boolean
+    description: |
+      Play the `wake` tune when this boot was a wake from ZMK sleep rather than a
+      fresh power-on.
+
+      ZMK sleeps with sys_poweroff(), which on the nRF52840 is System OFF: RAM is
+      lost and the wake is a cold boot, so the only thing that still knows is the
+      SoC's POWER.RESETREAS register (OFF bit = woke from System OFF on a GPIO DETECT
+      event, i.e. a key press). The driver reads it once at init and clears only
+      that bit, so a soft reset (&sys_reset, &bootloader, which set SREQ) is not
+      mistaken for a wake and other reset reasons stay readable.
+
+      Needs a SoC with a reset-reason register; elsewhere the property logs a
+      warning and does nothing.

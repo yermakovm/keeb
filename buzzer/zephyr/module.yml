@@ -1,0 +1,17 @@
+# zmk-buzzer - Zephyr module manifest.
+#
+# dts_root makes Zephyr discover dts/bindings (zmk,buzzer for the device and
+# zmk,behavior-buzzer for the behavior). Like keeb-module/ and status-led/,
+# this module is deliberately NOT a west project: it lives in this repo and is
+# handed to ZMK with -DZMK_EXTRA_MODULES (see Makefile / env.mk and the note in
+# west.yml).
+#
+# The explicit `name:` is load-bearing - Zephyr falls back to the directory
+# basename, and a generic name like `buzzer` is one collision away from another
+# module in the tree (zephyr/scripts/zephyr_module.py).
+name: zmk-buzzer
+build:
+  cmake: .
+  kconfig: Kconfig
+  settings:
+    dts_root: .

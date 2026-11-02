@@ -1007,3 +1007,330 @@ if (unresolved.length) {
 if (skipped.length) {
   console.warn(`[gen-contract] defines not evaluable as numbers (kept out of KEYCODES): ${skipped.slice(0, 12).join(', ')}${skipped.length > 12 ? ' …' : ''}`)
 }
+
+/* --------------------------------------------------------------------------
+ * 8. Protocol constants — keeb-module/proto/keeb_tlv*.h → src/proto/protocol.gen.ts
+ *
+ * The wire vocabulary (namespaces, record ids, error codes, widget kinds,
+ * limits) lives in the firmware headers and the app has to know every one of
+ * them. Mirroring ~150 numbers by hand is how a protocol fork starts: the
+ * keyboard adds an error code, the configurator prints "unknown error".
+ *
+ * This phase reads the same headers the firmware compiles, evaluates each
+ * #define with the same arithmetic the preprocessor uses (including the
+ * function-like KEEB_TLV_TYPE), and re-derives every wire struct's size from
+ * its field list. The headers carry _Static_assert(sizeof(struct X) == N) for
+ * the same reason; if the two disagree this script fails instead of writing a
+ * table the app would then trust.
+ * -------------------------------------------------------------------------- */
+
+const PROTO_DIR = join(REPO, 'keeb-module/proto')
+const PROTO_HEADER_FILES = ['keeb_tlv_wire.h', 'keeb_tlv_records.h', 'keeb_tlv.h']
+const PROTO_OUT = join(APP_DIR, 'src/proto/protocol.gen.ts')
+
+const C_TYPE_WIDTH = { uint8_t: 1, int8_t: 1, uint16_t: 2, int16_t: 2, uint32_t: 4, int32_t: 4 }
+
+/** The trailing block comment on a #define line — the reason for the number, kept in the output. */
+function parseDefineComments(src) {
+  const out = new Map()
+
+  for (const raw of src.split(/\r?\n/)) {
+    const m = /^\s*#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)\b(?:\([^)]*\))?\s+(.*?)(?:\s*\/\*\s*(.*?)\s*\*\/)?\s*$/.exec(raw)
+
+    if (m && m[3]) {
+      out.set(m[1], m[3])
+    }
+  }
+
+  return out
+}
+
+function parseEnums(src, evaluate) {
+  const out = []
+
+  for (const m of src.matchAll(/\benum\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{([^}]*)\}/g)) {
+    const members = []
+    let next = 0
+
+    for (const entryRaw of m[2].split(',')) {
+      const entry = entryRaw.trim()
+
+      if (!entry) {
+        continue
+      }
+
+      const km = /^([A-Za-z_][A-Za-z0-9_]*)(?:\s*=\s*(.+))?$/.exec(entry)
+
+      if (!km) {
+        throw new Error(`unparsable enum member in ${m[1]}: ${entry}`)
+      }
+
+      const value = km[2] === undefined ? next : evaluate(km[2], new Map())
+
+      members.push({ name: km[1], value: value >>> 0, raw: km[2] ?? null })
+      next = value + 1
+    }
+
+    out.push({ name: m[1], members })
+  }
+
+  return out
+}
+
+/** Field list → byte offsets. The structs are KEEB_PACKED, so the sum is the size. */
+function parseWireStructs(src) {
+  const out = []
+
+  for (const m of src.matchAll(/\bstruct\s+KEEB_PACKED\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{([^}]*)\}/g)) {
+    const fields = []
+    let off = 0
+
+    for (const raw of m[2].split('\n')) {
+      const line = raw.trim()
+
+      if (!line) {
+        continue
+      }
+
+      const fm = /^(u?int(8|16|32)_t)\s+([A-Za-z_][A-Za-z0-9_]*)\s*;$/.exec(line)
+
+      if (!fm) {
+        throw new Error(`unparsable field in struct ${m[1]}: ${line}`)
+      }
+
+      const width = C_TYPE_WIDTH[fm[1]]
+
+      if (!width) {
+        throw new Error(`unknown wire type ${fm[1]} in struct ${m[1]}`)
+      }
+
+      fields.push({ name: fm[3], type: fm[1], width, offset: off })
+      off += width
+    }
+
+    const seen = new Set()
+
+    for (const f of fields) {
+      if (seen.has(f.name)) {
+        throw new Error(`struct ${m[1]} declares field ${f.name} twice`)
+      }
+
+      seen.add(f.name)
+    }
+
+    out.push({ name: m[1], fields, size: off })
+  }
+
+  return out
+}
+
+/** The headers' own size asserts, which the compiler checks on the firmware side. */
+function parseSizeAsserts(src, evaluate) {
+  const out = new Map()
+
+  for (const m of src.matchAll(/_Static_assert\s*\(\s*sizeof\(struct\s+([A-Za-z_][A-Za-z0-9_]*)\)\s*==\s*([^,]+),/g)) {
+    out.set(m[1], evaluate(m[2].trim(), new Map()) >>> 0)
+  }
+
+  return out
+}
+
+/** C casts carry no arithmetic: `(uint16_t)(((ns) << 12) | (op))` is the value behind
+ * the cast, and this evaluator only speaks numbers. */
+function stripCasts(text) {
+  return text.replace(/\(\s*(?:u?int(?:8|16|32)_t|size_t|long|unsigned)\s*\)/g, '')
+}
+
+const protoFiles = []
+const protoDefs = new Map() /* every #define, function-like ones included: the evaluator needs them */
+
+for (const file of PROTO_HEADER_FILES) {
+  const path = join(PROTO_DIR, file)
+
+  if (!existsSync(path)) {
+    console.error(`missing input: ${path}`)
+    console.error('the protocol constants come from the firmware headers — did keeb-module/proto/keeb_tlv*.h move?')
+    process.exit(1)
+  }
+
+  const raw = readFileSync(path, 'utf8')
+
+  protoFiles.push({ path, body: stripCasts(stripComments(raw)), comments: parseDefineComments(raw) })
+
+  for (const [name, def] of parseDefines(stripCasts(stripComments(raw)))) {
+    if (!protoDefs.has(name)) {
+      protoDefs.set(name, def)
+    }
+  }
+}
+
+/* An evaluator of its own: a record id is KEEB_TLV_TYPE(KEEB_NS_KEYMAP, 0x03), and
+ * neither of those names exists in ZMK's dt-bindings. */
+const { evaluate: protoEval } = makeEvaluator(protoDefs)
+
+const protoMacros = new Map()
+const protoComments = new Map()
+const protoEnums = []
+const protoStructs = []
+const protoAsserts = new Map()
+const protoSources = []
+const protoUnnumeric = []
+
+for (const { path, body, comments } of protoFiles) {
+  protoSources.push(relative(REPO, path))
+
+  for (const [name, def] of parseDefines(body)) {
+    if (def.params || /_H$/.test(name)) {
+      continue /* function-like macros are evaluated through their uses; include guards are not constants */
+    }
+
+    let value
+
+    try {
+      value = protoEval(def.body, new Map()) >>> 0
+    } catch {
+      protoUnnumeric.push(name)
+      continue /* KEEB_PACKED and friends: not numbers */
+    }
+
+    if (!protoMacros.has(name)) {
+      protoMacros.set(name, { value, raw: def.body })
+
+      if (comments.has(name)) {
+        protoComments.set(name, comments.get(name))
+      }
+    }
+  }
+
+  for (const e of parseEnums(body, protoEval)) {
+    protoEnums.push(e)
+  }
+
+  for (const s of parseWireStructs(body)) {
+    protoStructs.push(s)
+  }
+
+  for (const [name, size] of parseSizeAsserts(body, protoEval)) {
+    protoAsserts.set(name, size)
+  }
+}
+
+for (const s of protoStructs) {
+  const asserted = protoAsserts.get(s.name)
+
+  if (asserted === undefined) {
+    throw new Error(`struct ${s.name} has no _Static_assert(sizeof(...) == N) in ${PROTO_HEADER_FILES.join(' / ')}`)
+  }
+
+  if (asserted !== s.size) {
+    throw new Error(
+      `struct ${s.name}: the fields add up to ${s.size} bytes but the header asserts ${asserted} — ` +
+        'a packed wire struct changed without the other side agreeing',
+    )
+  }
+}
+
+/** `struct keeb_cell` → KEEB_CELL_SIZE / KEEB_CELL_OFFSETS, the app's naming. */
+function structConst(name) {
+  return 'KEEB_' + name.replace(/^keeb_/, '').toUpperCase()
+}
+
+/** Keep the C spelling when the number is a plain literal — 0x4b45 is "KE" to
+ * anyone reading the header, 19269 is not. */
+function literal(raw, value) {
+  if (typeof raw === 'string' && /^\s*(?:0[xX][0-9a-fA-F]+|\d+)\s*$/.test(raw)) {
+    return raw.trim()
+  }
+
+  return String(value >>> 0)
+}
+
+const protoLines = []
+const emitted = new Map()
+
+function emitConst(name, value, comment, raw) {
+  if (emitted.has(name)) {
+    if (emitted.get(name) !== value) {
+      throw new Error(`${name} is defined twice with different values: ${emitted.get(name)} and ${value}`)
+    }
+
+    return
+  }
+
+  emitted.set(name, value)
+
+  if (comment) {
+    protoLines.push(`/** ${comment} */`)
+  }
+
+  protoLines.push(`export const ${name} = ${literal(raw, value)}`)
+  protoLines.push('')
+}
+
+for (const [name, def] of protoMacros) {
+  emitConst(name, def.value, protoComments.get(name), def.raw)
+}
+
+for (const e of protoEnums) {
+  for (const m of e.members) {
+    emitConst(m.name, m.value, protoComments.get(m.name), m.raw)
+  }
+}
+
+protoLines.push('/* Wire struct layouts: sizes the headers assert, and the offset of every')
+protoLines.push(' * field, so a decoder never hardcodes where a field sits. */')
+protoLines.push('')
+
+for (const s of protoStructs) {
+  const base = structConst(s.name)
+  const sizeName = `${base}_SIZE`
+
+  if (!emitted.has(sizeName)) {
+    emitConst(sizeName, s.size, `sizeof(struct ${s.name}) — asserted in the header`)
+  } else if (emitted.get(sizeName) !== s.size) {
+    throw new Error(`${sizeName} is ${emitted.get(sizeName)} as a #define but struct ${s.name} adds up to ${s.size}`)
+  }
+
+  protoLines.push(`/** struct ${s.name} — the packed field widths in order, and where each field sits. */`)
+  protoLines.push(`export const ${base}_FIELDS: number[] = [${s.fields.map((f) => f.width).join(', ')}]`)
+  protoLines.push(`export const ${base}_OFFSETS: Record<string, number> = ${JSON.stringify(Object.fromEntries(s.fields.map((f) => [f.name, f.offset])), null, 2)}`)
+  protoLines.push('')
+}
+
+const protoTs = `/*
+ * GENERATED FILE — do not edit.
+ *
+ * Copyright (c) 2025 The keeb keyboard authors
+ * SPDX-License-Identifier: MIT
+ *
+ * KEEB TLV protocol constants, generated from the firmware's own headers:
+${protoSources.map((s) => ` *   ${s}`).join('\n')}
+ *
+ * Re-run with: npm run gen
+ *
+ * Every number is a #define or enum member in those headers, evaluated with the
+ * same arithmetic the preprocessor uses (KEEB_TLV_TYPE(ns, op) and friends), and
+ * every struct size is re-derived from its field list and checked against the
+ * _Static_assert the firmware compiles. A disagreement fails this script.
+ *
+ * Not generated, on purpose: the BLE transport numbers (the app's KEEB_BLE_*
+ * mirror keeb_ble.c, which derives them from Zephyr's Kconfig MTU rather than
+ * from a #define), the vendor UUID strings, and the app-only helpers.
+ */
+
+export const GENERATED_PROTOCOL_FROM = ${JSON.stringify(protoSources, null, 2)}
+
+${protoLines.join('\n')}
+`
+
+writeFileSync(PROTO_OUT, protoTs)
+
+if (protoUnnumeric.length) {
+  console.warn(`[gen-contract] protocol defines that are not numbers (kept out of the contract): ${protoUnnumeric.join(', ')}`)
+}
+
+console.log(
+  `wrote ${PROTO_OUT.replace(REPO + '/', '')}: ${emitted.size} constants, ` +
+    `${protoEnums.reduce((n, e) => n + e.members.length, 0)} enum members, ` +
+    `${protoStructs.length} wire structs (sizes cross-checked against the header asserts)`,
+)

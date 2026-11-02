@@ -1,8 +1,36 @@
 config ZMK_STATUS_LED
 	bool "Status LED: boot/connect/advertising/battery-error indicators"
 	default n
+	# The driver sets a brightness per channel through Zephyr's LED API, so the
+	# LED subsystem has to exist even on a board with no backlight and no
+	# underglow (both are what normally `select LED`). `pwm-leds` channels need
+	# the PWM subsystem too; the condition keeps it out of a GPIO-only build.
+	select LED
+	select PWM if DT_HAS_PWM_LEDS_ENABLED
 
 if ZMK_STATUS_LED
+
+config ZMK_STATUS_LED_BRIGHTNESS_PERCENT
+	int "Brightness of every lit signal (%)"
+	range 1 100
+	default 50
+	help
+	  The level every lit signal is driven at: boot blinks, the connect flash,
+	  the advertising pulse, the layer color and the battery-error red all use
+	  this one value, so the palette stays readable relative to itself. 100 is
+	  full on.
+
+	  On a `pwm-leds` channel this is the duty cycle of a hardware PWM output:
+	  a real brightness change, no flicker at the period the devicetree asks
+	  for, and no CPU work - the dimming is done by the peripheral. 0% (an
+	  unlit signal) and 100% (solid) both stop the PWM peripheral and write the
+	  pad directly, so only a dimmed channel costs the peripheral any running
+	  time.
+
+	  On a `gpio-leds` channel (plain SoC GPIO or a GPIO expander) it is
+	  ignored - a GPIO channel is on or off - and the driver logs that once at
+	  boot instead of pretending. To dim those channels, move them to a
+	  PWM-capable pad or raise the series resistors.
 
 config ZMK_STATUS_LED_BATTERY_ERROR_LEVEL
 	int "Battery charge level (percent) that latches the solid error state"

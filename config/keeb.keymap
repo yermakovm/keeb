@@ -234,7 +234,12 @@ keymap {
 
 		combo_toggle_game {
 			timeout-ms = <50>;
-			/* The same thumb slot on each hand - mirror-symmetric by name. */
+			/* The same thumb slot on each hand - mirror-symmetric by name.
+			 * GAME is the layer the buzzer announces (beep-layers in
+			 * keeb_left.overlay): two rising notes on the way in, the same two
+			 * upside down on the way out, so the layer you are in is audible
+			 * without looking. That is a property of the buzzer node, not of this
+			 * combo - any other way of toggling GAME sounds the same. */
 			key-positions = <KEEB_POS_L_THUMB_1 KEEB_POS_R_THUMB_1>;
 			bindings = <&tog KEEB_LAYER_GAME>;
 		};
@@ -253,6 +258,12 @@ keymap {
 		 *          + L_TOP_1 = reset, + L_TOP_2 = bootloader. Combos are
 		 *          evaluated on the central half and &sys_reset / &bootloader
 		 *          are source-local, so these reboot the LEFT half directly.
+		 *          The reset chord sounds first (buzzer on P1.01, see
+		 *          buzzer_reset in keeb.dtsi) with a random pattern, and the
+		 *          bootloader chord sounds the `bootloader` tune (buzzer_boot,
+		 *          three descending notes) - different sounds, because mixing up
+		 *          "reboot" and "reboot into the UF2 bootloader" is how people
+		 *          conclude the keyboard is bricked.
 		 *   RIGHT: the corner plus its two inner neighbours (R_TOP_5 / R_TOP_4,
 		 *          since the right half counts outward-in): = reset,
 		 *          bootloader, via keeb,remote-reset which forwards the reboot
@@ -264,7 +275,14 @@ keymap {
 		 * without any other keypress. */
 		left_reset_combo {
 			key-positions = <KEEB_POS_L_TOP_0 KEEB_POS_L_TOP_1>;
-			bindings = <&sys_reset>;
+			/* &buzzer_reset (keeb.dtsi) = zmk,behavior-buzzer: a random beep
+			 * pattern on the left half's buzzer (P1.01), then &sys_reset when the
+			 * tone ends. &sys_reset alone reboots inside its own callback, i.e.
+			 * before anything could sound, and a combo only carries one binding -
+			 * so the tone and the reboot have to live in the same behavior.
+			 * The right half has no buzzer: its mirror chords use &right_reset and
+			 * stay silent. */
+			bindings = <&buzzer_reset>;
 			layers = <KEEB_LAYER_HOME>;
 			timeout-ms = <100>;
 			require-prior-idle-ms = <200>;
@@ -272,7 +290,12 @@ keymap {
 
 		left_boot_combo {
 			key-positions = <KEEB_POS_L_TOP_0 KEEB_POS_L_TOP_2>;
-			bindings = <&bootloader>;
+			/* &buzzer_boot (keeb.dtsi): the `bootloader` tune, then &bootloader.
+			 * Same one-behavior constraint as the reset chord above - &bootloader
+			 * reboots inside its own callback, so nothing else in the combo could
+			 * ever sound. The UF2 drive shows up about 0.3 s after the chord, which
+			 * is the price of hearing which chord you hit. */
+			bindings = <&buzzer_boot>;
 			layers = <KEEB_LAYER_HOME>;
 			timeout-ms = <100>;
 			require-prior-idle-ms = <200>;

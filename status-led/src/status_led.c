@@ -1,7 +1,16 @@
 /*
  * zmk-status-led - three-channel (RGB) status LED for ZMK keyboards.
- * Each channel is a plain GPIO (e.g. a KY-016 RGB module or discrete
- * R/G/B LEDs, on SoC pins or a GPIO expander): on/off only, no PWM.
+ * Each channel is a Zephyr LED device reached by phandle from the
+ * 'zmk,status-led' node: a 'gpio-leds' child (a KY-016 on plain SoC GPIOs or
+ * on a GPIO expander) is on/off only, a 'pwm-leds' child (an nRF52 PWM
+ * output) is a real duty cycle. The driver is identical for both - it asks
+ * for a brightness percentage per channel and Zephyr's LED driver turns that
+ * into a pin state or a pulse width.
+ *
+ * Brightness: CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT (default 50) is the
+ * level used for every lit signal, so the palette keeps its proportions and
+ * the whole thing dims together. A GPIO channel cannot honor it; the driver
+ * says so once at boot rather than silently running full on.
  *
  * Palette (priority order):
  *   ERROR   - solid red; battery <= CONFIG_ZMK_STATUS_LED_BATTERY_ERROR_LEVEL,
@@ -22,7 +31,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/init.h>
 #include <zephyr/device.h>
-#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/led.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/logging/log.h>
@@ -52,9 +61,17 @@ LOG_MODULE_REGISTER(zmk_status_led, CONFIG_ZMK_LOG_LEVEL);
 #define LED_R_NODE DT_PHANDLE(DT_INST(0, zmk_status_led), led_r)
 #define LED_G_NODE DT_PHANDLE(DT_INST(0, zmk_status_led), led_g)
 #define LED_B_NODE DT_PHANDLE(DT_INST(0, zmk_status_led), led_b)
-static const struct gpio_dt_spec led_r = GPIO_DT_SPEC_GET(LED_R_NODE, gpios);
-static const struct gpio_dt_spec led_g = GPIO_DT_SPEC_GET(LED_G_NODE, gpios);
-static const struct gpio_dt_spec led_b = GPIO_DT_SPEC_GET(LED_B_NODE, gpios);
+static const struct led_dt_spec led_r = LED_DT_SPEC_GET(LED_R_NODE);
+static const struct led_dt_spec led_g = LED_DT_SPEC_GET(LED_G_NODE);
+static const struct led_dt_spec led_b = LED_DT_SPEC_GET(LED_B_NODE);
+
+/* Whether the channels are dimmable is decided by the devicetree (pwm-leds vs
+ * gpio-leds children), not by a Kconfig option - the wiring is where that is
+ * known. Only the R channel is checked: a build that mixes the two is not a
+ * wiring this module documents, and the log line is diagnostic either way. */
+#define LED_CHANNELS_ARE_PWM DT_NODE_HAS_COMPAT(LED_R_NODE, pwm_leds)
+
+#define LED_ON_PCT CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT
 
 #define BOOT_ON_MS 100
 #define BOOT_OFF_MS 100
@@ -75,13 +92,28 @@ static uint8_t step;        /* pattern step counter for the current mode */
 static void tick(struct k_work *work);
 static K_WORK_DELAYABLE_DEFINE(led_tick, tick);
 
-/* All three channels in one shot (one I2C write per channel if these
- * live on an expander - cheap at blink rates, and bus-serialized with
- * the kscan). */
+/* All three channels in one shot (one LED driver call per channel; on a
+ * PWM-backed board each one is a duty-cycle write to its PWM instance -
+ * cheap at blink rates, and bus-serialized with the kscan if they live on an
+ * expander).
+ *
+ * ON is LED_ON_PCT percent, OFF is 0%: on a `pwm-leds` channel 0% and 100%
+ * both make the driver stop the PWM peripheral and hold the pad, so only a
+ * dimmed signal keeps the peripheral running. Called from the tick work only,
+ * never from an ISR. */
+static inline void led_channel(const struct led_dt_spec *led, bool on) {
+	uint8_t pct = on ? LED_ON_PCT : 0;
+	int ret = led_set_brightness_dt(led, pct);
+
+	if (ret < 0) {
+		LOG_WRN("status LED %s[%u] -> %u%% failed (%d)", led->dev->name, led->index, pct, ret);
+	}
+}
+
 static inline void led_rgb(bool r, bool g, bool b) {
-	gpio_pin_set_dt(&led_r, r);
-	gpio_pin_set_dt(&led_g, g);
-	gpio_pin_set_dt(&led_b, b);
+	led_channel(&led_r, r);
+	led_channel(&led_g, g);
+	led_channel(&led_b, b);
 }
 
 static void enter(enum led_mode m) {
@@ -276,16 +308,18 @@ ZMK_SUBSCRIPTION(status_led_activity, zmk_activity_state_changed);
 /* --- init ------------------------------------------------------------------ */
 
 static int status_led_init(void) {
-	static const struct gpio_dt_spec *const chans[] = {&led_r, &led_g, &led_b};
+	static const struct led_dt_spec *const chans[] = {&led_r, &led_g, &led_b};
 
 	for (size_t i = 0; i < ARRAY_SIZE(chans); i++) {
-		if (!device_is_ready(chans[i]->port)) {
-			LOG_ERR("status LED channel %zu: GPIO device not ready", i);
+		if (!led_is_ready_dt(chans[i])) {
+			LOG_ERR("status LED channel %zu: LED device %s not ready", i, chans[i]->dev->name);
 			return -ENODEV;
 		}
-		int ret = gpio_pin_configure_dt(chans[i], GPIO_OUTPUT_INACTIVE);
+		/* Park every channel at 0 rather than at whatever the reset default or a
+		 * previous boot left on the pad. */
+		int ret = led_set_brightness_dt(chans[i], 0);
 		if (ret) {
-			LOG_ERR("failed to configure status LED channel %zu: %d", i, ret);
+			LOG_ERR("failed to turn off status LED channel %zu: %d", i, ret);
 			return ret;
 		}
 	}
@@ -295,10 +329,19 @@ static int status_led_init(void) {
 	/* Quick boot blink; BOOT end transitions to FLASH/ADV/ERROR. */
 	enter(MODE_BOOT);
 
-	LOG_INF("status LED ready (%s profile)",
+	LOG_INF("status LED ready (%s profile, %s channels, lit signals at %d%%)",
 		IS_ENABLED(CONFIG_ZMK_SPLIT) && !IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
 			? "peripheral"
-			: "central");
+			: "central",
+		COND_CODE_1(LED_CHANNELS_ARE_PWM, ("pwm"), ("gpio")), LED_ON_PCT);
+
+#if !LED_CHANNELS_ARE_PWM
+	if (LED_ON_PCT < 100) {
+		LOG_WRN("channels are plain GPIO: %d%% is ignored, a GPIO channel is on or off",
+			LED_ON_PCT);
+	}
+#endif
+
 	return 0;
 }
 

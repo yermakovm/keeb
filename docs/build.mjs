@@ -18,9 +18,14 @@
  *   node docs/build.mjs                 -> docs/dist/deck.html
  *   node docs/build.mjs pdf             -> docs/dist/deck.pdf
  *   node docs/build.mjs html pdf pptx   -> all of them
+ *   node docs/build.mjs preview         -> Marp preview window of the whole deck
+ *
+ * `preview` also watches docs/<n>_*.md and re-merges .deck.md on change, so
+ * editing a source slide reloads the preview window (Marp itself only watches
+ * the merged file).
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
-import { spawnSync } from 'node:child_process'
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, cpSync, watch } from 'node:fs'
+import { spawn, spawnSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -30,8 +35,10 @@ const theme = 'docs/theme/keeb.css'
 const merged = path.join(docsDir, '.deck.md')
 const dist = path.join(docsDir, 'dist')
 
-const formats = process.argv.slice(2).filter((a) => !a.startsWith('-'))
-const wanted = formats.length ? formats : ['html']
+const args = process.argv.slice(2).filter((a) => !a.startsWith('-'))
+const preview = args.includes('preview')
+const wanted = args.filter((a) => a !== 'preview')
+if (!preview && !wanted.length) wanted.push('html')
 for (const f of wanted) {
   if (!['html', 'pdf', 'pptx', 'png'].includes(f)) {
     console.error(`unsupported format: ${f} (html | pdf | pptx | png)`)
@@ -52,25 +59,59 @@ if (!files.length) {
 console.log(`deck: ${files.map((f) => path.basename(f)).join(' ')}`)
 
 // .deck.md lives in docs/ so that `assets/...` paths keep resolving.
-writeFileSync(merged, files.map((f) => readFileSync(f, 'utf8').trimEnd()).join('\n\n---\n\n') + '\n')
-
-mkdirSync(dist, { recursive: true })
+const merge = () =>
+  writeFileSync(merged, files.map((f) => readFileSync(f, 'utf8').trimEnd()).join('\n\n---\n\n') + '\n')
+merge()
 
 const marp = path.join(root, 'node_modules', '.bin', 'marp')
-for (const fmt of wanted) {
-  const target = path.join(dist, `deck.${fmt === 'png' ? 'png' : fmt}`)
-  const res = spawnSync(
+
+if (preview) {
+  const child = spawn(
     marp,
-    [
-      path.relative(root, merged),
-      '--theme-set',
-      theme,
-      '--allow-local-files', // needed for docs/assets/*, otherwise Marp blocks them
-      '-o',
-      target,
-    ],
+    [path.relative(root, merged), '--theme-set', theme, '--allow-local-files', '--preview'],
     { cwd: root, stdio: 'inherit' },
   )
-  if (res.status !== 0) process.exit(res.status ?? 1)
-  console.log(`  -> ${path.relative(root, target)}`)
+
+  // Marp watches .deck.md, not the sources: re-merge so the preview reloads.
+  let timer = null
+  const watcher = watch(docsDir, (_event, name) => {
+    if (!name || !/^\d+_.+\.md$/.test(name)) return
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      merge()
+      console.log(`  re-merged after ${name}`)
+    }, 150)
+  })
+
+  child.on('exit', (code, signal) => {
+    watcher.close()
+    process.exit(signal ? 0 : (code ?? 0))
+  })
+  for (const sig of ['SIGINT', 'SIGTERM'])
+    process.on(sig, () => {
+      watcher.close()
+      child.kill(sig)
+    })
+} else {
+  mkdirSync(dist, { recursive: true })
+  // deck.html inlines the theme CSS and keeps `assets/...` srcs relative to docs/dist,
+  // so the placeholder images (and assets/fonts.woff2) only resolve once copied here.
+  cpSync(path.join(docsDir, 'assets'), path.join(dist, 'assets'), { recursive: true })
+  for (const fmt of wanted) {
+    const target = path.join(dist, `deck.${fmt === 'png' ? 'png' : fmt}`)
+    const res = spawnSync(
+      marp,
+      [
+        path.relative(root, merged),
+        '--theme-set',
+        theme,
+        '--allow-local-files', // needed for docs/assets/*, otherwise Marp blocks them
+        '-o',
+        target,
+      ],
+      { cwd: root, stdio: 'inherit' },
+    )
+    if (res.status !== 0) process.exit(res.status ?? 1)
+    console.log(`  -> ${path.relative(root, target)}`)
+  }
 }

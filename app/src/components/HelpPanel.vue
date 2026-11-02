@@ -60,12 +60,43 @@ const emit = defineEmits<{ (e: 'close'): void }>()
       </section>
 
       <section>
+        <h3>Screens and testing</h3>
+        <ul>
+          <li>
+            <b>screen 1 / screen 2</b> in the split are the status panels, drawn where the glass
+            is. Clicking one puts its widget table under the board and its properties in the
+            sidebar — the same two surfaces a key uses.
+          </li>
+          <li>
+            The <b>tester</b> draws the same board and inverts the switches the keyboard reports
+            closed. Reporting is asked for with <code>TEST_SET</code> and given back when the view
+            closes, so a keyboard is never left streaming keystrokes.
+          </li>
+          <li>
+            On the simulated keyboard, clicking a cap in the tester presses its switch for a
+            moment through the same path real hardware uses.
+          </li>
+        </ul>
+      </section>
+
+      <section>
         <h3>Editing, applying, saving</h3>
         <ul>
           <li>
-            Clicking a cap opens the picker; <b>Apply</b> only <b>stages</b> the binding (green
-            corner dot) and closes the picker. Nothing leaves the browser until
-            <b>Apply changes</b>.
+            Clicking a cap selects it — the cap inverts — and the keycode palette under the board
+            is where it gets its key: choose a category and every group in it is drawn with its
+            keys; the search field narrows that list as you type
+            (<code>&amp;kp / &amp;kt / &amp;sk</code> is chosen by which one you click). The sidebar
+            holds the rest: <code>&amp;trans</code>, <code>&amp;none</code>, <b>unstage</b>,
+            and one <code>&amp;mo</code> chip per layer slot. Every one of
+            them only <b>stages</b> the binding (green corner dot). Nothing leaves the browser
+            until <b>Apply changes</b>.
+          </li>
+          <li>
+            <b>advanced binding</b> is the group in that same column for the bindings with more
+            than one argument: hold/tap, mouse, BT and output. It opens like the
+            <b>state</b> and <b>session</b> groups do. <b>unstage</b> drops one cell's staged
+            binding and asks the keyboard what it has at that position again.
           </li>
           <li>
             <b>Apply changes</b> sends one <code>CELLS_SET</code> per dirty layer. The firmware
@@ -145,13 +176,13 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 .help {
   width: min(760px, 92vw); max-height: 84vh; overflow: auto;
-  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 0;
   padding: 16px 18px; display: flex; flex-direction: column; gap: 14px;
 }
 
 .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 h2 { margin: 0; font-size: 15px; }
-h3 { margin: 0 0 4px; font-size: 12px; color: var(--accent); letter-spacing: 0.5px; text-transform: uppercase; }
+h3 { margin: 0 0 4px; font-size: 12px; color: var(--ink); letter-spacing: 0.5px; text-transform: uppercase; }
 
 section { display: flex; flex-direction: column; }
 ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 5px; }
@@ -161,10 +192,10 @@ code { font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); }
 
 .chip {
   padding: 5px 10px; font-size: 12px;
-  border: 1px solid var(--border); border-radius: 999px;
+  border: 1px solid var(--border); border-radius: 0;
   background: var(--bg-raised); color: var(--text-dim); cursor: pointer;
 }
-.chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip:hover { border-color: var(--ink); color: var(--ink); }
 
 .foot { margin: 0; font-size: 11px; color: var(--text-faint); }
 </style>

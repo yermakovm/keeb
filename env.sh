@@ -8,8 +8,8 @@
 #     make -C zmk-config left|right|flash-left|flash-right   <- from the workspace root
 #     make left|right                                        <- from this directory
 #   or a raw west build from the workspace root:
-#     west build -s zmk/app -b xiao_ble//zmk -d out/left  -- -DSHIELD=keeb_left \
-#          -DZMK_CONFIG="$ZMK_CONFIG" -DZMK_EXTRA_MODULES="$KEEB_MODULE;$STATUS_LED"
+#     west build -s zmk/app -b nice_nano@1.0.0//zmk -d out/left  -- -DSHIELD=keeb_left \
+#          -DZMK_CONFIG="$ZMK_CONFIG" -DZMK_EXTRA_MODULES="$KEEB_MODULE;$STATUS_LED;$BUZZER"
 #
 # What it provides:
 #   PATH                                    venv with west + the python deps Zephyr needs
@@ -17,8 +17,8 @@
 #                                           ARM GCC SDK used by Zephyr 4.1
 #   ZMK_CONFIG                              <repo>/config - keeb.conf / keeb.keymap.
 #                                           Unset => ZMK silently uses its own keymaps.
-#   KEEB_MODULE, STATUS_LED                 the two Zephyr modules that live in this repo
-#                                           (keeb-module/, status-led/), passed to ZMK via
+#   KEEB_MODULE, STATUS_LED, BUZZER         the three Zephyr modules that live in this repo
+#                                           (keeb-module/, status-led/, buzzer/), passed to ZMK via
 #                                           -DZMK_EXTRA_MODULES as a ';' list, which ZMK
 #                                           merges with its own app/module and
 #                                           keymap-module inside ZEPHYR_EXTRA_MODULES
@@ -45,6 +45,7 @@ export ZEPHYR_SDK_INSTALL_DIR="$HOME/zephyr-sdk-0.16.9"
 export ZMK_CONFIG="$ZMK_REPO/config"
 export KEEB_MODULE="$ZMK_REPO/keeb-module"
 export STATUS_LED="$ZMK_REPO/status-led"
+export BUZZER="$ZMK_REPO/buzzer"
 export OUT="${OUT:-$ZMK_WS/out}"
 
 # Warnings are cheaper than a confusing build error later.
@@ -53,3 +54,4 @@ command -v west >/dev/null 2>&1 || echo "env.sh: west not on PATH (expected ~/.v
 [ -d "$ZEPHYR_SDK_INSTALL_DIR" ] || echo "env.sh: no SDK at $ZEPHYR_SDK_INSTALL_DIR" >&2
 [ -f "$KEEB_MODULE/zephyr/module.yml" ] || echo "env.sh: $KEEB_MODULE is not a Zephyr module" >&2
 [ -f "$STATUS_LED/zephyr/module.yml" ] || echo "env.sh: $STATUS_LED is not a Zephyr module" >&2
+[ -f "$BUZZER/zephyr/module.yml" ] || echo "env.sh: $BUZZER is not a Zephyr module" >&2

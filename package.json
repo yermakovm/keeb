@@ -7,7 +7,7 @@
     "deck": "node docs/build.mjs html pdf",
     "deck:html": "node docs/build.mjs",
     "deck:pdf": "node docs/build.mjs pdf",
-    "preview": "marp docs/0_index.md --theme-set docs/theme/keeb.css --allow-local-files --preview"
+    "preview": "node docs/build.mjs preview"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.5.1"

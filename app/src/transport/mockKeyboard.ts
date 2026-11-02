@@ -83,6 +83,7 @@ import {
   KEEB_T_TOKEN_PARAMS,
   KEEB_T_TOKENS,
   KEEB_T_APPLY_COMMIT,
+  KEEB_T_TEST_SET,
   KEEB_T_APPLY_CANCEL,
   KEEB_TOKEN_F_READY,
   KEEB_TOKEN_NAME_MAX,
@@ -121,6 +122,7 @@ import {
   KEEB_DISPLAY_F_DIRTY,
   KEEB_EV_CELLS_SET,
   KEEB_EV_DISPLAY_SAVED,
+  KEEB_EV_KEY,
   KEEB_EV_DISPLAY_SET,
   KEEB_EV_TEXT_SET,
   KEEB_EV_DISCARDED,
@@ -329,6 +331,10 @@ export class MockKeyboard implements KeebTransport {
   private panel: PanelState = panelFromPreset(0)
   private locked = 0
   private notifySeq = 0
+
+  /* Tester mode, mirrored from the firmware: key events are only reported while
+   * a host has asked for them. */
+  private testMode = false
   private nextMsgId = 1
 
   private packetHandlers = new Set<(pkt: Uint8Array) => void>()
@@ -352,6 +358,7 @@ export class MockKeyboard implements KeebTransport {
   }
 
   disconnect(): void {
+    this.testMode = false
     this.setState('offline', 'disconnected')
   }
 
@@ -432,8 +439,23 @@ export class MockKeyboard implements KeebTransport {
     sender.sendAll(msg.bytes(), this.nextMsgId++, KEEB_PKT_F_REPLY | KEEB_PKT_F_NOTIFY)
   }
 
-  /* ------------------------------------------------------------------ dispatch */
+  /** Tester mode's switch. A simulated keyboard has no fingers, so the tester
+   * view presses it directly — and the event then travels the same notification
+   * path the firmware uses, so nothing downstream can tell the difference. */
+  simulateKey(pos: number, pressed: boolean, layer = 0): void {
+    if (!this.testMode) {
+      return
+    }
 
+    this.notify(KEEB_EV_KEY, new Uint8Array([pos & 0xff, pressed ? 1 : 0, layer & 0xff]))
+  }
+
+  /** Whether this keyboard is currently reporting its switches. */
+  get testModeOn(): boolean {
+    return this.testMode
+  }
+
+  /* ------------------------------------------------------------------ dispatch */
   private receiveFromHost(pkt: Uint8Array): void {
     /* Reassembly is the host's job in reverse: the mock runs the same
      * fragment rules on the way in, so a half-sent message fails here exactly
@@ -613,6 +635,12 @@ export class MockKeyboard implements KeebTransport {
 
         case KEEB_T_DISPLAY_BLANK:
           break
+
+        case KEEB_T_TEST_SET: {
+          this.testMode = (rec.value[0] ?? 0) !== 0
+          detail = this.testMode ? 1 : 0
+          break
+        }
 
         case KEEB_T_APPLY_COMMIT:
         case KEEB_T_APPLY_CANCEL:

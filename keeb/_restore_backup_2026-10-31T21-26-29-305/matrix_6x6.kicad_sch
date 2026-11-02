@@ -1,0 +1,7310 @@
+(kicad_sch
+	(version 20260306)
+	(generator "eeschema")
+	(generator_version "10.0")
+	(uuid "2a17d66e-b80d-4567-8a2d-63f27b012faa")
+	(paper "A4")
+	(lib_symbols
+		(symbol "amoeba-royale-rescue:DIODE-amoeba-rescue"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "D"
+				(at 0 2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.016 1.016)
+					)
+				)
+			)
+			(property "Value" "DIODE-amoeba-rescue"
+				(at 0 -2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.016 1.016)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+				)
+			)
+			(property "Description" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "D? S*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "DIODE-amoeba-rescue_0_1"
+				(polyline
+					(pts
+						(xy -1.27 1.27) (xy 1.27 0) (xy -1.27 -1.27)
+					)
+					(stroke
+						(width 0)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 1.27) (xy 1.27 -1.27)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "DIODE-amoeba-rescue_1_1"
+				(pin passive line
+					(at -5.08 0 0)
+					(length 3.81)
+					(name "A"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 0 180)
+					(length 3.81)
+					(name "K"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.016 1.016)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "amoeba-royale-rescue:MX1A-amoeba-rescue"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "S"
+				(at -3.81 6.35 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+				)
+			)
+			(property "Value" "MX1A-amoeba-rescue"
+				(at 0 2.54 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.524 1.524)
+					)
+				)
+			)
+			(property "Description" ""
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "MX1A-amoeba-rescue_0_1"
+				(polyline
+					(pts
+						(xy -5.08 7.62) (xy -5.08 3.81) (xy -2.54 3.81)
+					)
+					(stroke
+						(width 0)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.54 3.81) (xy 1.27 6.35)
+					)
+					(stroke
+						(width 0)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "MX1A-amoeba-rescue_1_1"
+				(pin passive line
+					(at -5.08 10.16 270)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 3.81 180)
+					(length 2.54)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+	)
+	(junction
+		(at 201.93 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "009b0a91-42cf-4a43-bc07-a2623f971b90")
+	)
+	(junction
+		(at 158.75 36.83)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "0c250caa-1e71-46f9-96dd-018ab67809aa")
+	)
+	(junction
+		(at 153.67 62.23)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "0f84ec4d-d1df-4aa8-86e1-fb445c9dba76")
+	)
+	(junction
+		(at 134.62 83.82)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "112dd221-bbcc-4d3c-93c6-2d8c2be8f301")
+	)
+	(junction
+		(at 201.93 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "14a49bbf-1ca0-4a72-aff1-b1c922e58299")
+	)
+	(junction
+		(at 115.57 106.68)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "17453a69-2f2c-4402-bd6f-d69ad568c660")
+	)
+	(junction
+		(at 96.52 36.83)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "17a0e2a6-7ce1-4a62-9544-dda1a4825902")
+	)
+	(junction
+		(at 139.7 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "1ea0d894-2d39-4998-bfa8-1f31d0dc8259")
+	)
+	(junction
+		(at 139.7 106.68)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "2749b2e4-4fb6-459b-b6cf-e4c30c004911")
+	)
+	(junction
+		(at 153.67 83.82)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "2fea83d6-b9dc-4805-92e1-958331339daa")
+	)
+	(junction
+		(at 177.8 83.82)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "375adbf5-ec61-4081-9d95-2998965ff68a")
+	)
+	(junction
+		(at 96.52 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "3d690ca2-d157-4b7f-822e-0130b1969e57")
+	)
+	(junction
+		(at 134.62 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "3ef978ae-834d-4e29-8115-e1ef807e3764")
+	)
+	(junction
+		(at 153.67 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "43962a5f-d29b-4444-ab34-d09d91f49f7b")
+	)
+	(junction
+		(at 115.57 80.01)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "4d2aa72c-4991-4dd6-89bd-5a2a9cca7248")
+	)
+	(junction
+		(at 158.75 80.01)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "5118ea1d-6be8-4dff-977a-93d35512f510")
+	)
+	(junction
+		(at 158.75 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "518e9ec5-5d6c-44e7-b033-457b1575f8de")
+	)
+	(junction
+		(at 115.57 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "5404df20-36a3-45cf-b3d1-ca766b6c98fc")
+	)
+	(junction
+		(at 182.88 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "56ec3733-3377-43d2-a462-5e8dfb1e6a5f")
+	)
+	(junction
+		(at 139.7 80.01)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "584d3a77-1e30-4cf4-998e-201779da95f7")
+	)
+	(junction
+		(at 153.67 19.05)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "5af487a4-0f48-42bc-b41a-d1751f269aaf")
+	)
+	(junction
+		(at 110.49 19.05)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "5c9c547b-0a62-41dd-887d-24bdd75fc1c1")
+	)
+	(junction
+		(at 96.52 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "6178946b-1e6d-4e57-87d0-a0f05482d2f2")
+	)
+	(junction
+		(at 182.88 80.01)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "677beb48-cdbd-4bbe-9855-78748da834fc")
+	)
+	(junction
+		(at 158.75 124.46)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "6bdfe53a-911d-447b-bf1a-a4aef958d78f")
+	)
+	(junction
+		(at 139.7 124.46)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "70507482-2891-428c-bddc-1889bf3583f3")
+	)
+	(junction
+		(at 158.75 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "723fc4c6-5c5c-49a6-ae03-831af47b6316")
+	)
+	(junction
+		(at 91.44 19.05)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "72809b04-3905-4a6b-992b-02e92630a83c")
+	)
+	(junction
+		(at 201.93 36.83)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "83b89243-50d6-4ffa-a124-d978d20ab957")
+	)
+	(junction
+		(at 134.62 40.64)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "85b6987a-4a3c-4838-b52e-691b189c1aef")
+	)
+	(junction
+		(at 182.88 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "88c2a332-dfca-4418-bb07-eda96c49dac0")
+	)
+	(junction
+		(at 91.44 40.64)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "8eb32ebb-bda4-4660-a771-5a96a7b28877")
+	)
+	(junction
+		(at 182.88 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "94dae970-07c1-469e-9f28-d55e330e33c8")
+	)
+	(junction
+		(at 110.49 40.64)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "970faae6-e3f4-43bd-a64a-6b978f858db8")
+	)
+	(junction
+		(at 91.44 83.82)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "9b637182-6bf5-4ba4-9931-cad22409f24b")
+	)
+	(junction
+		(at 96.52 106.68)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "9d02f727-f886-4cba-8178-410afdd11766")
+	)
+	(junction
+		(at 153.67 40.64)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a62050e3-7796-4cd7-a4d6-9c7f28468e5a")
+	)
+	(junction
+		(at 110.49 62.23)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "a8af0fea-8b01-4a2d-ba93-c95c52fd65c1")
+	)
+	(junction
+		(at 182.88 36.83)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "b2a5cea6-1bd5-42c8-ad57-81a73f0e752f")
+	)
+	(junction
+		(at 177.8 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "b6050fea-3152-45bd-a1fc-1794031a4103")
+	)
+	(junction
+		(at 139.7 101.6)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "bf0df8a0-b2ca-4e8f-9590-80017e11ab12")
+	)
+	(junction
+		(at 110.49 83.82)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c1c14f99-353c-4e17-a1dc-eb25c2c04078")
+	)
+	(junction
+		(at 115.57 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c5e5a20e-4aa4-42c5-b184-c49b58d93181")
+	)
+	(junction
+		(at 96.52 80.01)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c8259218-e2b3-4f0f-a789-302f6ff56b22")
+	)
+	(junction
+		(at 201.93 80.01)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "cbf2181e-15af-4f53-b433-0d1f7ed1de01")
+	)
+	(junction
+		(at 177.8 40.64)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ddcaad16-d47a-48df-8259-e29fe1664b1e")
+	)
+	(junction
+		(at 134.62 62.23)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "e1149bcc-b764-471d-b53e-9e7ad98bd2d2")
+	)
+	(junction
+		(at 91.44 62.23)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "e4fa7d85-8824-4336-915f-604014744def")
+	)
+	(junction
+		(at 134.62 106.68)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "e96d08b6-313e-489c-9b3a-1b698b6846fa")
+	)
+	(junction
+		(at 139.7 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "e97e9f66-aaf6-4cf6-af22-bd0cc2163a50")
+	)
+	(junction
+		(at 134.62 19.05)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ebe0c34e-972a-4a2e-919e-b4f78da678ce")
+	)
+	(junction
+		(at 177.8 19.05)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "ec08fdeb-d6d7-4e6d-a32f-feac25199284")
+	)
+	(junction
+		(at 139.7 36.83)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "efac189c-f7a8-4687-a717-bb04fdcd1a94")
+	)
+	(junction
+		(at 115.57 36.83)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "f2b5727f-4883-4b6a-b055-2101bdf33ae8")
+	)
+	(junction
+		(at 177.8 62.23)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "fa9fea85-5dfb-4c74-8728-f7c7f23f51f7")
+	)
+	(wire
+		(pts
+			(xy 124.46 147.32) (xy 124.46 149.86)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0198c9a6-1d85-498a-9b31-92738b0cf7cd")
+	)
+	(wire
+		(pts
+			(xy 143.51 71.12) (xy 143.51 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "01f3781e-37ba-47e7-8382-c19b0c3713f8")
+	)
+	(wire
+		(pts
+			(xy 110.49 19.05) (xy 110.49 27.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "038a57f9-7932-4649-99be-4cd06869d6ec")
+	)
+	(wire
+		(pts
+			(xy 62.23 19.05) (xy 91.44 19.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "08350e49-9830-4bf6-b269-5d0fe94eb583")
+	)
+	(wire
+		(pts
+			(xy 134.62 40.64) (xy 153.67 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "087b27c5-3816-42ee-9312-e339cfa03576")
+	)
+	(wire
+		(pts
+			(xy 91.44 19.05) (xy 110.49 19.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "092cbfaa-d668-4c00-9dec-f98d499ce5c7")
+	)
+	(wire
+		(pts
+			(xy 124.46 71.12) (xy 124.46 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "093c36ea-b5ce-434c-8769-04797e770d6a")
+	)
+	(wire
+		(pts
+			(xy 186.69 27.94) (xy 186.69 30.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0944c3fc-3358-4977-9f07-07241df0ee22")
+	)
+	(wire
+		(pts
+			(xy 115.57 58.42) (xy 115.57 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0970833a-93bd-4383-a4aa-92c7965abb76")
+	)
+	(wire
+		(pts
+			(xy 100.33 27.94) (xy 100.33 30.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0beb7f69-392e-4e58-959b-f38a080d99ac")
+	)
+	(wire
+		(pts
+			(xy 177.8 36.83) (xy 182.88 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0d5780dd-43c2-47dc-9a22-8d35a71b97e1")
+	)
+	(wire
+		(pts
+			(xy 139.7 106.68) (xy 153.67 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0d99d7ad-32e8-4b1b-8e07-02972a00afac")
+	)
+	(wire
+		(pts
+			(xy 177.8 101.6) (xy 182.88 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1169e8b4-96ab-42b7-892b-1dfca981cabc")
+	)
+	(wire
+		(pts
+			(xy 91.44 19.05) (xy 91.44 27.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "125ba4bd-9a95-4b02-a623-4ccb61dc5690")
+	)
+	(wire
+		(pts
+			(xy 81.28 27.94) (xy 81.28 30.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "13ae3c95-4b19-45ae-9d3f-bb3d35e334e4")
+	)
+	(wire
+		(pts
+			(xy 134.62 101.6) (xy 139.7 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "148988bc-6fd1-4cea-9d7b-eb4f925b34bf")
+	)
+	(wire
+		(pts
+			(xy 134.62 62.23) (xy 134.62 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1b5636ca-2bf5-464e-a64e-63ae2f7978a1")
+	)
+	(wire
+		(pts
+			(xy 153.67 62.23) (xy 177.8 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1d1eb94d-c6ac-40b6-83e4-7cfbf5ce06da")
+	)
+	(wire
+		(pts
+			(xy 139.7 101.6) (xy 139.7 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1e1423b5-333d-4407-a104-d67957d2c248")
+	)
+	(wire
+		(pts
+			(xy 100.33 71.12) (xy 100.33 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "20db21d8-e155-4bb3-9b42-3cdc5593cbe6")
+	)
+	(wire
+		(pts
+			(xy 139.7 138.43) (xy 139.7 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "21963626-7252-41e3-a2b3-ae56ff9e4526")
+	)
+	(wire
+		(pts
+			(xy 201.93 101.6) (xy 201.93 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2234eee7-a770-4b96-a63d-82b27ab1661c")
+	)
+	(wire
+		(pts
+			(xy 62.23 138.43) (xy 177.8 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "22e59160-832c-4c45-84f3-d2ce0fea8bb1")
+	)
+	(wire
+		(pts
+			(xy 182.88 138.43) (xy 182.88 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "249a3720-f269-4f94-a2f9-11eb506f8c2a")
+	)
+	(wire
+		(pts
+			(xy 167.64 49.53) (xy 167.64 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2556eb97-ce81-481a-8266-c9ba3fd8a3b1")
+	)
+	(wire
+		(pts
+			(xy 167.64 92.71) (xy 167.64 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "272d02ed-25b3-4b4c-a836-a8be609fc179")
+	)
+	(wire
+		(pts
+			(xy 124.46 115.57) (xy 124.46 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2930a088-51ec-430d-bbc1-61fe25407a51")
+	)
+	(wire
+		(pts
+			(xy 134.62 58.42) (xy 139.7 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2b54d685-8678-454f-a8da-b1ac018ab7ca")
+	)
+	(wire
+		(pts
+			(xy 134.62 106.68) (xy 139.7 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2d570f3f-e389-4d3f-a9c8-f57314c2d4fa")
+	)
+	(wire
+		(pts
+			(xy 177.8 62.23) (xy 196.85 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2da677d3-c0d0-4f84-b9cb-9c3c7a81ec09")
+	)
+	(wire
+		(pts
+			(xy 153.67 19.05) (xy 177.8 19.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2f5d6d70-18de-4e51-aa98-46d2d3e27470")
+	)
+	(wire
+		(pts
+			(xy 153.67 156.21) (xy 158.75 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2fe3099d-3cb1-487e-a519-354b17715c6b")
+	)
+	(wire
+		(pts
+			(xy 167.64 27.94) (xy 167.64 30.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "337fbb49-2346-4075-8d4e-1e6e3c540551")
+	)
+	(wire
+		(pts
+			(xy 91.44 36.83) (xy 96.52 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "35f12111-6fcc-44dd-98cc-5e4d70993f6c")
+	)
+	(wire
+		(pts
+			(xy 153.67 101.6) (xy 158.75 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "35faad9d-3192-41d4-8949-b85dcb8b8bb4")
+	)
+	(wire
+		(pts
+			(xy 143.51 27.94) (xy 143.51 30.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "376df2b6-ccc6-41fb-81b1-ab11324cb7ab")
+	)
+	(wire
+		(pts
+			(xy 110.49 40.64) (xy 110.49 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "38e5407a-4c5f-48c9-944c-2746255163e6")
+	)
+	(wire
+		(pts
+			(xy 153.67 19.05) (xy 153.67 27.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3d6a5a9f-7760-4241-805c-33603824a09c")
+	)
+	(wire
+		(pts
+			(xy 110.49 62.23) (xy 110.49 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3df0c87a-f84d-45f3-a6d3-fbb24db9f732")
+	)
+	(wire
+		(pts
+			(xy 96.52 101.6) (xy 96.52 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4045315e-2b7d-49c2-9a9f-772596245902")
+	)
+	(wire
+		(pts
+			(xy 182.88 15.24) (xy 182.88 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "40ef1caa-dbe7-4655-88f9-2c846cbbbaf6")
+	)
+	(wire
+		(pts
+			(xy 177.8 62.23) (xy 177.8 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "426f6d69-16af-42b2-a217-a35d5283c1b2")
+	)
+	(wire
+		(pts
+			(xy 186.69 147.32) (xy 186.69 149.86)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4453baa9-7a59-4adc-aee0-67d6cab54938")
+	)
+	(wire
+		(pts
+			(xy 110.49 83.82) (xy 134.62 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4555ae25-ca2c-44d3-be51-e78d5ec6d24b")
+	)
+	(wire
+		(pts
+			(xy 124.46 49.53) (xy 124.46 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "478bbb9a-1db3-4099-abf9-c65b53ee1822")
+	)
+	(wire
+		(pts
+			(xy 177.8 83.82) (xy 196.85 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "484bac16-f14b-448c-b067-6c76da17299a")
+	)
+	(wire
+		(pts
+			(xy 91.44 58.42) (xy 96.52 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4a1ecdc6-c106-489b-b549-d8311a1a243d")
+	)
+	(wire
+		(pts
+			(xy 134.62 83.82) (xy 153.67 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4c15df72-7486-40af-aa2d-5cb98633cbf8")
+	)
+	(wire
+		(pts
+			(xy 115.57 80.01) (xy 115.57 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4fc88200-8def-42e3-b4a2-dc3ef02e11f8")
+	)
+	(wire
+		(pts
+			(xy 115.57 101.6) (xy 115.57 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "526c2ab5-e60a-41d0-b843-d7c132d032e0")
+	)
+	(wire
+		(pts
+			(xy 91.44 101.6) (xy 96.52 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "526e5d02-8904-497f-8677-733a85e5fb7f")
+	)
+	(wire
+		(pts
+			(xy 182.88 58.42) (xy 182.88 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "53481460-4cb9-4078-bed7-b7ae7fad1107")
+	)
+	(wire
+		(pts
+			(xy 91.44 80.01) (xy 96.52 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5bb3dc92-c5ed-4bc1-b952-10a7f4eb7c31")
+	)
+	(wire
+		(pts
+			(xy 196.85 19.05) (xy 196.85 27.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5cf99edf-6776-4738-afe1-a04f49cd87f9")
+	)
+	(wire
+		(pts
+			(xy 110.49 40.64) (xy 134.62 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5d6aedb9-1915-4d2e-958e-3faf42db41bf")
+	)
+	(wire
+		(pts
+			(xy 134.62 106.68) (xy 134.62 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5deee052-9f6a-4ca3-b8b5-b20e22e6bb91")
+	)
+	(wire
+		(pts
+			(xy 143.51 115.57) (xy 143.51 118.11)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5f4f1ff4-991c-47d6-b738-3708e1eefbcd")
+	)
+	(wire
+		(pts
+			(xy 158.75 15.24) (xy 158.75 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5fc270f5-d068-4f21-9839-dc85f166f1cb")
+	)
+	(wire
+		(pts
+			(xy 186.69 92.71) (xy 186.69 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "60d9ed2f-51e0-491b-92a5-f56f20cf391e")
+	)
+	(wire
+		(pts
+			(xy 91.44 40.64) (xy 91.44 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "61e8d3cb-03fe-4b2c-9538-91284e3a81eb")
+	)
+	(wire
+		(pts
+			(xy 196.85 62.23) (xy 196.85 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "63d970da-9bb1-416d-becf-65c7e8a46082")
+	)
+	(wire
+		(pts
+			(xy 91.44 83.82) (xy 110.49 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "642d6ebe-8482-4cfe-b555-abc3b34bcdf3")
+	)
+	(wire
+		(pts
+			(xy 134.62 62.23) (xy 153.67 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6438922f-ed31-4b69-8d5b-6bf7c1738b03")
+	)
+	(wire
+		(pts
+			(xy 134.62 19.05) (xy 153.67 19.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "688abc0f-9acc-4a5d-bcfd-72fcebdb19ac")
+	)
+	(wire
+		(pts
+			(xy 139.7 124.46) (xy 139.7 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6bf07b8d-69fc-465d-9a90-fd9233c00abc")
+	)
+	(wire
+		(pts
+			(xy 153.67 83.82) (xy 153.67 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "6f8b290d-6572-4459-bfae-cbf59406303d")
+	)
+	(wire
+		(pts
+			(xy 143.51 92.71) (xy 143.51 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7147ecb6-06d3-4863-bd10-23a9e61ab832")
+	)
+	(wire
+		(pts
+			(xy 186.69 71.12) (xy 186.69 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "71f998be-3bc9-4471-a841-def38ee765ed")
+	)
+	(wire
+		(pts
+			(xy 177.8 40.64) (xy 196.85 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "72682bb4-1eab-4aeb-9a66-022d8570dccf")
+	)
+	(wire
+		(pts
+			(xy 177.8 80.01) (xy 182.88 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7296e404-969b-4e3c-a06e-5ae5b8f01ed5")
+	)
+	(wire
+		(pts
+			(xy 91.44 62.23) (xy 91.44 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "73c987c7-2237-41e0-ac5a-3861a20ab83f")
+	)
+	(wire
+		(pts
+			(xy 158.75 124.46) (xy 158.75 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "76697b47-2f5e-4da1-9298-073a508c00d5")
+	)
+	(wire
+		(pts
+			(xy 134.62 19.05) (xy 134.62 27.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "79105925-4d62-49ff-a47a-e88fd225703a")
+	)
+	(wire
+		(pts
+			(xy 196.85 58.42) (xy 201.93 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "798fba7f-f8bf-4ca2-945c-e282a371d371")
+	)
+	(wire
+		(pts
+			(xy 139.7 80.01) (xy 139.7 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7bc7b3da-bcbf-4b7f-ae1a-edb3ccef33de")
+	)
+	(wire
+		(pts
+			(xy 134.62 36.83) (xy 139.7 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7c8c1729-d23b-4216-8435-7452c06976ef")
+	)
+	(wire
+		(pts
+			(xy 177.8 156.21) (xy 182.88 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7d4622c3-7b3b-4f73-b10e-e887fb5efae0")
+	)
+	(wire
+		(pts
+			(xy 91.44 40.64) (xy 110.49 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7da98d5a-c627-4a3f-ba5e-41242d4d22d4")
+	)
+	(wire
+		(pts
+			(xy 153.67 138.43) (xy 153.67 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7e111bcc-ca60-4e85-9472-af7855615f77")
+	)
+	(wire
+		(pts
+			(xy 177.8 138.43) (xy 177.8 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "806127d9-9fd0-4c61-88ed-e9c1de527dea")
+	)
+	(wire
+		(pts
+			(xy 139.7 58.42) (xy 139.7 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "80719c9f-b577-4af8-970a-4188be50236c")
+	)
+	(wire
+		(pts
+			(xy 158.75 58.42) (xy 158.75 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "81a04cd9-6d90-4761-924b-1368d6c5b843")
+	)
+	(wire
+		(pts
+			(xy 177.8 19.05) (xy 196.85 19.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "82868a98-caca-49ef-aa2f-76585b98542b")
+	)
+	(wire
+		(pts
+			(xy 62.23 40.64) (xy 91.44 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "855ae883-c92b-4dcf-a94d-4a295cb0b910")
+	)
+	(wire
+		(pts
+			(xy 134.62 138.43) (xy 134.62 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "862d154f-2895-4367-8433-e4dcad843aeb")
+	)
+	(wire
+		(pts
+			(xy 81.28 49.53) (xy 81.28 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8879d916-0daa-4a66-aaad-864ee6f6b3d8")
+	)
+	(wire
+		(pts
+			(xy 153.67 80.01) (xy 158.75 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c1a6829-2367-4675-bc56-7de7717796e6")
+	)
+	(wire
+		(pts
+			(xy 177.8 58.42) (xy 182.88 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8db11aea-6793-4f86-826a-f91b4fafbe23")
+	)
+	(wire
+		(pts
+			(xy 96.52 80.01) (xy 96.52 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "948ecba4-5ece-4fbf-8c3b-b5cb8de6fb29")
+	)
+	(wire
+		(pts
+			(xy 196.85 138.43) (xy 196.85 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9515a577-be7b-41c2-aa63-581dc983989f")
+	)
+	(wire
+		(pts
+			(xy 110.49 58.42) (xy 115.57 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9519a1ce-df1f-4832-ba1b-3a75b4d2c992")
+	)
+	(wire
+		(pts
+			(xy 110.49 83.82) (xy 110.49 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "96357e36-5509-43f1-ad42-350df9929d01")
+	)
+	(wire
+		(pts
+			(xy 143.51 49.53) (xy 143.51 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "971395d6-31ac-4223-8a7e-468880f464ad")
+	)
+	(wire
+		(pts
+			(xy 134.62 40.64) (xy 134.62 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "99fafb59-4953-4387-9d2f-b8aa69380515")
+	)
+	(wire
+		(pts
+			(xy 91.44 83.82) (xy 91.44 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9a18b037-bff7-444d-b798-8d39786fd60f")
+	)
+	(wire
+		(pts
+			(xy 186.69 49.53) (xy 186.69 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9c6c394b-9474-40fd-9ef2-85186ab2113f")
+	)
+	(wire
+		(pts
+			(xy 196.85 101.6) (xy 201.93 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9dd2181d-99d8-4c3b-bc00-918558963bd6")
+	)
+	(wire
+		(pts
+			(xy 134.62 83.82) (xy 134.62 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9e63a362-0ef4-45c6-a9fe-d4434e4e71c5")
+	)
+	(wire
+		(pts
+			(xy 115.57 15.24) (xy 115.57 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9ea90674-a6be-4cc1-9c38-a2a40f9a4fd6")
+	)
+	(wire
+		(pts
+			(xy 110.49 101.6) (xy 115.57 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9eb48e99-1bff-4088-ad18-7e352db44875")
+	)
+	(wire
+		(pts
+			(xy 196.85 156.21) (xy 201.93 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9ee849f4-914d-46f8-aa20-e3dc816925cd")
+	)
+	(wire
+		(pts
+			(xy 124.46 92.71) (xy 124.46 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9fdbdb56-268e-4624-8723-9a7822a5873f")
+	)
+	(wire
+		(pts
+			(xy 100.33 49.53) (xy 100.33 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a05ab6f7-11d8-49c8-befd-88af87ca658f")
+	)
+	(wire
+		(pts
+			(xy 110.49 36.83) (xy 115.57 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a2c5c69d-6e44-4fbe-b93d-aef78d4db11c")
+	)
+	(wire
+		(pts
+			(xy 153.67 40.64) (xy 153.67 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a2fdc8c6-e9ae-4341-874b-6ff1dea3b22d")
+	)
+	(wire
+		(pts
+			(xy 182.88 80.01) (xy 182.88 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a7dbafa6-6dd6-4111-bca4-01bd22413f4e")
+	)
+	(wire
+		(pts
+			(xy 96.52 58.42) (xy 96.52 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "aaa08640-4259-475e-b96c-5a84bed6d894")
+	)
+	(wire
+		(pts
+			(xy 139.7 106.68) (xy 139.7 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "aba95561-fccb-4330-b4f2-9119ac310f9c")
+	)
+	(wire
+		(pts
+			(xy 81.28 92.71) (xy 81.28 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ae1fc544-33e0-4b09-8116-4c6bf6cc9904")
+	)
+	(wire
+		(pts
+			(xy 177.8 83.82) (xy 177.8 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b2464371-f443-4a44-a531-aac6d64ac3a7")
+	)
+	(wire
+		(pts
+			(xy 134.62 156.21) (xy 139.7 156.21)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b2fec9c0-7d94-435e-9b90-97e333ea7661")
+	)
+	(wire
+		(pts
+			(xy 201.93 58.42) (xy 201.93 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b467f9f4-5296-4944-827a-51edb71dea02")
+	)
+	(wire
+		(pts
+			(xy 153.67 83.82) (xy 177.8 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b79670bc-5de6-4298-96ad-c48818df254a")
+	)
+	(wire
+		(pts
+			(xy 153.67 40.64) (xy 177.8 40.64)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b7ca7a62-136c-488b-9ef9-bcd05a55e3ac")
+	)
+	(wire
+		(pts
+			(xy 177.8 19.05) (xy 177.8 27.94)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b7e12a23-cb06-42a9-85b6-b55a36f8dad5")
+	)
+	(wire
+		(pts
+			(xy 110.49 80.01) (xy 115.57 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "be25ef86-93c4-421b-88c1-4525968c3ea7")
+	)
+	(wire
+		(pts
+			(xy 153.67 62.23) (xy 153.67 71.12)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c039841f-8531-4e1b-b331-8551ebea6a4f")
+	)
+	(wire
+		(pts
+			(xy 110.49 19.05) (xy 134.62 19.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c234d126-04d3-4767-b6ba-4bc61f38cfc1")
+	)
+	(wire
+		(pts
+			(xy 167.64 71.12) (xy 167.64 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c38def40-4a9c-411a-a364-056f35227ed1")
+	)
+	(wire
+		(pts
+			(xy 196.85 80.01) (xy 201.93 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c543fe62-2985-4676-9691-e6c30caa9d0a")
+	)
+	(wire
+		(pts
+			(xy 201.93 80.01) (xy 201.93 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c63e374d-8bc8-48f3-af69-ffdb35cc3075")
+	)
+	(wire
+		(pts
+			(xy 96.52 15.24) (xy 96.52 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c6e3a320-9675-463a-aae3-9b799eeb2240")
+	)
+	(wire
+		(pts
+			(xy 110.49 62.23) (xy 134.62 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c8d5d215-dd80-4cb0-86e2-3cf88d7c8c70")
+	)
+	(wire
+		(pts
+			(xy 153.67 106.68) (xy 153.67 115.57)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c9c580c4-9edd-4cd1-956d-d0109b8a2cd7")
+	)
+	(wire
+		(pts
+			(xy 196.85 40.64) (xy 196.85 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ca1d6b4c-786b-4f80-9ea1-741f285b9c75")
+	)
+	(wire
+		(pts
+			(xy 62.23 106.68) (xy 134.62 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ce539985-d0b2-4a4d-b30b-d8d05ba1d1f4")
+	)
+	(wire
+		(pts
+			(xy 177.8 40.64) (xy 177.8 49.53)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ceaa0d29-4deb-461f-b0c8-a433285a59bb")
+	)
+	(wire
+		(pts
+			(xy 153.67 124.46) (xy 158.75 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cf895ec1-8630-4c4a-99a6-702e6e79bf16")
+	)
+	(wire
+		(pts
+			(xy 62.23 62.23) (xy 91.44 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d2809da0-3cef-4794-8d34-31de5c649c69")
+	)
+	(wire
+		(pts
+			(xy 196.85 36.83) (xy 201.93 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d2a48991-7e85-4ac5-9977-1e779235b36d")
+	)
+	(wire
+		(pts
+			(xy 91.44 62.23) (xy 110.49 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d3838a1b-4ed1-4950-9d74-1ad3596d87af")
+	)
+	(wire
+		(pts
+			(xy 153.67 58.42) (xy 158.75 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d3afdd5a-18f2-4aba-94b7-f5ad545150b6")
+	)
+	(wire
+		(pts
+			(xy 177.8 138.43) (xy 182.88 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d5635bee-9458-451f-a622-64ea0c9c6ed6")
+	)
+	(wire
+		(pts
+			(xy 134.62 124.46) (xy 139.7 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d9303a97-de1a-4f70-a0ca-0ef32ad92f60")
+	)
+	(wire
+		(pts
+			(xy 182.88 138.43) (xy 196.85 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e3695cc0-5787-4e7a-8603-2cf393ced43c")
+	)
+	(wire
+		(pts
+			(xy 143.51 147.32) (xy 143.51 149.86)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e4502572-4e03-4633-8835-747539e729ca")
+	)
+	(wire
+		(pts
+			(xy 81.28 71.12) (xy 81.28 73.66)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e4ca0297-266d-450e-ad45-8441d45dd0c8")
+	)
+	(wire
+		(pts
+			(xy 182.88 101.6) (xy 182.88 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e93e7506-4fe8-4dac-b47e-ac4ad8ded43e")
+	)
+	(wire
+		(pts
+			(xy 134.62 80.01) (xy 139.7 80.01)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e9edd4e7-0c04-4c34-b2e8-20db3756a3f6")
+	)
+	(wire
+		(pts
+			(xy 196.85 83.82) (xy 196.85 92.71)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ea362c2a-4d32-403b-934f-a897da9837b7")
+	)
+	(wire
+		(pts
+			(xy 167.64 147.32) (xy 167.64 149.86)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ec88ce8f-066f-4fcd-b300-37d2bb312b08")
+	)
+	(wire
+		(pts
+			(xy 201.93 15.24) (xy 201.93 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ed40aa24-4392-457e-b5ab-24c550b64e41")
+	)
+	(wire
+		(pts
+			(xy 158.75 101.6) (xy 158.75 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "efee08e4-5a01-4a22-a1d1-512b1ca4d8ea")
+	)
+	(wire
+		(pts
+			(xy 62.23 83.82) (xy 91.44 83.82)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f04fbb3b-814c-4e39-9a56-e374897bb8d3")
+	)
+	(wire
+		(pts
+			(xy 124.46 27.94) (xy 124.46 30.48)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f16c77d7-6b7d-44d1-8905-4612405d8f38")
+	)
+	(wire
+		(pts
+			(xy 139.7 15.24) (xy 139.7 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f27d1314-5ae2-42d0-91a2-31dae79757ff")
+	)
+	(wire
+		(pts
+			(xy 158.75 80.01) (xy 158.75 101.6)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f35bcfb7-d5ee-494b-b89e-99804287aa82")
+	)
+	(wire
+		(pts
+			(xy 153.67 36.83) (xy 158.75 36.83)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f9d92a4c-48b4-4c71-a5ba-584f393508a8")
+	)
+	(wire
+		(pts
+			(xy 100.33 92.71) (xy 100.33 95.25)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "fd7595c7-0b3a-4d4b-bb07-3cf645e84665")
+	)
+	(label "N-SD0"
+		(at 167.64 147.32 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "06a74a0c-cef9-4b04-a515-53ffa5886414")
+	)
+	(label "N-SD0"
+		(at 167.64 27.94 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "0fc0adc9-7a5b-4208-9227-2e54aa0c4596")
+	)
+	(label "N-SD0"
+		(at 186.69 71.12 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "10802a36-ddde-40fa-9dda-142ebaaa95f1")
+	)
+	(label "N-SD0"
+		(at 186.69 27.94 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "1bfe65ac-573f-40a9-8f9d-aee7c6f747e2")
+	)
+	(label "N-SD0"
+		(at 100.33 92.71 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "1fb1d1cb-9e17-4298-93bb-aea78c93c078")
+	)
+	(label "N-SD0"
+		(at 81.28 92.71 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "250b36f6-d301-49cf-acba-e01b1bc26a33")
+	)
+	(label "N-SD0"
+		(at 81.28 49.53 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "2b475ff5-ee4f-4d49-a48f-f41cff7c1939")
+	)
+	(label "N-SD0"
+		(at 124.46 115.57 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "3ff2066e-8cd0-4d38-9f11-76dfa7e56f85")
+	)
+	(label "N-SD0"
+		(at 81.28 71.12 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "3ff9c306-0e31-4be2-af8f-d633fcc02ff3")
+	)
+	(label "N-SD0"
+		(at 143.51 27.94 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "48c6ee7c-8e8c-4038-844b-cc01feb69546")
+	)
+	(label "N-SD0"
+		(at 167.64 92.71 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "4ad5e968-dedc-49f6-b10d-5ae4e991ec4f")
+	)
+	(label "N-SD0"
+		(at 143.51 71.12 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "58b39694-eaf4-4458-92b4-6a56b3237f61")
+	)
+	(label "N-SD0"
+		(at 167.64 49.53 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "5d577b1e-1ec7-4854-a61c-818f2e4fe68d")
+	)
+	(label "N-SD0"
+		(at 100.33 71.12 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "5ecf3a6b-3374-4964-928b-6ffe50b9b9cd")
+	)
+	(label "N-SD0"
+		(at 124.46 27.94 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "6a4674f8-66fe-47a6-9844-fda7072ec1a2")
+	)
+	(label "N-SD0"
+		(at 143.51 115.57 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "6f50c1d1-dc8a-4417-9ac0-f836618489e6")
+	)
+	(label "N-SD0"
+		(at 100.33 49.53 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "7060234e-739d-45ca-a8b5-8f355724e6a7")
+	)
+	(label "N-SD0"
+		(at 186.69 49.53 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "71d59874-5f6e-491d-8670-38031bd7c7e2")
+	)
+	(label "N-SD0"
+		(at 124.46 147.32 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "77eccb33-b213-4d54-a293-8812e7a3520a")
+	)
+	(label "N-SD0"
+		(at 167.64 71.12 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "7bcd4dd4-386e-4a45-abc5-36d00b40abc7")
+	)
+	(label "N-SD0"
+		(at 100.33 27.94 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "9d86966a-afc2-4fa4-9689-311aa8ef8511")
+	)
+	(label "N-SD0"
+		(at 186.69 147.32 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "a9bc1206-d48b-4357-9be4-276cc3f35e2b")
+	)
+	(label "N-SD0"
+		(at 143.51 147.32 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "aa74c061-0eb9-4308-9377-de25ac01967b")
+	)
+	(label "N-SD0"
+		(at 124.46 92.71 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "abc9a749-a44d-4c64-ae00-91e54328aa7c")
+	)
+	(label "N-SD0"
+		(at 124.46 49.53 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "af10ac70-1430-4db2-9fca-7f4ec5624088")
+	)
+	(label "N-SD0"
+		(at 81.28 27.94 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "c46b6f79-3dce-4e49-bad4-982f9bf11208")
+	)
+	(label "N-SD0"
+		(at 143.51 49.53 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "d661e8d5-089b-469a-bcab-ae77db7b086f")
+	)
+	(label "N-SD0"
+		(at 124.46 71.12 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "d817e83f-2f63-4b37-b1aa-e76ffec9ca5c")
+	)
+	(label "N-SD0"
+		(at 143.51 92.71 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "f73a5ae8-097d-4f87-a003-153f88443b7e")
+	)
+	(label "N-SD0"
+		(at 186.69 92.71 90)
+		(effects
+			(font
+				(size 1.524 1.524)
+			)
+			(justify left bottom)
+		)
+		(uuid "f8f45f1a-3ee0-46cb-b1f1-edbac976bac4")
+	)
+	(hierarchical_label "r5"
+		(shape bidirectional)
+		(at 62.23 106.68 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "1d01914b-86fc-417c-94ee-1ba0fc0efa27")
+		(property "r5" ""
+			(at 62.23 107.95 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "c6"
+		(shape bidirectional)
+		(at 201.93 15.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "2091c3b1-ccd2-463d-a129-8ec86c3a2bee")
+		(property "c6" ""
+			(at 201.93 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "r2"
+		(shape bidirectional)
+		(at 62.23 40.64 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "283414b9-9259-47aa-922c-1c64f5ea352c")
+		(property "r2" ""
+			(at 62.23 41.91 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "c4"
+		(shape bidirectional)
+		(at 158.75 15.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "2bf7730f-6284-40b4-b2a7-485e412ecc2c")
+		(property "c4" ""
+			(at 158.75 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "c2"
+		(shape bidirectional)
+		(at 115.57 15.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "3c5eb2b1-2703-43c3-bb1e-8c836835c835")
+		(property "c2" ""
+			(at 115.57 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "r4"
+		(shape bidirectional)
+		(at 62.23 83.82 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "547d6aa4-3013-4d52-959e-4ed0956c4af1")
+		(property "r4" ""
+			(at 62.23 85.09 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "r1"
+		(shape bidirectional)
+		(at 62.23 19.05 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "6fda0de0-be20-46af-9511-d3acb674a254")
+		(property "r1" ""
+			(at 62.23 20.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify left)
+			)
+		)
+	)
+	(hierarchical_label "r3"
+		(shape bidirectional)
+		(at 62.23 62.23 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "8c4a1616-f72f-40d8-b327-6fe9b77d8cf3")
+		(property "r3" ""
+			(at 62.23 63.5 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "r6"
+		(shape bidirectional)
+		(at 62.23 138.43 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "a7a37720-e584-4d82-8510-1168ec3f4231")
+		(property "r6" ""
+			(at 62.23 139.7 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "c5"
+		(shape bidirectional)
+		(at 182.88 15.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "d45e4c8d-7e7d-4a54-8506-63fbf33c8702")
+		(property "c5" ""
+			(at 182.88 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "c3"
+		(shape bidirectional)
+		(at 139.7 15.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "e8c9120f-df5e-4250-b6f6-8ad8836661e2")
+		(property "c3" ""
+			(at 139.7 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(hierarchical_label "c1"
+		(shape bidirectional)
+		(at 96.52 15.24 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "fc2a8390-1e78-4988-b8c9-eb9a00117f41")
+		(property "c1" ""
+			(at 96.52 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(italic yes)
+				)
+				(justify right)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 105.41 105.41 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "0a3be1ab-6914-4aa8-924a-ffe1e2983936")
+		(property "Reference" "S44"
+			(at 101.6 99.06 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "Z"
+			(at 105.41 102.87 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 105.41 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8d165723-8a37-4dfa-afa5-5cc20dde9ba3")
+		)
+		(pin "2"
+			(uuid "f25c80d1-f045-4cda-a5f3-84b61ae3b8fa")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S44")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 129.54 83.82 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "12c4c655-c00d-404d-9ffb-0ac5d7c8c318")
+		(property "Reference" "S47"
+			(at 125.73 77.47 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "S"
+			(at 129.54 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 129.54 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b587f49b-f4c1-4b03-80cd-22941106f50b")
+		)
+		(pin "2"
+			(uuid "51301d59-113d-4c44-99c1-f86c436fe81b")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S47")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 86.36 49.53 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "16911fbc-ba27-4f9b-8b03-3899f084176d")
+		(property "Reference" "D38"
+			(at 86.36 46.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 86.36 52.07 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 86.36 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "0815d2a4-c715-44a4-bed5-325329825ec8")
+		)
+		(pin "2"
+			(uuid "fcda0f11-a4b0-4d0d-86d9-009504f6e7bd")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D38")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 191.77 147.32 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "2244bc76-315a-4d33-9d4e-54d5825386f5")
+		(property "Reference" "D72"
+			(at 191.77 144.78 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 191.77 149.86 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 191.77 147.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "e256d6fc-7389-4971-a715-697035d2111f")
+		)
+		(pin "2"
+			(uuid "50dad0aa-8fe5-4022-abfa-356ff07ca71c")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D72")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 191.77 71.12 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "328469c5-6a27-46e7-aa73-cea8ad8d9761")
+		(property "Reference" "D70"
+			(at 191.77 68.58 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 191.77 73.66 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 191.77 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "00622c8f-8afc-4f7b-9bf4-cb9223ac71b8")
+		)
+		(pin "2"
+			(uuid "feafde6a-0fbf-4474-b901-9fddfec822ce")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D70")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 105.41 71.12 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "3b39415f-1db0-4ada-8d40-379e8754753d")
+		(property "Reference" "D43"
+			(at 105.41 68.58 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 105.41 73.66 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 105.41 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3d852bd9-76d6-473c-b9fb-24186d3078e8")
+		)
+		(pin "2"
+			(uuid "5a6f13f9-0f5f-4e9e-b4bb-27be4d1c850f")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D43")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 191.77 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "3c9c2ab3-ebaa-4dc3-a388-62e5f939ffe2")
+		(property "Reference" "S68"
+			(at 187.96 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "5"
+			(at 191.77 38.1 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 191.77 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 41.91 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 40.64 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "61e9b5d1-b5ca-4fe1-9a96-c266542a7a76")
+		)
+		(pin "2"
+			(uuid "ebb45cdb-c959-4f41-b6fe-51adbddd8724")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S68")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 148.59 92.71 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "41945d66-d212-4fa8-bcaa-49442e6e1159")
+		(property "Reference" "D52"
+			(at 148.59 90.17 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 148.59 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 148.59 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "909301d2-563c-4adf-97eb-0690e44b2e83")
+		)
+		(pin "2"
+			(uuid "d236f0b8-d0d3-499e-918a-5241cb6de563")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D52")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 105.41 49.53 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "42c107ea-c72e-4262-93e4-55ddd628e787")
+		(property "Reference" "D42"
+			(at 105.41 46.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 105.41 52.07 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 105.41 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b542d386-8738-40a7-a1c5-545468cfdeaf")
+		)
+		(pin "2"
+			(uuid "13c7e2d6-11cd-4061-bf0a-a4f4becc5260")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D42")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 86.36 92.71 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "433e2f8f-a65f-4575-b7cf-0902c4fd189a")
+		(property "Reference" "D40"
+			(at 86.36 90.17 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 86.36 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 86.36 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f32649ae-4244-47c1-ae59-9c912c3fa48f")
+		)
+		(pin "2"
+			(uuid "16619a64-1f0f-4207-be67-1c4d175977d3")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D40")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 172.72 62.23 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "469c9958-ac3d-4420-b11d-628d7342384b")
+		(property "Reference" "S64"
+			(at 168.91 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "R"
+			(at 172.72 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 172.72 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a5e161bd-f9b0-495d-b8ae-db447bce4262")
+		)
+		(pin "2"
+			(uuid "ecfb2b32-6115-4a61-b120-4dc731014e6b")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S64")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 148.59 62.23 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "469db4d3-7d12-4640-8346-1e6b1db10aea")
+		(property "Reference" "S50"
+			(at 144.78 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "E"
+			(at 148.59 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 148.59 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "f22b6fd8-37b4-4838-8bc3-f4dc20656404")
+		)
+		(pin "2"
+			(uuid "47fc6d22-a9ab-4727-8887-4abf1109ff36")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S50")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 172.72 27.94 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "4b445988-a4dc-4623-912b-ff262213bd3d")
+		(property "Reference" "D63"
+			(at 172.72 25.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 172.72 30.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 172.72 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "cf2c5965-55a8-4b12-8ebe-5e7632ae6d78")
+		)
+		(pin "2"
+			(uuid "49910fec-1a1d-4fef-9206-4023003716b5")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D63")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 172.72 147.32 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "4bd36b37-6077-49f2-8ea7-ef6b359caeae")
+		(property "Reference" "D67"
+			(at 172.72 144.78 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 172.72 149.86 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 172.72 147.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "77029fec-ecbb-4b73-b28f-5f73ec0c0b93")
+		)
+		(pin "2"
+			(uuid "8e233223-038e-4e31-8f99-b295c8d05880")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D67")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 105.41 92.71 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "505f1551-dab5-4de0-8ff7-003938099c92")
+		(property "Reference" "D44"
+			(at 105.41 90.17 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 105.41 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 105.41 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "b12fcf99-4dd2-4579-bb35-f858b1a62a87")
+		)
+		(pin "2"
+			(uuid "148b0121-e0d1-4831-9940-f12bb7da722b")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D44")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 148.59 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "58401670-d23c-42bf-90e4-279fbed1d171")
+		(property "Reference" "S49"
+			(at 144.78 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "3"
+			(at 148.59 38.1 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 148.59 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 41.91 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 40.64 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a14b64ef-2a6d-4f48-9623-2a1a691b19e9")
+		)
+		(pin "2"
+			(uuid "60d769c8-cf0f-4ead-90e4-188b2a98f7c9")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S49")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 129.54 27.94 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "5b7c7135-55a0-4839-bce1-af20453b03f0")
+		(property "Reference" "D45"
+			(at 129.54 25.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 129.54 30.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 129.54 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "847c563d-dedf-43f8-8cab-b36ea6267e75")
+		)
+		(pin "2"
+			(uuid "432b0e45-cbd3-4ff8-92f7-f36a2dc7002b")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D45")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 129.54 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "5f58e5e8-9a9e-44da-9b54-4c00e0eac9e9")
+		(property "Reference" "S45"
+			(at 125.73 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "2"
+			(at 129.54 38.1 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 129.54 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 41.91 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 40.64 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a71a02b9-a02f-4599-9dd3-7673d00cf88c")
+		)
+		(pin "2"
+			(uuid "f3db21c0-7bf1-41b8-a728-ab1046a154f7")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S45")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 172.72 71.12 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "60c0f4c9-261e-4c9f-9bea-2ff03421b74c")
+		(property "Reference" "D65"
+			(at 172.72 68.58 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 172.72 73.66 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 172.72 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "bca9e9e4-0016-4824-8c2a-4fef25a3db58")
+		)
+		(pin "2"
+			(uuid "2ed59bb3-7447-4f55-aba1-efb94003e7b9")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D65")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 105.41 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "686e1a3a-42e7-466d-a259-dcdbbeb9a9a0")
+		(property "Reference" "S41"
+			(at 101.6 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "1"
+			(at 105.41 38.1 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 105.41 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 41.91 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 40.64 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8d919478-cb6e-45cf-be00-49a0942434d7")
+		)
+		(pin "2"
+			(uuid "8061b9d2-481f-423e-9bde-7e31e97eba6d")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S41")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 191.77 92.71 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6ab299fa-d731-4f8f-abb4-43e365e7f8ba")
+		(property "Reference" "D71"
+			(at 191.77 90.17 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 191.77 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 191.77 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "85fa6648-b78f-4b2f-ac3d-f22a0ac9ae5e")
+		)
+		(pin "2"
+			(uuid "df064dde-9b79-4b51-a636-ea00308b45cc")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D71")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 172.72 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6ac4909a-9a43-4ea4-9019-97c9f984c32e")
+		(property "Reference" "S63"
+			(at 168.91 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "4"
+			(at 172.72 38.1 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 172.72 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 41.91 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 40.64 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "c2c14597-3a0f-48ac-bea8-96c3723d4e97")
+		)
+		(pin "2"
+			(uuid "51f0148f-cc19-4caf-a995-24cc686a9883")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S63")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 129.54 115.57 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6bbde385-74ce-42c4-b73f-71ea582a463d")
+		(property "Reference" "D59"
+			(at 129.54 113.03 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 129.54 118.11 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 129.54 115.57 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 115.57 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 115.57 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "df944f56-078b-4dca-a053-d20be7cb1dc7")
+		)
+		(pin "2"
+			(uuid "aeeb38d0-de7d-4d83-b175-0cbfd5887d8e")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D59")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 172.72 83.82 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6d0986be-d2f9-4e9b-8c33-47f89b91220c")
+		(property "Reference" "S65"
+			(at 168.91 77.47 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "F"
+			(at 172.72 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 172.72 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "5b48ac47-cd61-408b-8579-5f299a8e039b")
+		)
+		(pin "2"
+			(uuid "d458990e-0d88-4892-9e61-f85b3bb14f44")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S65")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 172.72 92.71 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6f875596-59b8-4aab-a4ef-3a7bf8345dfa")
+		(property "Reference" "D66"
+			(at 172.72 90.17 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 172.72 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 172.72 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "6a5d6f15-6768-458d-9da0-895310e93c83")
+		)
+		(pin "2"
+			(uuid "d8b49fbe-116e-482c-9b9e-273a35a7581f")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D66")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 129.54 128.27 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "707487c3-7cfb-4ce3-8ba0-7a1620e27276")
+		(property "Reference" "S59"
+			(at 125.73 121.92 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "LBKT"
+			(at 129.54 125.73 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 129.54 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 128.27 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "86c085bb-178c-49a8-bb4f-8a3ef19bd425")
+		)
+		(pin "2"
+			(uuid "d3b27480-7b5a-47bd-8ab7-2ea6a0eb688a")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S59")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 191.77 83.82 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "727fbd94-b835-41ad-a768-2596be5a843a")
+		(property "Reference" "S70"
+			(at 187.96 77.47 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "G"
+			(at 191.77 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 191.77 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d4f4ec05-c186-495b-a005-4d62dcff2aa5")
+		)
+		(pin "2"
+			(uuid "f696c5e3-9f58-45ce-b890-f295c77a52be")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S70")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 129.54 62.23 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "819c2333-2588-4915-9ad4-115b29a4f818")
+		(property "Reference" "S46"
+			(at 125.73 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "W"
+			(at 129.54 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 129.54 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4ac81b2b-f822-4cf8-a224-656e0b216e21")
+		)
+		(pin "2"
+			(uuid "eae65524-581a-4457-9fd0-1c535330a7d4")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S46")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 86.36 62.23 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "86486358-ce25-4ffa-bbee-b999c4e2f235")
+		(property "Reference" "S38"
+			(at 82.55 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "GRAVE"
+			(at 86.36 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 86.36 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "8b40567d-fe0e-408e-8e79-b1fc1ffcbe6f")
+		)
+		(pin "2"
+			(uuid "e3554489-897f-4c1c-a1a3-5aabe507c665")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S38")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 86.36 71.12 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "91216b24-0e53-435a-bf9d-3139075dc851")
+		(property "Reference" "D39"
+			(at 86.36 68.58 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 86.36 73.66 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 86.36 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "90e3ff20-0b8c-4610-856a-e8eafb63637e")
+		)
+		(pin "2"
+			(uuid "8e09b285-e3ec-42fd-b70b-7c8ee2bfa5fe")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D39")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 172.72 49.53 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "93bd6617-909a-4417-b3e1-3ed8b62cc48d")
+		(property "Reference" "D64"
+			(at 172.72 46.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 172.72 52.07 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 172.72 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1d954010-2004-4fe7-89ca-08c49772e2f2")
+		)
+		(pin "2"
+			(uuid "1aa7801d-86e0-4b39-bd98-f3c2f3c35129")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D64")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 172.72 160.02 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "99a1c8b8-7a33-4471-af98-a4551ea44ec2")
+		(property "Reference" "S67"
+			(at 168.91 153.67 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "PGUP"
+			(at 172.72 157.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 172.72 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 160.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "6b2b1bb1-d089-4d26-8dea-8548dd8196eb")
+		)
+		(pin "2"
+			(uuid "3ea54f1f-3c7e-4983-a368-4fe7a0401c5d")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S67")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 129.54 105.41 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "9fb7b524-1b3c-43b8-9bc0-1ab30970186c")
+		(property "Reference" "S48"
+			(at 125.73 99.06 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "X"
+			(at 129.54 102.87 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 129.54 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "77510448-8959-42b5-8564-ff641bc8affb")
+		)
+		(pin "2"
+			(uuid "8400c179-1f64-4db5-857e-54e2520dfa09")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S48")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 148.59 27.94 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "a4072e1f-a9e0-4d77-b767-779c51fae73a")
+		(property "Reference" "D49"
+			(at 148.59 25.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 148.59 30.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 148.59 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "94a5ed2a-b7e2-42a0-8cad-09453ce48cd3")
+		)
+		(pin "2"
+			(uuid "5bb642a7-abb3-46fc-ba0b-ef6ceefd939f")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D49")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 172.72 105.41 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "a596ae15-c1d5-4401-b7ee-1e36129c3a02")
+		(property "Reference" "S66"
+			(at 168.91 99.06 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "V"
+			(at 172.72 102.87 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 172.72 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 172.72 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 172.72 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "54b955a7-c58d-44b6-b105-1ac33aa7f4f5")
+		)
+		(pin "2"
+			(uuid "0185be31-c34d-4a0a-9ce2-61fb70b13093")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S66")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 86.36 83.82 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "a8b1ca7a-3051-49f5-b9e0-bde6fead456d")
+		(property "Reference" "S39"
+			(at 82.55 77.47 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "ESC"
+			(at 86.36 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 86.36 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "c4d1a317-6cb1-4c82-88b2-e824b53910ea")
+		)
+		(pin "2"
+			(uuid "33045adb-b225-4443-a842-00d4b7e9f326")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S39")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 86.36 40.64 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "adac7702-09ad-492d-93b1-a0c713286158")
+		(property "Reference" "S37"
+			(at 82.55 34.29 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "+"
+			(at 86.36 38.1 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 86.36 40.64 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 41.91 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 40.64 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "0a199d58-f3c1-477d-add6-e94292603d4b")
+		)
+		(pin "2"
+			(uuid "27486e11-8172-43b3-a883-e684dc88c692")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S37")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 129.54 71.12 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "b9b9261b-a0ce-45fe-b72c-b4c34e08ce3f")
+		(property "Reference" "D47"
+			(at 129.54 68.58 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 129.54 73.66 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 129.54 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "316b6e82-51db-4215-87ce-5e4d1358d2ec")
+		)
+		(pin "2"
+			(uuid "e3120956-b329-43cd-bb08-39866b24ac40")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D47")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 148.59 128.27 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "bc90808a-749b-4cfc-af7e-ae009f9d88ea")
+		(property "Reference" "S61"
+			(at 144.78 121.92 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "RBKT"
+			(at 148.59 125.73 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 148.59 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 128.27 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 128.27 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "70b52588-f422-4fdf-9833-49977d18767e")
+		)
+		(pin "2"
+			(uuid "315dd126-203d-4a16-8109-a8447baeed51")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S61")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 129.54 160.02 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "be45e877-f592-42cd-b77a-8408cb9d6e79")
+		(property "Reference" "S60"
+			(at 125.73 153.67 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "TAB"
+			(at 129.54 157.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 129.54 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 160.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "dc4ff497-3f0c-48bc-acf1-b1187f47a29d")
+		)
+		(pin "2"
+			(uuid "d785a7a7-b370-4395-84eb-7d8e3ae3023e")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S60")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 105.41 27.94 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "bebe7be0-66e8-4188-acbc-ceece541216b")
+		(property "Reference" "D41"
+			(at 105.41 25.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 105.41 30.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 105.41 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "21ce7e8a-6bc9-41b9-bd24-09baa51dc30e")
+		)
+		(pin "2"
+			(uuid "a4ba93a8-227d-464a-8a52-f87e22698bc9")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D41")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 148.59 49.53 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "c17af79c-4614-4b74-8c78-2388037519fb")
+		(property "Reference" "D50"
+			(at 148.59 46.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 148.59 52.07 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 148.59 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "6ee49b07-56b4-48b7-b401-eca2f468751c")
+		)
+		(pin "2"
+			(uuid "7db4f55b-4284-4242-9970-ab343565cea2")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D50")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 191.77 62.23 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "c28a7f7d-6840-4e9a-80a9-54b1843b665d")
+		(property "Reference" "S69"
+			(at 187.96 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "T"
+			(at 191.77 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 191.77 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "9283c4db-e16c-4585-bfdd-c03530cb2263")
+		)
+		(pin "2"
+			(uuid "0cfcc538-281c-45fe-8435-d01389de4012")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S69")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 148.59 160.02 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "c88d1ffc-f7ff-4fd1-b9d3-4e238c8f3cf0")
+		(property "Reference" "S62"
+			(at 144.78 153.67 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "SPC"
+			(at 148.59 157.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 148.59 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 160.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d27b08c0-9b01-4ed4-a1ee-8699e2d05825")
+		)
+		(pin "2"
+			(uuid "fc52afbc-5a4a-4d5b-bfc5-6c993356a6cf")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S62")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 191.77 49.53 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "d0ec1611-a223-4898-bf8c-6954d16a438f")
+		(property "Reference" "D69"
+			(at 191.77 46.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 191.77 52.07 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 191.77 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "28adec89-df7e-4eb8-9081-2ea56afcd103")
+		)
+		(pin "2"
+			(uuid "1728e75f-1c9e-44dc-8feb-2dcd37ad893c")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D69")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 191.77 160.02 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "d34c1d9d-525c-43ec-87db-ff9452761bf3")
+		(property "Reference" "S72"
+			(at 187.96 153.67 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "PGDWN"
+			(at 191.77 157.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 191.77 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 160.02 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 160.02 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3d9c9d4f-f510-444f-b06e-d7e6e39368b1")
+		)
+		(pin "2"
+			(uuid "d679d819-3614-4860-a296-c11845b6ce20")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S72")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 191.77 105.41 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "d6e6a64b-f09a-4a72-9d62-91cd36096dc0")
+		(property "Reference" "S71"
+			(at 187.96 99.06 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "B"
+			(at 191.77 102.87 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 191.77 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3ae4e2f9-51cd-44bf-840c-df967933fba5")
+		)
+		(pin "2"
+			(uuid "df3d0748-0736-446e-8151-ef09f73c5ee5")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S71")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 105.41 83.82 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "d93f431d-169d-49a2-88f0-0b0d828300d9")
+		(property "Reference" "S43"
+			(at 101.6 77.47 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "A"
+			(at 105.41 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 105.41 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "9c29568e-7e32-4ef3-9181-aaf2a01e19a7")
+		)
+		(pin "2"
+			(uuid "324f2946-84a5-422c-b6ee-30699800da74")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S43")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 86.36 27.94 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "dd588d93-16c8-4420-85b4-5ee7aa8fe501")
+		(property "Reference" "D37"
+			(at 86.36 25.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 86.36 30.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 86.36 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "43069b67-a96e-4a44-8a73-1a093dba6b75")
+		)
+		(pin "2"
+			(uuid "d2469422-f760-4df0-b3cf-de09621f6239")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D37")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 148.59 83.82 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "e0e4f918-5963-4302-bf5c-7def857ee5e1")
+		(property "Reference" "S51"
+			(at 144.78 77.47 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "D"
+			(at 148.59 81.28 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 148.59 83.82 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 83.82 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "4575b4bc-0cee-4eda-b7cb-b0180a30bd92")
+		)
+		(pin "2"
+			(uuid "0954c623-bd96-4be4-97e8-ec33838f3c50")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S51")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 129.54 147.32 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "e25b675c-2454-4e63-91c1-7b06926191ea")
+		(property "Reference" "D60"
+			(at 129.54 144.78 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 129.54 149.86 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 129.54 147.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "da38d21d-a4fa-437c-8806-79c8160c7704")
+		)
+		(pin "2"
+			(uuid "4cc907fd-dcd6-4ce7-955e-05b1c4d74f88")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D60")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 148.59 147.32 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "e7481b5b-a8ea-449f-b0df-fe3f6a1fc1de")
+		(property "Reference" "D62"
+			(at 148.59 144.78 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 148.59 149.86 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 148.59 147.32 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 147.32 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "3c99373b-01ad-47fe-82fb-a4a1db1fc1b8")
+		)
+		(pin "2"
+			(uuid "de6839b0-8c82-41bb-b113-3028651c1367")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D62")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 105.41 62.23 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "ea04fb12-10e9-42be-9eec-d50e1f0c3efc")
+		(property "Reference" "S42"
+			(at 101.6 55.88 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "Q"
+			(at 105.41 59.69 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 105.41 62.23 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 105.41 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 105.41 62.23 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "92a303ce-8d7f-46d6-8386-f3999b769329")
+		)
+		(pin "2"
+			(uuid "63866797-bf98-41f6-98e6-d7df849bbf2d")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S42")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 148.59 71.12 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "ea0b7b1f-bf8a-481f-aba6-d3ac8d53a473")
+		(property "Reference" "D51"
+			(at 148.59 68.58 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 148.59 73.66 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 148.59 71.12 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 71.12 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "a043f5ba-6108-4e81-b03d-63b748182cca")
+		)
+		(pin "2"
+			(uuid "1ef4c3dd-d83f-422d-adce-63576f40473b")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D51")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 191.77 27.94 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "ea8a1965-2dd8-4008-843b-20f023389386")
+		(property "Reference" "D68"
+			(at 191.77 25.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 191.77 30.48 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 191.77 27.94 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 191.77 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 191.77 27.94 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "7d0f25fe-52e2-4db0-b3de-b4bc53b50d90")
+		)
+		(pin "2"
+			(uuid "eb53df05-72e9-49de-a8c5-5f6c22d2bb24")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D68")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 148.59 115.57 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "f1cb5cfb-054a-4cf8-a66c-3f76c19cbfa5")
+		(property "Reference" "D61"
+			(at 148.59 113.03 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 148.59 118.11 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 148.59 115.57 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 115.57 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 115.57 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "1da1fa04-65cb-484f-9f9d-0398ea4c517b")
+		)
+		(pin "2"
+			(uuid "ae5ae002-9288-497b-a13a-10127e27fa15")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D61")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 148.59 105.41 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "f2deba3b-5684-4622-b0a0-dd1b430d8872")
+		(property "Reference" "S52"
+			(at 144.78 99.06 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "C"
+			(at 148.59 102.87 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 148.59 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 148.59 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 148.59 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "399c5c3f-b56f-4e9a-b2fb-9031bc48b6f1")
+		)
+		(pin "2"
+			(uuid "84bbfffa-0aa1-4e39-a37e-31841a5b7562")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S52")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 129.54 92.71 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "f6714a8c-91f1-4652-ba12-4548a5e7e5b1")
+		(property "Reference" "D48"
+			(at 129.54 90.17 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 129.54 95.25 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 129.54 92.71 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 92.71 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "7c3e7a37-512d-4512-b9eb-ba5d9799d16b")
+		)
+		(pin "2"
+			(uuid "73af71b6-4765-4d72-bb8c-b83a755bb214")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D48")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:MX1A-amoeba-rescue")
+		(at 86.36 105.41 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "f6b65783-9ca1-43ba-83a9-e583087d3e7a")
+		(property "Reference" "S40"
+			(at 82.55 99.06 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Value" "CTRL"
+			(at 86.36 102.87 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Footprint" "amoeba-modules:Kailh_MX_Socket"
+			(at 86.36 105.41 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 86.36 105.41 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "fe3a6114-af0a-456f-984b-10b730773620")
+		)
+		(pin "2"
+			(uuid "cef96474-f394-409b-acf6-70a052446872")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "S40")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "amoeba-royale-rescue:DIODE-amoeba-rescue")
+		(at 129.54 49.53 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "f8a1e709-f51e-46cf-8a16-06882d1ac3f3")
+		(property "Reference" "D46"
+			(at 129.54 46.99 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Value" "DIODE"
+			(at 129.54 52.07 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.016 1.016)
+				)
+			)
+		)
+		(property "Footprint" "Diode_THT:D_DO-35_SOD27_P10.16mm_Horizontal"
+			(at 129.54 49.53 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 129.54 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.524 1.524)
+				)
+			)
+		)
+		(property "Description" ""
+			(at 129.54 49.53 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "d2b7d0e6-bc5a-463b-9298-b8646ca11a8f")
+		)
+		(pin "2"
+			(uuid "6be97f7d-00db-4caa-926e-11415763c441")
+		)
+		(instances
+			(project "keeb"
+				(path "/d1ac5044-02bb-4af7-9c25-401b345d32f6/5e814296-7056-4191-9209-a83e678d54a6"
+					(reference "D46")
+					(unit 1)
+				)
+			)
+		)
+	)
+)

@@ -1,3 +1,5 @@
+<!-- _class: dense -->
+
 # Ключові рішення та бізнес-модель
 
 <div class="cards grid-2">

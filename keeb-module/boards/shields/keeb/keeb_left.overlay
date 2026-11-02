@@ -1,2 +1,84 @@
 /* Left half. */
 #include "keeb.dtsi"
+
+#include <dt-bindings/pwm/pwm.h>
+
+/* Passive buzzer (KY-006 / HW-508 piezo module) on P1.01 - LEFT half only.
+ * It is the half the reset chord is played on, the half that chord reboots, and
+ * the half the buzzer is soldered to; the right half gets no node and no PWM
+ * controller, and the buzzer behavior there degrades to "no sound, act
+ * immediately".
+ *
+ * A passive piezo needs a square wave, so this pin is a PWM output, not a GPIO:
+ * pitch is the drive frequency and silence is 0% duty. See buzzer/README.md.
+ *
+ * P1.01 is not one of the Pro Micro D-labels in the board file
+ * (nice_nano/arduino_pro_micro_pins.dtsi) - it is a spare pad, so wire by the
+ * board silkscreen. Nothing else on this keyboard uses it: gpio1 carries matrix
+ * rows 3/5 (P1.00/P1.04), cols 0/3/4/5 (P1.06/P1.11/P1.13/P1.15) and nothing
+ * else, and &spi1 stays disabled so its pinctrl never claims pins back.
+ *
+ * &pwm0 is the nRF52840 PWM instance Zephyr exposes (nrf52840.dtsi, disabled by
+ * default) and nothing else on nice!nano or on this shield uses it. Its output
+ * is routed to P1.01 through PSEL, which is why a pinctrl state is mandatory
+ * here (the nrfx PWM driver requires default + sleep states). The `sleep` group
+ * disconnects the pad on a PM suspend - the same reason the status RGB is driven
+ * OFF before System OFF in keeb.dtsi: the SoC keeps pad state, and a pad still
+ * being driven at 2 kHz would keep the disc audible while the half "sleeps".
+ *
+ * Wiring: module S -> P1.01, module - -> GND, module middle pin -> nothing (NC
+ * on these boards). No 3 V rail needed: the piezo is driven by the signal
+ * swing, which is also why the earlier active-buzzer design needed a transistor
+ * and this one does not. */
+/ {
+	buzzer_dev: buzzer {
+		compatible = "zmk,buzzer";
+		/* Channel 0, 2 kHz base period - the ~2 kHz resonance of a KY-006.
+		 * The driver overrides the period per beep (that is the pitch); this
+		 * value is the reference for the 0%-duty silence calls. */
+		pwms = <&pwm0 0 PWM_USEC(500) PWM_POLARITY_NORMAL>;
+
+		/* Sounds this half makes on its own, without a keymap binding:
+		 *
+		 *   beep-layers - GAME is the only layer here that is a toggle
+		 *   (&tog KEEB_LAYER_GAME in combo_toggle_game), so it is the only one
+		 *   announced. NAV/FUN/MOUSE are hold-momentary: announcing those would
+		 *   beep twice per use. HOME (layer 0) is left out because ZMK turns the
+		 *   default layer on at boot, which would make every boot beep.
+		 *
+		 *   beep-on-wake - ZMK's sleep is System OFF, so waking up is a cold
+		 *   boot; the SoC's reset-reason register is what distinguishes it from a
+		 *   fresh power-on (and from the reset/bootloader chords, which reboot
+		 *   rather than wake). */
+		beep-layers = <KEEB_LAYER_GAME>;
+		beep-on-wake;
+	};
+};
+
+/* The state groups go inside the board's existing pin controller node (label
+ * `pinctrl`, node `pin-controller`, compatible nordic,nrf-pinctrl, declared in
+ * zephyr/dts/common/nordic/nrf_common.dtsi) - the same way nice_nano-pinctrl.dtsi
+ * adds uart0_default/i2c0_default/spi*_default. Writing `/ { pinctrl { ... } }`
+ * instead creates a second, unrelated node at /pinctrl, and the PWM driver then
+ * fails to compile its pinctrl table ("Z_PINCTRL_STATE_PIN_INIT undeclared"). */
+&pinctrl {
+	buzzer_pwm_default: buzzer_pwm_default {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 1, 1)>;  /* P1.01 */
+		};
+	};
+
+	buzzer_pwm_sleep: buzzer_pwm_sleep {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 1, 1)>;  /* P1.01 */
+			low-power-enable;
+		};
+	};
+};
+
+&pwm0 {
+	status = "okay";
+	pinctrl-0 = <&buzzer_pwm_default>;
+	pinctrl-1 = <&buzzer_pwm_sleep>;
+	pinctrl-names = "default", "sleep";
+};

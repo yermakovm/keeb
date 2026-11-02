@@ -12,18 +12,42 @@
 # Run from anywhere: make -C ~/src/keyboard-zmk/zmk-config left
 # (build trees live in the workspace, not in this repo: ../out/{left,right})
 
-BOARD ?= xiao_ble//zmk
-DRIVE ?= /Volumes/XIAO-SENSE
-# env.mk provides WS, OUT, west on PATH, the SDK vars, ZMK_CONFIG and the two
-# in-repo Zephyr modules (module/, status-led/). Sourcing is idempotent, so this
-# works both standalone and when env.sh was already sourced.
+# nice!nano, v2.0.0 revision.
+#
+# These boards switch the VCC rail (the 3 V supply the nice!view and the
+# KY-016 hang off) from P0.13, and the board manual says P0.13 HIGH = VCC on.
+# That is the @2.0.0 polarity (control-gpios = GPIO_ACTIVE_HIGH); @1.0.0
+# declares GPIO_ACTIVE_LOW, so ZMK's ext-power driver - which enables at
+# boot - would drive P0.13 LOW and cut VCC: display and RGB dark, no supply.
+# Verified in the built tree: out/*/zephyr/zephyr.dts control-gpios is
+# <&gpio0 0xd 0x1> (ACTIVE_LOW) on @1.0.0 and <&gpio0 0xd 0x0> (ACTIVE_HIGH)
+# on @2.0.0.
+#
+# @2.0.0 also matches what keeb.dtsi already does for the battery
+# (zmk,battery-nrf-vddh; there is no P0.04 divider on these boards) and adds
+# init-delay-ms = 50 to ext-power. It does NOT match on power mode: @2.0.0
+# enables &reg0 for the VDDH->VDD buck, which these clones do not have -
+# keeb.dtsi disables it again, see "regulator stages" in keeb-module/readme.md.
+# Symptom of the wrong revision: display + RGB dead (VCC off) or a battery
+# level that reads 0%/stuck.
+BOARD ?= nice_nano@2.0.0//zmk
+# UF2 drive name is set by the bootloader, not by this repo: nice!nano and the
+# Pro Micro nRF52840 clones mount NICENANO, a genuine nice!nano may mount
+# NAKED, the old XIAO-footprint boards mounted XIAO-SENSE. The first one that
+# is actually mounted wins (evaluated when the copy runs, not when make
+# parses). Pin it explicitly with: make flash-left DRIVE=/Volumes/<name>
+DRIVE_CANDIDATES ?= /Volumes/NICENANO /Volumes/NAKED /Volumes/XIAO-SENSE
+DRIVE ?= $(firstword $(wildcard $(DRIVE_CANDIDATES)))
+# env.mk provides WS, OUT, west on PATH, the SDK vars, ZMK_CONFIG and the three
+# in-repo Zephyr modules (keeb-module/, status-led/, buzzer/). Sourcing is
+# idempotent, so this works both standalone and when env.sh was already sourced.
 include env.mk
 SDK_ENV = ZEPHYR_TOOLCHAIN_VARIANT=zephyr ZEPHYR_SDK_INSTALL_DIR=$(HOME)/zephyr-sdk-0.16.9
 APP = $(WS)/zmk/app
 # NB: the in-repo modules must be passed via -DZMK_EXTRA_MODULES (a ';' list),
 # NOT via the EXTRA_ZEPHYR_MODULES env var - on Zephyr 4.1 the env var overrides
 # ZMK's own ZEPHYR_EXTRA_MODULES and silently drops zmk/app/module (see env.sh).
-EXTRA_MODULES = $(KEEB_MODULE);$(STATUS_LED)
+EXTRA_MODULES = $(KEEB_MODULE);$(STATUS_LED);$(BUZZER)
 COMMON = -s $(APP) -b $(BOARD) -d $(BUILD_DIR) -- \
          -DSHIELD=$(SHIELD) -DZMK_CONFIG=$(ZMK_CONFIG) -DZMK_EXTRA_MODULES="$(EXTRA_MODULES)"
 
@@ -41,7 +65,7 @@ clean:
 	rm -rf $(OUT)/left $(OUT)/right $(OUT)/nodisp
 
 # NB: incremental rebuilds don't reliably pick up Kconfig/devicetree changes
-# made in keeb-module/ or status-led/ — after changing Kconfig/DT files, run
+# made in keeb-module/, status-led/ or buzzer/ — after changing Kconfig/DT files, run
 # `make clean` first, or the build will silently reuse stale config.
 # (Also required whenever BOARD/ZMK_CONFIG/module paths change - ZMK warns
 # "The build directory must be cleaned pristinely when changing user ZMK
@@ -60,7 +84,7 @@ _build:
 # The bootloader ejects the drive as soon as the write lands, so a cp error
 # with a vanished drive means success; retry is for macOS mount racing.
 define _uf2_copy
-	test -d $(DRIVE) || { echo "$(DRIVE) not mounted - double-tap RESET (one half at a time)"; sleep 3; }
+	test -d $(DRIVE) || { echo "no UF2 drive mounted (looked for: $(DRIVE_CANDIDATES)) - double-tap RESET, one half at a time, or pass DRIVE=/Volumes/<name>"; sleep 3; }
 	test -d $(DRIVE) || { echo "still not mounted"; exit 1; }
 	ok=""; \
 	for i in 1 2 3; do \

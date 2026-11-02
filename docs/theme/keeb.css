@@ -238,6 +238,34 @@ section .card.bad p.why {
   color: var(--kb-warn);
 }
 
+/* ---- dense slides (class: dense) ---- */
+/* For content-heavy card grids where one paragraph per card is already too much:
+   tightens card padding and body text instead of forcing the author to drop
+   facts. Applied per page with `<!-- _class: dense -->`, not to the whole deck. */
+section.dense .cards {
+  gap: 10px 16px;
+}
+
+section.dense .card {
+  padding: 8px 16px;
+}
+
+section.dense .card h3 {
+  font-size: 0.62em;
+  margin-bottom: 0.22em;
+}
+
+section.dense .card p,
+section.dense .card ul {
+  font-size: 0.7em;
+  line-height: 1.35;
+}
+
+section.dense h1 {
+  font-size: 1.22em;
+  margin-bottom: 0.35em;
+}
+
 /* media block: a photo or a video frame in a column */
 section .media {
   align-self: center;

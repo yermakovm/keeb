@@ -56,8 +56,10 @@ import {
   KEEB_T_PRESET_SET,
   KEEB_T_TEXT_SET,
   KEEB_T_VALUE_SET,
+  KEEB_T_TEST_SET,
   KEEB_T_TOKENS,
   KEEB_TOKEN_F_READY,
+  KEEB_STATUS_OK,
   KEEB_TLV_MSG_MAX,
   KEEB_PKT_F_NOTIFY,
   KEEB_STATUS_ERR,
@@ -331,6 +333,7 @@ export const useDeviceStore = defineStore('device', () => {
     info.value = null
     tokens.value = []
     tokenTableMatches.value = false
+    testMode.value = false
   }
 
   /** Test-only: attach the simulated keyboard. Nothing in the UI calls this;
@@ -817,6 +820,47 @@ export const useDeviceStore = defineStore('device', () => {
   const discard = () => request((m) => m.add(KEEB_T_DISCARD, 0))
   const reset = () => request((m) => m.add(KEEB_T_RESET, 0))
 
+  /* ---------------------------------------------------------------- tester mode
+   *
+   * Key events are a mode, not a subscription: a keyboard that streamed every
+   * keystroke would couple its typing to a Bluetooth link it does not need. So
+   * the configurator asks for them when the tester is open and stops asking
+   * when it closes, and the keyboard answers with the mode it actually ended up
+   * in rather than trusting the request. */
+
+  const testMode = ref(false)
+
+  async function setTestMode(on: boolean): Promise<boolean> {
+    if (state.value !== 'connected') {
+      testMode.value = false
+      return false
+    }
+
+    const ack = await request((m) => m.addFields(KEEB_T_TEST_SET, [on ? 1 : 0], [1]))
+
+    testMode.value = ack.status === KEEB_STATUS_OK && ack.detail === 1
+
+    return testMode.value
+  }
+
+  /** Press a switch on the simulated keyboard. Only the mock has switches to
+   * press; on real hardware the finger does it and this returns false. */
+  function mockKey(pos: number, pressed: boolean, layer = 0): boolean {
+    if (kind.value !== 'mock') {
+      return false
+    }
+
+    const t = transport.value as MockKeyboard | null
+
+    if (!t || typeof t.simulateKey !== 'function') {
+      return false
+    }
+
+    t.simulateKey(pos, pressed, layer)
+
+    return true
+  }
+
   /* ---------------------------------------------------------------- display ops
    *
    * The panel is a table of drawing primitives the firmware paints from ZMK's
@@ -935,6 +979,7 @@ export const useDeviceStore = defineStore('device', () => {
     connectMock, connectBle, reconnectBle, forgetBle, disconnect, handshake, ping, fetchTokens,
     readLayerCells, writeCells, readLayers, renameLayer, moveLayer, addLayer, removeLayer, restoreLayer,
     save, discard, reset, readTokenParams,
+    testMode, setTestMode, mockKey,
     readDisplayInfo, readDisplay, writeDisplay, writeWidget, writeText, writeValue, applyPreset,
     displaySave, displayDiscard, displayReset, displayBlank,
     traceLog, clearTraceLog,

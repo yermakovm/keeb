@@ -1,10 +1,9 @@
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/i2c/i2c.h>
 #include <dt-bindings/pinctrl/nrf-pinctrl.h>
+#include <dt-bindings/pwm/pwm.h>
+#include <dt-bindings/regulator/nrf5x.h>
 #include <dt-bindings/zmk/matrix_transform.h>
 
-/* Key position names and layer indices. This map is what defines those numbers,
- * so the names and the map live in the same module on purpose. */
 #include <keeb-positions.dtsi>
 
 / {
@@ -15,113 +14,57 @@
     zmk,battery = &vbatt;
 	};
 
-	/* Switch to the direct ADC driver to bypass ZMK's hardcoded divider assumptions */
-	vbatt: vbatt {
-		compatible = "zmk,battery-voltage-divider";
-		label = "BATTERY";
-		io-channels = <&adc 2>; /* Channel 2 = AIN2 = P0.04 */
-		output-ohms = <2000000>; 
-		full-ohms = <2806000>;   /* Correct scaling resistor math for this board clone */
-	};
+    vbatt: vbatt {
+        compatible = "zmk,battery-nrf-vddh";
+        label = "BATTERY";
+    };
 
 	default_transform: keymap_transform_0 {
 		compatible = "zmk,matrix-transform";
 		columns = <12>;
 		rows = <6>;
-		/* Key positions are named in dts/keeb-positions.dtsi; this map is what
-		 * defines those numbers, so keep the two in step - app/scripts/gen-contract.mjs
-		 * checks every named group against this map, so a name that stops matching
-		 * the wiring fails the build instead of silently rebinding another key.
-		 *
-		 * A row's line may list fewer than 12 entries: an unlisted grid slot has no
-		 * switch and no keymap position. Each keymap layer must carry exactly as many
-		 * bindings as this map has RC() entries (ZMK_KEYMAP_LEN, see matrix.h).
-		 * Global columns: left half 0-5, right half 6-11 (keeb_right.overlay adds
-		 * col-offset 6). Each half numbers its own columns 0-5 the same way, so a
-		 * key's mirror on the other half is the same local column: global c on the
-		 * left, c+6 on the right. Every row here obeys that - alpha 0-5, the extras
-		 * 2-3, the thumb cluster 2-5, on both halves.
-		 *   rows 0-3   full alpha grid, both halves
-		 *   row  4     2 extra keys per half, local cols 2-3
-		 *   row  5     thumb cluster, local cols 2-5
-		 * The right half is listed inner-to-outer (11 down to 6) so the keymap drawing
-		 * reads left-to-right on both halves: position 6 is the right half's innermost
-		 * top key, position 11 its outermost. */
-		map = <
-			RC(0,0) RC(0,1) RC(0,2) RC(0,3) RC(0,4) RC(0,5)   RC(0,11) RC(0,10) RC(0,9)  RC(0,8)  RC(0,7) RC(0,6)
-			RC(1,0) RC(1,1) RC(1,2) RC(1,3) RC(1,4) RC(1,5)   RC(1,11) RC(1,10) RC(1,9)  RC(1,8)  RC(1,7) RC(1,6)
-			RC(2,0) RC(2,1) RC(2,2) RC(2,3) RC(2,4) RC(2,5)   RC(2,11) RC(2,10) RC(2,9)  RC(2,8)  RC(2,7) RC(2,6)
-			RC(3,0) RC(3,1) RC(3,2) RC(3,3) RC(3,4) RC(3,5)   RC(3,11) RC(3,10) RC(3,9)  RC(3,8)  RC(3,7) RC(3,6)
-			RC(4,2) RC(4,3)   RC(4,9) RC(4,8)
-			RC(5,2) RC(5,3) RC(5,4) RC(5,5)   RC(5,11) RC(5,10) RC(5,9) RC(5,8)
+	map = <
+			RC(0,5) RC(0,4) RC(0,3) RC(0,2) RC(0,1) RC(0,0)   RC(0,6) RC(0,7) RC(0,8)  RC(0,9)  RC(0,10) RC(0,11)
+			RC(1,5) RC(1,4) RC(1,3) RC(1,2) RC(1,1) RC(1,0)   RC(1,6) RC(1,7) RC(1,8)  RC(1,9)  RC(1,10) RC(1,11)
+			RC(2,5) RC(2,4) RC(2,3) RC(2,2) RC(2,1) RC(2,0)   RC(2,6) RC(2,7) RC(2,8)  RC(2,9)  RC(2,10) RC(2,11)
+			RC(3,5) RC(3,4) RC(3,3) RC(3,2) RC(3,1) RC(3,0)   RC(3,6) RC(3,7) RC(3,8)  RC(3,9)  RC(3,10) RC(3,11)
+			RC(4,2) RC(4,3)   RC(4,8) RC(4,9)
+			RC(5,3) RC(5,2) RC(5,5) RC(5,4)   RC(5,10) RC(5,11) RC(5,8) RC(5,9)
 		>;
 	};
 
-	/* Deep-sleep-capable matrix scan (pinout: keeb-module/readme.md).
-	 *
-	 * ROWS are INPUTS on the nRF52840's own GPIOs (XIAO D0/D1/D2/D3/D6/D9
-	 * = rows 0-5), active-high with the nRF's internal pull-downs. COLS are
-	 * OUTPUTS on the MCP23017 port A (A0-A5 = driver pins 0-5), active-high.
-	 * PCB diodes conduct col -> row (anode on the col side, verified on this
-	 * board), so diode-direction = "col2row": during a scan the driver
-	 * drives one col HIGH at a time and a pressed key pulls its row HIGH
-	 * through the diode.
-	 *
-	 * Interrupt mode (no CONFIG_ZMK_KSCAN_MATRIX_POLLING): while idle the
-	 * driver parks ALL cols driven HIGH with LEVEL_ACTIVE interrupts
-	 * armed on the rows - a press pulls a row HIGH and GPIOTE fires.
-	 * `wakeup-source` keeps this device out of ZMK's pre-poweroff suspend
-	 * pass, so with CONFIG_ZMK_SLEEP the rows keep their PIN_CNF (SENSE)
-	 * through System OFF while the expander's outputs stay latched HIGH
-	 * (the Zephyr mcp23xxx driver has no PM actions, so suspend leaves it
-	 * alone): any key press asserts DETECT and the SoC wakes.
-	 * (History: the first all-expander config floated its inputs - the
-	 * MCP23017 has no pull-downs - and spammed phantom presses; the
-	 * all-on-expander polling config could never wake from deep sleep
-	 * because I2C and GPIOTE are dead in System OFF.)
-	 */
-	kscan0: kscan {
+kscan0: kscan {
 		compatible = "zmk,kscan-gpio-matrix";
 		diode-direction = "col2row";
 		wakeup-source;
 		row-gpios =
-			<&gpio0  2 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D0 */
-			<&gpio0  3 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D1 */
-			<&gpio0 28 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D2 */
-			<&gpio0 29 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D3 */
-			<&gpio1 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D6 */
-			<&gpio1 14 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;  /* D9 */
+			<&gpio0  8 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D0  */
+			<&gpio0 22 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D4  */
+			<&gpio0 24 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D5  */
+			<&gpio1  0 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D6  */
+			<&gpio0 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>,  /* D7  */
+			<&gpio1  4 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>;  /* D8  */
 		col-gpios =
-			<&mcp23017_0 5 GPIO_ACTIVE_HIGH>,  /* A0 */
-			<&mcp23017_0 4 GPIO_ACTIVE_HIGH>,  /* A1 */
-			<&mcp23017_0 3 GPIO_ACTIVE_HIGH>,  /* A2 */
-			<&mcp23017_0 2 GPIO_ACTIVE_HIGH>,  /* A3 */
-			<&mcp23017_0 1 GPIO_ACTIVE_HIGH>,  /* A4 */
-			<&mcp23017_0 0 GPIO_ACTIVE_HIGH>;  /* A5 */
+			<&gpio1  6 GPIO_ACTIVE_HIGH>,  /* D9  */
+			<&gpio0  9 GPIO_ACTIVE_HIGH>,  /* D10 */
+			<&gpio0 10 GPIO_ACTIVE_HIGH>,  /* D16 */
+			<&gpio1 11 GPIO_ACTIVE_HIGH>,  /* D14 */
+			<&gpio1 13 GPIO_ACTIVE_HIGH>,  /* D15 */
+			<&gpio1 15 GPIO_ACTIVE_HIGH>;  /* D18 */
 	};
 
-	/* Status RGB: KY-016 module (common cathode, 150R per channel already
-	 * on the module) on the MCP23017's GPB5-7 (driver pins 13-15), module
-	 * pin "-" to GND. VDD is LDO ~3.0V, so red (Vf ~1.8V) is bright while
-	 * green/blue (Vf ~2.8V) stay dim - the state palette in zmk-status-led
-	 * is red-dominant anyway (error=red, connected=green flash,
-	 * advertising=blue pulse, boot=white). Both halves share this dtsi, so
-	 * each half's KY-016 wires to its own expander: R -> B5, G -> B6,
-	 * B -> B7. Replaces the old single LED on &gpio0 2 (P0.02, now matrix
-	 * row 0). NB: the expander's outputs latch through deep sleep - the
-	 * status module must drive all channels OFF before System OFF, or a
-	 * lit LED stays lit until the battery dies. */
-	leds {
-		compatible = "gpio-leds";
+status_leds: status_leds {
+		compatible = "pwm-leds";
 
 		led_r: led_r {
-			gpios = <&mcp23017_0 13 GPIO_ACTIVE_HIGH>;  /* B5 */
+			/* instance channel, period, polarity (common cathode -> active high) */
+			pwms = <&pwm1 0 PWM_USEC(2000) PWM_POLARITY_NORMAL>;  /* D19/A1 = P0.02 */
 		};
 		led_g: led_g {
-			gpios = <&mcp23017_0 14 GPIO_ACTIVE_HIGH>;  /* B6 */
+			pwms = <&pwm1 1 PWM_USEC(2000) PWM_POLARITY_NORMAL>;  /* D20/A2 = P0.29 */
 		};
 		led_b: led_b {
-			gpios = <&mcp23017_0 15 GPIO_ACTIVE_HIGH>;  /* B7 */
+			pwms = <&pwm1 2 PWM_USEC(2000) PWM_POLARITY_NORMAL>;  /* D21/A3 = P0.31 */
 		};
 	};
 
@@ -139,11 +82,7 @@
 			display-name = "Layer Art";
 		};
 
-		/* Reboot / UF2-bootloader the RIGHT half (see
-		 * behavior_remote_reset.c: combos are evaluated on the central and
-		 * &sys_reset / &bootloader are source-local, so right-half keys
-		 * need an explicit forward to the peripheral). */
-		right_reset: right_reset {
+	right_reset: right_reset {
 			compatible = "keeb,remote-reset";
 			target = <&sys_reset>;
 			#binding-cells = <0>;
@@ -156,102 +95,112 @@
 			#binding-cells = <0>;
 			display-name = "Right Half Bootloader";
 		};
+
+	buzzer_reset: buzzer_reset {
+			compatible = "zmk,behavior-buzzer";
+			target = <&sys_reset>;
+			#binding-cells = <0>;
+			display-name = "Buzz Then Reset";
+		};
+
+		buzzer_boot: buzzer_boot {
+			compatible = "zmk,behavior-buzzer";
+			target = <&bootloader>;
+			tune = "bootloader";
+			#binding-cells = <0>;
+			display-name = "Buzz Then Bootloader";
+		};
 	};
 };
 
+&pinctrl {
+	status_led_pwm_default: status_led_pwm_default {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 0, 2)>,   /* R  D19/A1 = P0.02 */
+				<NRF_PSEL(PWM_OUT1, 0, 29)>,  /* G  D20/A2 = P0.29 */
+				<NRF_PSEL(PWM_OUT2, 0, 31)>;  /* B  D21/A3 = P0.31 */
+		};
+	};
+
+	status_led_pwm_sleep: status_led_pwm_sleep {
+		group1 {
+			psels = <NRF_PSEL(PWM_OUT0, 0, 2)>,
+				<NRF_PSEL(PWM_OUT1, 0, 29)>,
+				<NRF_PSEL(PWM_OUT2, 0, 31)>;
+			low-power-enable;
+		};
+	};
+};
+
+&pwm1 {
+	status = "okay";
+	pinctrl-0 = <&status_led_pwm_default>;
+	pinctrl-1 = <&status_led_pwm_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
 &uart0 {
-       status = "disabled";
+	status = "disabled";
+};
+
+&i2c0 {
+	status = "disabled";
 };
 
 &adc {
 	status = "okay";
 };
 
+&zephyr_udc0 {
+	board_cdc_acm_uart: board_cdc_acm_uart {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+/ {
+	chosen {
+		zephyr,console = &board_cdc_acm_uart;
+		zephyr,shell-uart = &board_cdc_acm_uart;
+	};
+};
+
 &reg0 {
-	status = "disabled"; /* VDDH stage: disabled = DCDCEN1 off = LDO */
+	status = "disabled";
 };
 
 &reg1 {
-	regulator-initial-mode = <0>; /* core stage: LDO */
+	regulator-initial-mode = <NRF5X_REG_MODE_LDO>;
 };
 
-
-&i2c0 {
-	status = "okay";
-	clock-frequency = <I2C_BITRATE_STANDARD>;
-    pinctrl-0 = <&i2c0_default>;
-    pinctrl-1 = <&i2c0_sleep>;
-    pinctrl-names = "default", "sleep";
-
-mcp23017_0: gpio@20 {
-		compatible = "microchip,mcp23017";
-		reg = <0x20>;
-		status = "okay";
-		gpio-controller;
-		#gpio-cells = <2>;
-	};
-};
-
-/* Force BOTH nRF52840 regulator stages to LDO mode.
- *
- * The Super nRF52840 clone boards are missing the external DCDC
- * inductors (likely 0R/omitted), so DC/DC mode does not regulate at
- * all: the stage passes VDDH straight through to VDD. Measured: VDD
- * (and every GPIO high) rides at battery voltage ~4V - above the
- * nRF52840 3.6V abs max, ~5V on USB (which is why the chip overheats
- * on USB) - and the radio is unstable enough that BLE split
- * connections time out at creation.
- *
- * LDO is the only mode that regulates on this hardware: VDD ~3.0V on
- * battery and USB alike. Cost: the LDO burns the VDDH-VDD drop as
- * heat (2V x ~25mA = ~50mW on USB - mild, and in-spec). */
-/* The board's spi2 pinctrl (xiao_ble-pinctrl.dtsi) claims P1.14 (XIAO D9)
- * as SPIM_MISO. The nice!view panel is write-only and D9 is matrix row 5
- * (see kscan0), so re-point spi2 at trimmed pinctrl states that stop
- * claiming MISO - otherwise every pinctrl (re-)application would steal
- * the pin back from the matrix. */
 &pinctrl {
-
-    i2c0_default: i2c0_default {
-        group1 {
-            psels = <NRF_PSEL(TWIM_SDA, 0, 19)>,   /* P0.02 */
-                    <NRF_PSEL(TWIM_SCL, 0, 5)>;   /* P0.03 */
-            bias-pull-up;
-        };
-    };
-
-    i2c0_sleep: i2c0_sleep {
-        group1 {
-            psels = <NRF_PSEL(TWIM_SDA, 0, 19)>,   /* P0.02 */
-                    <NRF_PSEL(TWIM_SCL, 0, 5)>;   /* P0.03 */
-            low-power-enable;
-        };
-    };
-
-	keeb_spi2_default: spi2_default_no_miso {
+	spi0_default: spi0_default {
 		group1 {
-			psels =
-				<NRF_PSEL(SPIM_SCK, 1, 13)>,
-				<NRF_PSEL(SPIM_MOSI, 1, 15)>;
+			psels = <NRF_PSEL(SPIM_SCK, 0, 20)>,
+				<NRF_PSEL(SPIM_MOSI, 0, 17)>,
+				<NRF_PSEL(SPIM_MISO, 0, 25)>;
 		};
 	};
 
-	keeb_spi2_sleep: spi2_sleep_no_miso {
+	spi0_sleep: spi0_sleep {
 		group1 {
-			psels =
-				<NRF_PSEL(SPIM_SCK, 1, 13)>,
-				<NRF_PSEL(SPIM_MOSI, 1, 15)>;
+			psels = <NRF_PSEL(SPIM_SCK, 0, 20)>,
+				<NRF_PSEL(SPIM_MOSI, 0, 17)>,
+				<NRF_PSEL(SPIM_MISO, 0, 25)>;
 			low-power-enable;
 		};
 	};
 };
 
-&xiao_spi {
+nice_view_spi: &spi0 {
+	compatible = "nordic,nrf-spim";
 	status = "okay";
-	pinctrl-0 = <&keeb_spi2_default>;
-	pinctrl-1 = <&keeb_spi2_sleep>;
+	pinctrl-0 = <&spi0_default>;
+	pinctrl-1 = <&spi0_sleep>;
 	pinctrl-names = "default", "sleep";
-	cs-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+	/* LS0xx chip select is active-high (XS: L = disabled, H = enabled),
+	 * which is also what ZMK's nice_view_adapter uses. */
+	cs-gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;  /* D1 */
+
 	nice_view: ls0xx@0 {
 		compatible = "sharp,ls0xx";
 		status = "okay";
@@ -263,49 +212,10 @@ mcp23017_0: gpio@20 {
 		serial-vcom-interval = <33>;
 	};
 };
-
-/*
- * Live keymap mutation engine (see keeb-module/engine, proto, keymap).
- *
- * tokens is the protocol's token table: token id = index into this list. The
- * host references a behavior by that number instead of by name, because ZMK
- * resolves a binding by device-name string and a behavior that is not compiled
- * into the image cannot be bound at runtime. Listing a behavior whose driver is
- * switched off is harmless - the engine finds the missing device at boot and
- * reports the token as unavailable.
- *
- * The list mirrors what the configurator can offer today: normal keys, the
- * layer and tap-hold behaviors, sticky/toggle/grave-escape helpers, Bluetooth
- * and output switching, reset, mouse behaviors, and the keeb nodes. Combos and
- * conditional layers are separate devicetree nodes, not bindings, so they are
- * not reachable here - they stay whatever the keymap file says.
- *
- * reserved-positions are the two outer top corners of the grid - KEEB_POS_L_TOP_0
- * and KEEB_POS_R_TOP_0, which the stock keymap binds to &kp EQUAL and &kp MINUS.
- * The engine refuses to rebind them over TLV, and holding both for revert-hold-ms
- * discards the saved keymap and returns to the keymap file. That chord is detected
- * on raw key positions, so no layout, and no bad or missing layout, can lock the
- * configurator out.
- */
 / {
 	keeb_engine: engine {
 		compatible = "keeb,engine";
-
-		/* Behaviour tokens, named by ZMK's own devicetree labels. The
-		 * node text for a behaviour is always present - the omit rule
-		 * only ever marks it /omit-if-no-ref/ - and referencing it here
-		 * is what keeps the behaviours we want to write to compiled in.
-		 * A behaviour whose driver was dropped stays listed here; the
-		 * runtime readiness check in keymap/keeb_tokens.c is what leaves
-		 * it out of the list the host is offered, so a write to a
-		 * behaviour this firmware cannot execute never gets an answer
-		 * that looks like a valid token.
-		 *
-		 * Token id is the index into this list, so inserting here moves
-		 * every id after it. The host resolves tokens by name hash
-		 * (KEEB_T_TOKENS), which is why this list may be reordered.
-		 */
-		tokens = <
+   	tokens = <
 			&kp &trans &none
 			&mo &to &tog &lt &mt
 			&sk &sl &kt &gresc &key_repeat &caps_word

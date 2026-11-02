@@ -1,66 +1,164 @@
-/* Oryx-inspired dark theme */
+/*
+ * Terminal / vim-flavoured dashboard.
+ *
+ * One accent, no rounded corners, monospace everywhere, and a flat dark ground
+ * with a faint grid. Every surface is a rectangle drawn with a 1px line.
+ *
+ * The accent carries two things, and only two:
+ *
+ *   1. **a write.** Something here sends data to the keyboard, or is asking you
+ *      to deal with something that has not been sent: `save to device`,
+ *      `connect`, the picker's `apply`, the panel's `apply panel`, and the
+ *      footer mode block while it reads EDIT.
+ *   2. **the bar that says "you are here".** The nav's active section (left
+ *      edge, bottom edge on the narrow layout), the active layer tab, and the
+ *      selected widget in the panel editor. A bar only - the label stays ink,
+ *      so the accent never floods a region.
+ *
+ * Everything else - the grid, the log, keycaps, the live-layer dot, selection
+ * on the board - says itself in grey, in weight, or by inverting ground and
+ * ink. A cap that is defined on this layer and a button that writes to the
+ * firmware must never look alike, and the accent stays off the keycap grid.
+ *
+ * Contrast contract. Almost everything here is set at 8-13px, so WCAG AA at
+ * 4.5:1 applies to the text and 1.4.11's 3:1 applies to the lines. The tiers,
+ * measured against paper / mod / soft in the dark theme:
+ *
+ *   --ink           16.0 / 14.6 / 12.9   body text
+ *   --mid           7.2 /  6.6  /  5.8   secondary text, keycap labels, 9px marks
+ *   --text-faint    5.1 /  4.6  /  4.1   decorative chrome only, never a label
+ *   --line          4.1 /  3.8  /  3.3   every boundary you can click or read
+ *   --border-soft   1.9 /  1.8  /  1.6   separators with no meaning of their own
+ *   --grid          1.1                   the blueprint ground, decorative
+ *
+ * Status colours clear 4.5:1 on every ground in both themes. Disabled controls
+ * use opacity 0.62, not 0.4: 0.4 measured 2.9 (dark) and 2.5 (light), which is
+ * not a dimmer control, it is an unreadable one.
+ */
 :root {
-  --bg: #131316;
-  --bg-raised: #1b1b1f;
-  --bg-panel: #1e1e23;
-  --bg-inset: #0f0f12;
-  --border: #33333a;
-  --border-soft: #26262c;
-  --text: #e6e6e9;
-  --text-dim: #9a9aa2;
-  --text-faint: #5c5c66;
-  --accent: #e0a158;
-  --accent-dim: #b07f45;
+  --paper: #0d1117;
+  --panel: #0d1117;
+  --key: transparent;
+  --mod: #161b22;
+  --ink: #e6edf3;
+  --mid: #97a1ad;
+  --line: #6e7681;
+  --soft: #21262d;
+  --accent: #ff5c8a;
+  --on-accent: #0d1117;
+  --on-ink: #0d1117;
 
-  /* key categories (Oryx-style color coding) */
-  --cap-key: #3a3a42;
-  --cap-key-top: #45454f;
-  --cap-mod: #4a5568;
-  --cap-mod-top: #5b6a85;
-  --cap-layer: #6e4a26;
-  --cap-layer-top: #8a5c2e;
-  --cap-holdtap: #4a4260;
-  --cap-holdtap-top: #5e5478;
-  --cap-media: #5b3350;
-  --cap-media-top: #74405f;
-  --cap-mouse: #2a5450;
-  --cap-mouse-top: #356863;
-  --cap-nav: #2f4a38;
-  --cap-nav-top: #3c5e48;
-  --cap-unwired: #1c1c20;
+  --bg: var(--paper);
+  --bg-raised: var(--panel);
+  --bg-panel: var(--panel);
+  --bg-inset: #010409;
+  --border: var(--line);
+  --border-soft: #3d444d;
+  --grid: rgba(151, 161, 173, 0.09);
+  --text: var(--ink);
+  --text-dim: var(--mid);
+  --text-faint: #7d8590;
+  --accent-dim: #e15a80;
 
-  /* Bindings the firmware itself distinguishes: a transparent binding inherits
-   * from the slot below, a no-op binding is a real binding that does nothing,
-   * and a system behavior is not a key at all. */
-  --cap-inherit: #1f2126;
-  --cap-off: #17171a;
-  --cap-system: #35324a;
-  --cap-unknown: #4a2b2b;
+  /* Key categories collapse into tints of the same ground: a category is
+   * conveyed by weight and opacity, not by a second hue. */
+  --cap-key: transparent;
+  --cap-key-top: transparent;
+  --cap-mod: var(--mod);
+  --cap-mod-top: var(--mod);
+  --cap-layer: transparent;
+  --cap-layer-top: transparent;
+  --cap-holdtap: var(--mod);
+  --cap-holdtap-top: var(--mod);
+  --cap-media: var(--mod);
+  --cap-media-top: var(--mod);
+  --cap-mouse: var(--mod);
+  --cap-mouse-top: var(--mod);
+  --cap-nav: var(--mod);
+  --cap-nav-top: var(--mod);
+  --cap-unwired: transparent;
 
-  --border-strong: #4a4a55;
-  --ok: #57a66c;
-  --warn: #d4a24c;
-  --err: #c9584f;
+  --cap-inherit: transparent;
+  --cap-off: transparent;
+  --cap-system: var(--soft);
+  --cap-unknown: var(--soft);
 
-  --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --border-strong: #86909c;
+  --ok: #3fb950;
+  --warn: #d29922;
+  --err: #f85149;
+  --on-warn: #0d1117;
 
-  --cap-text: #ececef;
-  --cap-text-hold: #cfa8ff;
+  --mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, ui-monospace, monospace;
+
+  --cap-text: var(--ink);
+  --cap-text-hold: var(--mid);
+
+  /* Rectangular everywhere; the only exception is the encoder ring. */
+  --r: 0;
 
   --gap: 6px;
-  --split-gap: 40px;
+  --split-gap: 36px;
 
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
   color-scheme: dark;
 }
 
-* { box-sizing: border-box; }
+/* Light. Same geometry, same single accent - only the ground inverts. */
+:root[data-theme='light'] {
+  --paper: #f6f7f9;
+  --panel: #f6f7f9;
+  --key: transparent;
+  --mod: #e3e6ec;
+  --ink: #16181d;
+  --mid: #4d5462;
+  --line: #767d89;
+  --soft: #dfe2e8;
+  --accent: #b3124f;
+  --on-accent: #fff;
+  --on-ink: #f6f7f9;
+  --accent-dim: #8f0f40;
+  --bg-inset: #fff;
+  --border-soft: #b4b9c2;
+  --grid: rgba(77, 84, 98, 0.09);
+  --border-strong: #6b7280;
+  --text-faint: #5a616f;
+  --ok: #0a5c2e;
+  --warn: #7a4f00;
+  --err: #a3211a;
+}
 
-html, body {
+* {
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+html,
+body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 14px;
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Blueprint ground: a 24px grid, faint enough to read as paper rather than chrome.
+ * Decorative, so it is allowed to sit at ~1.1:1 - but it is a token now, so the
+ * light theme gets its own blend instead of a dark-mode rgba. */
+body {
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--on-ink);
 }
 
 button {
@@ -71,15 +169,61 @@ button {
   cursor: pointer;
 }
 
-input, select {
+input,
+select,
+textarea {
   font: inherit;
-  color: var(--text);
+  font-size: 13px;
+  color: var(--ink);
   background: var(--bg-inset);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--line);
+  border-radius: 0;
   padding: 4px 8px;
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
+select option {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Terminal checkbox: the state is text, not a filled box. */
+input[type='checkbox'] {
+  appearance: none;
+  width: auto;
+  height: auto;
+  border: 0;
+  background: none;
+  padding: 0;
+  display: inline-block;
+  cursor: pointer;
+}
+
+input[type='checkbox']::before {
+  content: '[ ]';
+  color: var(--mid);
+}
+
+input[type='checkbox']:checked::before {
+  content: '[x]';
+  color: var(--ink);
+  font-weight: 700;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

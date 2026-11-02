@@ -76,6 +76,8 @@ export const useDisplayStore = defineStore('display', () => {
   /* `editable` is a boolean on the wire (DISPLAY_INFO says whether this half
    * accepts panel writes), and `writable` is the session's rule: a read-only
    * link can read the panel but not redraw it. */
+  const selectedWidget = ref(0)
+
   const canEdit = computed(() => (info.value?.editable ?? false) && device.writable)
   const canDrawArt = computed(() => (((info.value?.flags ?? 0) & KEEB_DISPLAY_INFO_F_ART) !== 0))
   const logicalW = computed(() => info.value?.logicalW ?? 0)
@@ -464,6 +466,7 @@ export const useDisplayStore = defineStore('display', () => {
     info, presets, widgets, texts, values, preset, deviceDirty, loaded, loading, lastError, savedAt,
     canEdit, canDrawArt, logicalW, logicalH, widgetMax, textSlots, valueSlots, textMax, layerCount,
     hasLocalEdits, unsavedWrites, problems, statusLine,
+    selectedWidget,
     load, reload, edit, addWidget, removeWidget, moveWidget, dropLocalEdits,
     applyTable, setTextSlot, setValueSlot, applyPreset, save, discard, resetStorage, blank,
     validate, bindEvents,
