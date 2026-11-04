@@ -1,40 +1,74 @@
-<!-- _class: dense -->
+<!-- _class: visual -->
 
 # Плати матриці
 
-<div class="cols">
+<div class="stage">
 
-<div class="col">
+<figure class="shot">
+<div class="photo contain"><img src="assets/pcb-3d.png" alt="3D-рендер плати матриці"/></div>
+<figcaption>3D-рендер плати матриці — те, куди треба рухатись після прототипу</figcaption>
+</figure>
 
-<!-- Заглушку замінює docs/assets/pcb-3d.png — 3D-модель або схема плати. -->
-<div class="media"><img src="assets/pcb-placeholder.svg" alt="Місце для 3D-моделі або схеми плат матриці"/></div>
+<div class="sidenotes">
 
+<div class="sidenote">
+<h3>GPIO-бюджет</h3>
+<p>12 пінів матриці + 3 екран + 3 RGB: майже всі 18 GPIO Pro Micro вже зайняті.</p>
 </div>
 
-<div class="col">
-
-<div class="cards">
-
-<div class="card">
-<h3>GPIO</h3>
-<p>12 пінів матриці + 3 екран + 3 RGB: майже всі 18 GPIO Pro Micro.</p>
+<div class="sidenote">
+<h3>KiCAD</h3>
+<p>Проєкт має три частини, які з'єднуються <strong>FPC-коннекторами</strong>.</p>
 </div>
 
-<div class="card">
-<h3>Гнучкість під keywell ергономіку</h3>
-<p>Задум: гнучкі чи криволінейні pcb.</p>
+<div class="sidenote warn">
+<h3>Геометрія</h3>
+<p>Задум — гнучкі чи криволінейні плати під keywell-ергономіку; остаточні форма й кріплення ще не обрані.</p>
 </div>
 
-<div class="card bad">
-<h3>KiCAD </h3>
-<p>KiCAD-проєкт має три частини які зʼєднуються FPC-коннекторами</p>
-<p class="why">Остаточні геометрія й кріплення ще не обрані.</p>
-</div>
-
-</div>
-
+<div class="sidenote">
+<h3>Наразі</h3>
+<p>Hand-wired збірка: це прототип, а не повторювана конструкція.</p>
 </div>
 
 </div>
 
-<p class="note"><strong>Наразі</strong> — hand-wired збірка</p>
+</div>
+
+---
+
+<!-- _class: visual -->
+
+# Плати: розведення частин
+
+<div class="stage">
+
+<div class="mosaic">
+
+<figure class="shot">
+<div class="photo contain"><img src="assets/pcb-view-a.png" alt="Варіант розведення плати матриці — вид A"/></div>
+<figcaption>Schematic</figcaption>
+</figure>
+
+<figure class="shot">
+<div class="photo contain"><img src="assets/pcb-view-b.png" alt="Варіант розведення плати матриці — вид B"/></div>
+<figcaption>PCB</figcaption>
+</figure>
+
+</div>
+
+<div class="sidenotes">
+
+<div class="sidenote">
+<h3>Чому три частини</h3>
+<p>Одна плата на половинку + окремий борд під екран і контролер: FPC дає кривизну там, де жорсткий FR-4 її не дає.</p>
+</div>
+
+<div class="sidenote warn">
+<h3>Ще не рішення</h3>
+<p>Це робочі варіанти розведення, не фінальна ревізія</p>
+</div>
+
+</div>
+
+</div>

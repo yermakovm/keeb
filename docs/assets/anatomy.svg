@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+  <!--
+    Anatomy of one half and how the two halves talk. Primary visual for the
+    idea slide; the prose lives in the sidenote rail of docs/1_project_idea.md.
+
+    Facts mirror the repo, not a wish list:
+      nRF52840 on a Pro Micro-форм-фактор (klon nice!nano) — config/keeb.conf
+      6×12 matrix, 30 positions per half — config/keeb.dtsi, matrix-transform
+      nice!view (LS011B7DH03) 160×68 on &spi0 — keeb-module/boards/shields/keeb
+      KY-016 RGB on P0.02 / P0.29 / P0.31 (&pwm1) — status-led/
+      KY-006 passive piezo on the LEFT half's P1.01 (&pwm0) — buzzer/
+      1000 mAh LiPo per half
+  -->
+
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6ee7a0"/>
+    </marker>
+    <marker id="arrDim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4c5a66"/>
+    </marker>
+  </defs>
+
+  <!-- host -->
+  <g>
+    <rect x="305" y="22" width="190" height="50" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="2"/>
+    <text x="400" y="45" fill="#e8ecf0" font-size="15" text-anchor="middle">КОМП'ЮТЕР / ТЕЛЕФОН</text>
+    <text x="400" y="63" fill="#97a3af" font-size="12" text-anchor="middle">Web Bluetooth з конфігуратора</text>
+  </g>
+
+  <!-- BLE: host to the central half -->
+  <path d="M330 72 C 250 96 215 112 200 142" fill="none" stroke="#6ee7a0" stroke-width="2.5" opacity="0.85" marker-end="url(#arr)"/>
+  <text x="214" y="104" fill="#6ee7a0" font-size="13" letter-spacing="1">BLE</text>
+
+  <!-- BLE between the halves -->
+  <g fill="none" stroke="#6ee7a0" stroke-width="2.5" opacity="0.55" stroke-linecap="round">
+    <path d="M388 220 a14 14 0 0 1 24 0"/>
+    <path d="M380 208 a26 26 0 0 1 40 0"/>
+    <path d="M372 196 a38 38 0 0 1 56 0"/>
+  </g>
+  <text x="400" y="118" fill="#97a3af" font-size="13" text-anchor="middle" letter-spacing="0.5">центральна ⇄ периферійна</text>
+  <text x="400" y="136" fill="#4c5a66" font-size="12" text-anchor="middle">без дроту між половинками</text>
+
+  <!-- left half -->
+  <g>
+    <rect x="40" y="150" width="330" height="292" rx="14" fill="#141a20" stroke="#2b343c" stroke-width="2"/>
+    <text x="60" y="180" fill="#6ee7a0" font-size="12" letter-spacing="1.5">ЛІВА ПОЛОВИНКА · CENTRAL</text>
+    <line x1="60" y1="192" x2="350" y2="192" stroke="#2b343c" stroke-width="1.5"/>
+    <g fill="#97a3af" font-size="13.5">
+      <text x="60" y="218">nRF52840 · Pro Micro форм-фактор</text>
+      <text x="60" y="248">матриця 6×12 · 30 позицій</text>
+      <text x="60" y="278">nice!view 160×68 · &amp;spi0</text>
+      <text x="60" y="308">KY-016 RGB · P0.02 / P0.29 / P0.31</text>
+      <text x="60" y="338">KY-006 п'єзо · P1.01 (&amp;pwm0)</text>
+      <text x="60" y="368">LiPo 1000 mAh</text>
+    </g>
+    <!-- engine block: only the central half resolves the live keymap -->
+    <rect x="60" y="386" width="290" height="38" rx="8" fill="#12251c" stroke="#6ee7a0" stroke-width="1.5"/>
+    <text x="205" y="411" fill="#6ee7a0" font-size="13" text-anchor="middle">KEEB engine: жива розкладка</text>
+  </g>
+
+  <!-- right half -->
+  <g>
+    <rect x="430" y="150" width="330" height="292" rx="14" fill="#141a20" stroke="#2b343c" stroke-width="2"/>
+    <text x="450" y="180" fill="#6ee7a0" font-size="12" letter-spacing="1.5">ПРАВА ПОЛОВИНКА · PERIPHERAL</text>
+    <line x1="450" y1="192" x2="740" y2="192" stroke="#2b343c" stroke-width="1.5"/>
+    <g fill="#97a3af" font-size="13.5">
+      <text x="450" y="218">nRF52840 · Pro Micro форм-фактор</text>
+      <text x="450" y="248">матриця 6×12 · 30 позицій</text>
+      <text x="450" y="278">nice!view 160×68 · &amp;spi0</text>
+      <text x="450" y="308">KY-016 RGB · P0.02 / P0.29 / P0.31</text>
+      <text x="450" y="338">— без п'єзо на правій</text>
+      <text x="450" y="368">LiPo 1000 mAh</text>
+    </g>
+    <rect x="450" y="386" width="290" height="38" rx="8" fill="#10151a" stroke="#394853" stroke-width="1.5" stroke-dasharray="6 5"/>
+    <text x="595" y="411" fill="#97a3af" font-size="13" text-anchor="middle">отримує готову половинку від central</text>
+  </g>
+
+
+  <!-- footer line -->
+  <text x="400" y="478" fill="#4c5a66" font-size="13" text-anchor="middle">анатомія hand-wired прототипу: два nRF52840, два екрани, RGB і п'єзо на кожному боці</text>
+</svg>

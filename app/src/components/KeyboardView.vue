@@ -135,7 +135,6 @@ const HALF_SIDES = ['left', 'right'] as const
         <select id="layout" v-model="layoutId">
           <option v-for="l in LAYOUTS" :key="l.id" :value="l.id">{{ l.label }}</option>
         </select>
-        <span class="note">{{ layout.note }}</span>
       </div>
 
       <div class="pick">

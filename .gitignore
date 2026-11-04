@@ -18,3 +18,7 @@ app/.vite/
 
 # SSR smoke-test bundle (npm run smoke).
 app/dist-ssr/
+
+# Built configurator (npm run build -> npm run upload). Pure build output:
+# the server holds the deployed copy, git holds the source.
+app/dist/

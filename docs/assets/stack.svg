@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 470" width="800" height="470" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+  <!--
+    What we actually build on. Bands are the real layers: the app talks to the
+    KEEB module (keeb-module/), which sits inside a ZMK fork on Zephyr
+    (config/zmk.conf, keeb-module/boards). The BLE gap is the only place where
+    host and firmware touch.
+  -->
+
+  <!-- host side -->
+  <text x="40" y="34" fill="#6ee7a0" font-size="12" letter-spacing="1">HOST</text>
+  <rect x="90" y="20" width="670" height="46" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="110" y="40" fill="#e8ecf0" font-size="13">КОНФІГУРАТОР — Vue 3 + Pinia + Web Bluetooth</text>
+  <text x="110" y="58" fill="#97a3af" font-size="11">спільний protobuf-подібний стан з клавіатурою · app/src/proto/</text>
+  <text x="740" y="40" fill="#4c5a66" font-size="11" text-anchor="end">працює й без заліза:</text>
+  <text x="740" y="56" fill="#4c5a66" font-size="11" text-anchor="end">host-side mock</text>
+
+  <!-- the gap -->
+  <rect x="90" y="76" width="670" height="42" rx="10" fill="none" stroke="#6ee7a0" stroke-width="1.5" stroke-dasharray="7 6" opacity="0.7"/>
+  <text x="110" y="94" fill="#6ee7a0" font-size="12">KEEB TLV ПОВЕРХ BLE GATT</text>
+  <text x="110" y="110" fill="#97a3af" font-size="11">cmd = write без відповіді · evt = notify · 46 B payload у пакеті</text>
+  <text x="740" y="94" fill="#4c5a66" font-size="11" text-anchor="end">єдине місце,</text>
+  <text x="740" y="110" fill="#4c5a66" font-size="11" text-anchor="end">де host і прошивка стикаються</text>
+
+  <!-- firmware side -->
+  <text x="40" y="146" fill="#6ee7a0" font-size="12" letter-spacing="1">ЗАЛІЗО</text>
+  <rect x="90" y="130" width="670" height="74" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.55" stroke-width="1.5"/>
+  <text x="110" y="152" fill="#6ee7a0" font-size="12" letter-spacing="1">KEEB MODULE — НАШ КОД</text>
+  <g stroke="#2b343c" stroke-width="1.5" fill="#141a20">
+    <rect x="110" y="162" width="150" height="32" rx="7"/>
+    <rect x="270" y="162" width="130" height="32" rx="7"/>
+    <rect x="410" y="162" width="110" height="32" rx="7"/>
+    <rect x="530" y="162" width="110" height="32" rx="7"/>
+    <rect x="650" y="162" width="90" height="32" rx="7"/>
+  </g>
+  <g font-size="11" fill="#e8ecf0" text-anchor="middle">
+    <text x="185" y="177">keeb_tlv</text>
+    <text x="335" y="177">engine</text>
+    <text x="465" y="177">status-led</text>
+    <text x="585" y="177">buzzer</text>
+    <text x="695" y="177">display</text>
+  </g>
+  <g font-size="10" fill="#4c5a66" text-anchor="middle">
+    <text x="185" y="189">framing + CRC</text>
+    <text x="335" y="189">live keymap</text>
+    <text x="465" y="189">RGB / PWM</text>
+    <text x="585" y="189">piezo</text>
+    <text x="695" y="189">nice!view</text>
+  </g>
+
+  <rect x="90" y="216" width="670" height="52" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="110" y="236" fill="#e8ecf0" font-size="12.5">ZMK — ФОРК: keymap, шари, behaviors, split central/peripheral</text>
+  <text x="110" y="254" fill="#97a3af" font-size="11">matrix-transform (keeb-module/keymap/) робить 72 позиції з 6×12 матриці</text>
+
+  <rect x="90" y="280" width="670" height="52" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="110" y="300" fill="#e8ecf0" font-size="12.5">ZEPHYR RTOS — devicetree, драйвери, BLE-стек</text>
+  <text x="110" y="318" fill="#97a3af" font-size="11">config/keeb.dtsi · &amp;pwm0 п'єзо · &amp;pwm1 RGB · &amp;spi0 екран</text>
+
+  <text x="40" y="356" fill="#6ee7a0" font-size="12" letter-spacing="1">SILICON</text>
+  <rect x="90" y="344" width="670" height="46" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+  <text x="110" y="362" fill="#e8ecf0" font-size="12.5">nRF52840 на Pro Micro форм-факторі (клон nice!nano) · ×2</text>
+  <text x="110" y="380" fill="#97a3af" font-size="11">18 GPIO на половинку: 12 матриця + 3 екран + 3 RGB</text>
+
+  <!-- license strip -->
+  <g stroke="#2b343c" stroke-width="1.5" fill="#141a20">
+    <rect x="90" y="404" width="330" height="46" rx="10"/>
+    <rect x="430" y="404" width="330" height="46" rx="10"/>
+  </g>
+  <text x="110" y="424" fill="#6ee7a0" font-size="11.5">SPDX У НАШИХ ФАЙЛАХ — MIT</text>
+  <text x="110" y="440" fill="#4c5a66" font-size="11">keeb-module/*, app/*, tools/*</text>
+  <text x="450" y="424" fill="#f0b05e" font-size="11.5">УСПАДКОВАНЕ — GPL-2.0-ONLY (ZMK)</text>
+  <text x="450" y="440" fill="#4c5a66" font-size="11">рішення про ліцензію продукту ще не ухвалене</text>
+</svg>

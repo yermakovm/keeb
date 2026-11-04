@@ -11,15 +11,19 @@
   is reachable by keyboard and announces its state.
 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   label: string
   /** one line saying what is inside, so a closed group is not a mystery */
   hint?: string
+  /** start expanded instead of collapsed */
+  open?: boolean
 }>()
 
-const open = ref(false)
+const open = ref(props.open ?? false)
+
+watch(() => props.open, (v) => { if (v !== undefined) open.value = v })
 </script>
 
 <template>

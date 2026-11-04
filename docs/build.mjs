@@ -48,7 +48,12 @@ for (const f of wanted) {
 
 const files = readdirSync(docsDir)
   .filter((f) => /^\d+_.+\.md$/.test(f))
-  .sort((a, b) => Number.parseInt(a, 10) - Number.parseInt(b, 10))
+  // parseInt gives every `8_*` the same key, so ties fall back to readdir
+  // order (filesystem-dependent). Tie-break on the name to keep deck order fixed.
+  .sort((a, b) =>
+    Number.parseInt(a, 10) - Number.parseInt(b, 10) ||
+    path.basename(a).localeCompare(path.basename(b), undefined, { numeric: true }),
+  )
   .map((f) => path.join(docsDir, f))
 
 if (!files.length) {
@@ -68,7 +73,14 @@ const marp = path.join(root, 'node_modules', '.bin', 'marp')
 if (preview) {
   const child = spawn(
     marp,
-    [path.relative(root, merged), '--theme-set', theme, '--allow-local-files', '--preview'],
+    [
+      path.relative(root, merged),
+      '--theme-set',
+      theme,
+      '--allow-local-files',
+      '--html', // raw HTML: <iframe> for the video slide, inline style for the poster
+      '--preview',
+    ],
     { cwd: root, stdio: 'inherit' },
   )
 
@@ -106,6 +118,7 @@ if (preview) {
         '--theme-set',
         theme,
         '--allow-local-files', // needed for docs/assets/*, otherwise Marp blocks them
+        '--html', // raw HTML: <iframe> for the video slide, inline style for the poster
         '-o',
         target,
       ],

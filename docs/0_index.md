@@ -5,28 +5,22 @@ lang: uk-UA
 theme: keeb
 ---
 
-<!-- _class: title -->
+<!-- _class: title hero -->
 
 <!--
-  Титульна сторінка.
+  Титульна сторінка: фото клавіатури на весь слайд, текст по центру поверх нього.
 
-  Макет: зліва заголовок і підзаголовок, справа — фото клавіатури
-  (split background `right:45%`, клас `title` з теми `keeb`).
+  `_class: title hero` — окремим HTML-коментарем із `_` (scope лише цієї сторінки),
+  а не у front-matter: front-matter першого файлу діє на весь deck, бо
+  build.mjs зливає ці файли в один документ.
 
-  `_class: title` — окремим HTML-коментарем із `_` (scope лише цієї
-  сторінки) і не у front-matter: front-matter першого файлу діє на весь
-  deck, бо build.mjs щедрить ці файли в один документ.
+  `![bg cover]` без `right:45%` = full-bleed: Marpit рендерить картинку як
+  окремий шар ПІД вмістом слайда, тому `.hero` у theme/keeb.css не має власного
+  фону, а затемнення під текстом робить pseudo-element `::before` (м'яке
+  радіальне, щоб клавіатура залишалася видно).
 
-  Заглушка: docs/assets/keyboard-placeholder.svg — співвідношення 480:600
-  збігається з правою половиною слайда 16:9, тому `contain` заповнює її точно.
-
-  Реальне фото:
-    1. покласти зображення в docs/assets/keyboard.png
-    2. замінити шлях нижче на assets/keyboard.png
-    3. для фото, яке треба обрізати, — `cover` замість `contain`
-
-  Дзеркальний макет (фото зліва, текст справа):
-    `![bg left:45% contain](...)` + клас `title flip`
+  Фото — docs/assets/index.png (світлини збірки без пробілів в імені).
+  Для фото, яке треба обрізати під рамку, — `cover`, для схеми — `contain`.
 
   Експорт вимагає `--allow-local-files`, інакше Marp блокує локальні
   зображення (це вже робить docs/build.mjs).
@@ -36,4 +30,4 @@ theme: keeb
 
 Доповідач: **Єрмаков Михайло Вікторович**
 
-![bg right:45% contain](assets/keyboard-placeholder.svg)
+![bg cover](assets/index.png)

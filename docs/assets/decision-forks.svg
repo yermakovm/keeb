@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+  <!--
+    The four forks the project has already taken, with the road not taken kept
+    visible and the criterion that decided each one. Green = chosen,
+    grey = the alternative we rejected (for now).
+  -->
+
+  <g font-size="10.5" letter-spacing="1">
+    <text x="52" y="44" fill="#4c5a66">РІШЕННЯ / КРИТЕРІЙ</text>
+    <text x="202" y="44" fill="#6ee7a0">ВИБРАНО</text>
+    <text x="486" y="44" fill="#4c5a66">АЛЬТЕРНАТИВА</text>
+  </g>
+
+  <!-- 1 controller -->
+  <g>
+    <rect x="36" y="56" width="130" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="52" y="86" fill="#e8ecf0" font-size="12.5">КОНТРОЛЕР</text>
+    <text x="52" y="108" fill="#4c5a66" font-size="10">економія на платі</text>
+    <text x="52" y="122" fill="#4c5a66" font-size="10">vs вартість порту</text>
+    <rect x="186" y="56" width="280" height="100" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.5"/>
+    <text x="202" y="84" fill="#e8ecf0" font-size="12">nRF52840 · Pro Micro форм-фактор</text>
+    <text x="202" y="106" fill="#97a3af" font-size="10.5">готовий BLE-стек і екосистема ZMK,</text>
+    <text x="202" y="122" fill="#97a3af" font-size="10.5">низьке споживання</text>
+    <rect x="486" y="56" width="280" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="502" y="84" fill="#cdd5de" font-size="12">дешевший BLE LE-аналог</text>
+    <text x="502" y="106" fill="#4c5a66" font-size="10.5">менша ціна плати, але інший порт</text>
+    <text x="502" y="122" fill="#4c5a66" font-size="10.5">і втрачені готові модулі</text>
+    <g stroke="#4c5a66" stroke-width="1.5" fill="none">
+      <path d="M166 106 h10 M176 86 v40 M176 86 h10 M176 126 h10"/>
+    </g>
+  </g>
+
+  <!-- 2 display -->
+  <g>
+    <rect x="36" y="164" width="130" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="52" y="194" fill="#e8ecf0" font-size="12.5">ДИСПЛЕЙ</text>
+    <text x="52" y="216" fill="#4c5a66" font-size="10">споживання та</text>
+    <text x="52" y="230" fill="#4c5a66" font-size="10">ціна панелі</text>
+    <rect x="186" y="164" width="280" height="100" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.5"/>
+    <text x="202" y="192" fill="#e8ecf0" font-size="12">nice!view — LS011B7DH03, 160×68</text>
+    <text x="202" y="214" fill="#97a3af" font-size="10.5">готові панелі й модуль у ZMK,</text>
+    <text x="202" y="230" fill="#97a3af" font-size="10.5">енергоефективність</text>
+    <rect x="486" y="164" width="280" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="502" y="192" fill="#cdd5de" font-size="12">аналог панелі</text>
+    <text x="502" y="214" fill="#4c5a66" font-size="10.5">контроль ціни, розміру, орієнтації —</text>
+    <text x="502" y="230" fill="#4c5a66" font-size="10.5">але дисплей підтримуємо самі</text>
+    <g stroke="#4c5a66" stroke-width="1.5" fill="none">
+      <path d="M166 214 h10 M176 194 v40 M176 194 h10 M176 234 h10"/>
+    </g>
+  </g>
+
+  <!-- 3 firmware -->
+  <g>
+    <rect x="36" y="272" width="130" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="52" y="302" fill="#e8ecf0" font-size="12.5">ПРОШИВКА</text>
+    <text x="52" y="324" fill="#4c5a66" font-size="10">виграш у пам'яті</text>
+    <text x="52" y="338" fill="#4c5a66" font-size="10">vs весь стек на нас</text>
+    <rect x="186" y="272" width="280" height="100" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.5"/>
+    <text x="202" y="300" fill="#e8ecf0" font-size="12">форк ZMK / Zephyr</text>
+    <text x="202" y="322" fill="#97a3af" font-size="10.5">розкладка, BLE-спліт, батарея, екрани</text>
+    <text x="202" y="338" fill="#97a3af" font-size="10.5">— уже готові; own TLV поверх ядра</text>
+    <rect x="486" y="272" width="280" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="502" y="300" fill="#cdd5de" font-size="12">власна прошивка</text>
+    <text x="502" y="322" fill="#4c5a66" font-size="10.5">менше зайвого коду, повний контроль —</text>
+    <text x="502" y="338" fill="#4c5a66" font-size="10.5">але весь стек на нас</text>
+    <g stroke="#4c5a66" stroke-width="1.5" fill="none">
+      <path d="M166 322 h10 M176 302 v40 M176 302 h10 M176 342 h10"/>
+    </g>
+  </g>
+
+  <!-- 4 build method -->
+  <g>
+    <rect x="36" y="380" width="130" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="52" y="410" fill="#e8ecf0" font-size="12.5">СПОСІБ ЗБІРКИ</text>
+    <text x="52" y="432" fill="#4c5a66" font-size="10">повторюваність</text>
+    <text x="52" y="446" fill="#4c5a66" font-size="10">партії</text>
+    <rect x="186" y="380" width="280" height="100" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.5"/>
+    <text x="202" y="408" fill="#e8ecf0" font-size="12">PCB: 3 частини + FPC-коннектори</text>
+    <text x="202" y="430" fill="#97a3af" font-size="10.5">гнучкі / криволінейні плати під keywell;</text>
+    <text x="202" y="446" fill="#f0b05e" font-size="10.5">геометрія й кріплення ще не обрані</text>
+    <rect x="486" y="380" width="280" height="100" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+    <text x="502" y="408" fill="#cdd5de" font-size="12">hand-wired — так зараз</text>
+    <text x="502" y="430" fill="#4c5a66" font-size="10.5">прототип: партію не повторити,</text>
+    <text x="502" y="446" fill="#4c5a66" font-size="10.5">кожна збірка — окрема історія</text>
+    <g stroke="#4c5a66" stroke-width="1.5" fill="none">
+      <path d="M166 430 h10 M176 410 v40 M176 410 h10 M176 450 h10"/>
+    </g>
+  </g>
+
+</svg>

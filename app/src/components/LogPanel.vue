@@ -66,6 +66,14 @@ function toggleTrace(): void {
 }
 
 const cls = (k: LogKind): string => (k === 'err' ? 'err' : k === 'tx' ? 'tx' : k === 'rx' ? 'rx' : k === 'evt' ? 'evt' : k === 'ui' ? 'ui' : 'ack')
+
+/** Strip the trace header from the message — the kind and msg id are already
+ * shown in their own column. */
+function clean(kind: LogKind, line: string): string {
+  if (kind === 'ui') return line
+  // "keeb tlv  tx #1   INFO(...)" → "INFO(...)"
+  return line.replace(/^keeb tlv\s+\S+(?:\s+#\d+)?\s+/, '')
+}
 </script>
 
 <template>
@@ -95,7 +103,7 @@ const cls = (k: LogKind): string => (k === 'err' ? 'err' : k === 'tx' ? 'tx' : k
       <p v-for="(l, i) in shown" :key="i" class="line">
         <span class="t">{{ log.at(l.at) }}</span>
         <span class="k" :class="cls(l.kind)">{{ l.kind }}</span>
-        <span class="m">{{ l.line }}</span>
+        <span class="m">{{ clean(l.kind, l.line) }}</span>
       </p>
     </div>
   </section>
@@ -184,7 +192,7 @@ header {
   line-height: 1.45;
 }
 
-.line { margin: 0; display: grid; grid-template-columns: 7ch 4ch 1fr; gap: 8px; }
+.line { margin: 0; display: grid; grid-template-columns: 8ch 4ch 1fr; gap: 12px; }
 
 .t { color: var(--mid); }
 .k { font-weight: 700; }

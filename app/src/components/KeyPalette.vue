@@ -1,27 +1,22 @@
 <!--
-  The keycode palette.
+  Keycode palette — Oryx-style stepped binding.
 
-  It sits under the keyboard, in the wide part of the page, because choosing what
-  a key becomes is a browsing task: a category, a group, a key. Three clicks, no
-  typing, no text field to get wrong.
+  Everything you can bind lives in one place under the keyboard.  Categories
+  are the first step; inside a category you either pick an item directly or
+  walk through a short param chain (layer → keycode, modifier → keycode, …).
 
-  That matters most when the keyboard is the thing that is broken. A dead layer
-  key or a stuck modifier is fixed by clicking the cap on the grid and then
-  clicking a real chip here — and a menu you can only reach by typing is useless
-  to a keyboard that cannot type.
-
-  Mouse bindings are a chip that opens the picker instead of a group of chips:
-  `&mkp / &mmv / &msc` take vectors and masks, not a keycode, and pretending
-  otherwise would stage a binding the firmware rejects.
+  The palette never hides the grid: it is under it, so the cap you clicked and
+  the chip you are about to click are both visible at once.
 -->
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
 import { CATALOG } from '../data/keycodes.ts'
-import { TOKENS } from '../proto/zmk.gen.ts'
+import { paramKinds } from '../model/cap.ts'
+import { KEYCODES, TOKENS } from '../proto/zmk.gen.ts'
 import type { Binding } from '../proto/types.ts'
 import { useDeviceStore } from '../stores/device.ts'
-import { LAYER_ID_INVALID, NONE_TOKEN, TRANSPARENT_TOKEN, useKeymapStore } from '../stores/keymap.ts'
+import { LAYER_ID_INVALID, useKeymapStore } from '../stores/keymap.ts'
 
 const props = defineProps<{ pos: number | null; reserved: boolean }>()
 
@@ -32,16 +27,19 @@ const emit = defineEmits<{
 const device = useDeviceStore()
 const keymap = useKeymapStore()
 
-const KINDS: Array<{ id: string; title: string; groups: string[] }> = [
-  { id: 'letters', title: 'letters · numbers', groups: ['letters', 'numbers'] },
-  { id: 'symbols', title: 'symbols', groups: ['symbols', 'shifted'] },
-  { id: 'modifiers', title: 'modifiers', groups: ['modifiers'] },
-  { id: 'navigation', title: 'navigation', groups: ['navigation'] },
-  { id: 'function', title: 'function · keypad', groups: ['function', 'keypad'] },
-  { id: 'media', title: 'media', groups: ['media'] },
-  { id: 'behaviors', title: 'behaviors', groups: [] },
-  { id: 'system', title: 'bluetooth · output', groups: ['bluetooth', 'outputs'] },
-  { id: 'mouse', title: 'mouse', groups: ['mouseButtons', 'mouseMove', 'mouseScroll'] },
+/* ---------------------------------------------------------------- categories */
+
+const KINDS: Array<{ id: string; title: string; groups: string[]; note: string }> = [
+  { id: 'letters', title: 'letters · numbers', groups: ['letters', 'numbers'], note: '' },
+  { id: 'symbols', title: 'symbols', groups: ['symbols', 'shifted'], note: '' },
+  { id: 'modifiers', title: 'modifiers', groups: ['modifiers'], note: '' },
+  { id: 'navigation', title: 'navigation', groups: ['navigation'], note: '' },
+  { id: 'function', title: 'function · keypad', groups: ['function', 'keypad'], note: '' },
+  { id: 'media', title: 'media', groups: ['media'], note: '' },
+  { id: 'layers', title: 'layers', groups: [], note: 'mo · to · tog · sl' },
+  { id: 'dual', title: 'dual-function', groups: [], note: 'lt · mt · gresc' },
+  { id: 'system', title: 'system', groups: [], note: 'reset · bt · out · caps' },
+  { id: 'mouse', title: 'mouse', groups: [], note: 'mkp · mmv · msc' },
 ]
 
 const GROUP_TITLE: Record<string, string> = {
@@ -54,20 +52,35 @@ const GROUP_TITLE: Record<string, string> = {
   function: 'F1–F12',
   keypad: 'keypad',
   media: 'media',
-  bluetooth: 'bluetooth',
-  outputs: 'output',
-  behaviors: 'no arguments',
   mouseButtons: 'buttons',
   mouseMove: 'move',
   mouseScroll: 'scroll',
 }
 
-/* The catalog carries mouse groups for the mouse editors' benefit. */
 const KEYCODE_GROUPS = Object.keys(CATALOG)
+
+/* ---------------------------------------------------------------- tabs */
+
+const TAB_IDS = ['keycodes', 'behaviors'] as const
+type TabId = (typeof TAB_IDS)[number]
+
+const TAB_KINDS: Record<TabId, string[]> = {
+  keycodes: ['letters', 'symbols', 'modifiers', 'navigation', 'function', 'media'],
+  behaviors: ['layers', 'dual', 'system', 'mouse'],
+}
+
+const tab = ref<TabId>('keycodes')
+
+/* ---------------------------------------------------------------- state */
 
 const kindId = ref<string | null>(null)
 const wrap = ref<'kp' | 'kt' | 'sk'>('kp')
 const query = ref('')
+
+/* stepped binding state */
+const pickedToken = ref<number | null>(null)
+const paramValues = ref<[number, number]>([0, 0])
+const paramStep = ref(0)
 
 const WRAP_NOTE: Record<typeof wrap.value, string> = {
   kp: 'tap',
@@ -75,7 +88,7 @@ const WRAP_NOTE: Record<typeof wrap.value, string> = {
   sk: 'sticky key',
 }
 
-const wrapToken = computed(() => TOKENS.find((t) => t.label === wrap.value))
+/* ---------------------------------------------------------------- helpers */
 
 const readyIds = computed(() => new Set(device.readyTokens.map((t) => t.token)))
 const hasDeviceTokens = computed(() => device.tokens.length > 0)
@@ -87,22 +100,46 @@ const canWrite = computed(
 )
 
 const kind = computed(() => KINDS.find((k) => k.id === kindId.value) ?? null)
+const wrapToken = computed(() => TOKENS.find((t) => t.label === wrap.value))
 
-const behaviors = computed(() =>
-  TOKENS.filter(
-    (t) => t.bindingCells === 0 && t.id !== TRANSPARENT_TOKEN && t.id !== NONE_TOKEN && usable(t.id),
-  ).map((t) => ({
-    id: `behavior:${t.label}`,
-    main: `&${t.label}`,
-    sub: t.displayName ?? t.name,
-    binding: { token: t.id, param1: 0, param2: 0 } as Binding,
-  })),
-)
+/* ---------------------------------------------------------------- token lookups */
 
-/* The groups on show: the chosen category's, or the whole catalog when the
- * person typed instead of browsing. Every group in them is drawn with its keys,
- * because a panel that stays empty until something is typed is a panel that
- * blames the person for what it did not draw. */
+function tokenByLabel(label: string): number | null {
+  const t = TOKENS.find((x) => x.label === label)
+  return t && usable(t.id) ? t.id : null
+}
+
+/* ---------------------------------------------------------------- stepped flow helpers */
+
+function startToken(label: string) {
+  const id = tokenByLabel(label)
+  if (id === null) return
+  pickedToken.value = id
+  paramValues.value = [0, 0]
+  paramStep.value = 0
+}
+
+function setParam(value: number) {
+  const next: [number, number] = [...paramValues.value] as [number, number]
+  next[paramStep.value] = value >>> 0
+  paramValues.value = next
+  paramStep.value++
+
+  const kinds = paramKinds(pickedToken.value!)
+  if (paramStep.value >= kinds.length) {
+    stage({ token: pickedToken.value!, param1: next[0], param2: next[1] })
+    reset()
+  }
+}
+
+function cancelStep() {
+  pickedToken.value = null
+  paramValues.value = [0, 0]
+  paramStep.value = 0
+}
+
+/* ---------------------------------------------------------------- keycodes */
+
 const groupsFor = computed(() =>
   (kind.value ? kind.value.groups : KEYCODE_GROUPS).map((id) => ({
     id,
@@ -116,28 +153,8 @@ const q = computed(() => query.value.trim().toUpperCase())
 const matches = (item: { name: string; label: string }): boolean =>
   !q.value.length || item.name.includes(q.value) || item.label.toUpperCase().includes(q.value)
 
-/* One shape for everything the list can hold: a chip, a line of detail, and the
- * binding it stages. Keycodes and behaviors differ in where they come from, not
- * in what choosing one does. */
-const sections = computed(() => {
-  if (kind.value?.id === 'behaviors') {
-    return [
-      {
-        title: 'no arguments',
-        items: behaviors.value.filter(
-          (b) => !q.value.length || b.main.includes(q.value) || b.sub.toUpperCase().includes(q.value),
-        ),
-      },
-    ]
-  }
-
-  const token = wrapToken.value
-
-  if (!token) {
-    return []
-  }
-
-  return groupsFor.value
+const sections = computed(() =>
+  groupsFor.value
     .map((g) => ({
       title: g.title,
       items: g.items
@@ -146,68 +163,181 @@ const sections = computed(() => {
           id: `${g.id}:${item.name}`,
           main: item.label,
           sub: item.name,
-          binding: { token: token.id, param1: item.code, param2: 0 } as Binding,
+          binding: { token: wrapToken.value!.id, param1: item.code, param2: 0 } as Binding,
         })),
     }))
-    .filter((s) => s.items.length > 0)
-})
+    .filter((s) => s.items.length > 0),
+)
 
 const total = computed(() => sections.value.reduce((n, s) => n + s.items.length, 0))
 
-/* Typing is a complete way in: it selects the list without a category. Clicking
- * a category is the other way in, and it needs no typing at all. */
-const step = computed(() => (kind.value || q.value.length ? 'choices' : 'kind'))
+/* ---------------------------------------------------------------- step machine */
+
+/* kind      → category grid
+ * choices   → normal keycode groups (letters, symbols, …)
+ * token     → choose a specific token (layer ops, dual-function ops, system ops)
+ * param     → fill the next parameter for the chosen token
+ */
+type FlowStep = 'kind' | 'choices' | 'token' | 'param'
+
+const flow = computed<FlowStep>(() => {
+  if (pickedToken.value !== null) return 'param'
+  if (kind.value?.id === 'layers' || kind.value?.id === 'dual' || kind.value?.id === 'system' || kind.value?.id === 'mouse') return 'token'
+  return kind.value || q.value.length ? 'choices' : 'kind'
+})
+
+/* ---------------------------------------------------------------- system tokens */
+
+const SYSTEM_TOKENS = ['sys_reset', 'bootloader', 'right_reset', 'right_boot', 'caps_word', 'key_repeat', 'layer_art']
+const MOUSE_TOKENS = ['mkp', 'mmv', 'msc']
+
+const systemItems = computed(() =>
+  SYSTEM_TOKENS.map((label) => {
+    const t = TOKENS.find((x) => x.label === label)
+    if (!t || !usable(t.id)) return null
+    const k = paramKinds(t.id)
+    return { label, name: t.displayName ?? t.name, token: t.id, hasParams: k.length > 0 }
+  }).filter(Boolean) as Array<{ label: string; name: string; token: number; hasParams: boolean }>,
+)
+
+/* ---------------------------------------------------------------- layer tokens */
+
+const LAYER_OPS = ['mo', 'to', 'tog', 'sl']
+
+const layerOps = computed(() =>
+  LAYER_OPS.map((label) => {
+    const t = TOKENS.find((x) => x.label === label)
+    if (!t || !usable(t.id)) return null
+    return { label, name: t.displayName ?? t.name, token: t.id }
+  }).filter(Boolean) as Array<{ label: string; name: string; token: number }>,
+)
+
+/* ---------------------------------------------------------------- dual tokens */
+
+const DUAL_OPS = ['lt', 'mt', 'hml', 'hmr', 'gresc']
+
+const dualOps = computed(() =>
+  DUAL_OPS.map((label) => {
+    const t = TOKENS.find((x) => x.label === label)
+    if (!t || !usable(t.id)) return null
+    return { label, name: t.displayName ?? t.name, token: t.id }
+  }).filter(Boolean) as Array<{ label: string; name: string; token: number }>,
+)
+
+const mouseOps = computed(() =>
+  MOUSE_TOKENS.map((label) => {
+    const t = TOKENS.find((x) => x.label === label)
+    if (!t || !usable(t.id)) return null
+    return { label, name: t.displayName ?? t.name, token: t.id }
+  }).filter(Boolean) as Array<{ label: string; name: string; token: number }>,
+)
+
+/* ---------------------------------------------------------------- tab filtering */
+
+const tabKinds = computed(() =>
+  q.value.length ? KINDS : KINDS.filter((k) => TAB_KINDS[tab.value].includes(k.id)),
+)
+
+/* ---------------------------------------------------------------- param UI data */
+
+const currentParamKind = computed(() => {
+  if (pickedToken.value === null) return null
+  const kinds = paramKinds(pickedToken.value)
+  return kinds[paramStep.value] ?? null
+})
+
+const currentParamLabel = computed(() => {
+  const kind = currentParamKind.value
+  if (!kind) return ''
+  switch (kind) {
+    case 'keycode': return 'keycode'
+    case 'layer': return 'layer'
+    case 'mouse-vector': return 'direction'
+    case 'button-mask': return 'buttons'
+    case 'bt-cmd': return 'command'
+    case 'output': return 'output'
+    default: return `param${paramStep.value + 1}`
+  }
+})
+
+const layerSlots = computed(() => keymap.slots.filter((s) => s.id !== LAYER_ID_INVALID))
+
+const keySearch = ref('')
+
+const keycodeHits = computed(() => {
+  const qv = keySearch.value.trim().toUpperCase()
+  const all = Object.values(CATALOG).flat()
+  if (!qv) return all
+  return all.filter((k) => k.name.includes(qv) || k.label.toUpperCase().includes(qv)).slice(0, 30)
+})
+
+/* ---------------------------------------------------------------- breadcrumb */
 
 const crumbs = computed(() => {
   const out: Array<{ id: string | null; label: string }> = [{ id: null, label: 'category' }]
-
-  if (kind.value) {
-    out.push({ id: 'kind', label: kind.value.title })
+  if (kind.value) out.push({ id: 'kind', label: kind.value.title })
+  if (pickedToken.value !== null) {
+    const def = TOKENS.find((t) => t.id === pickedToken.value)
+    out.push({ id: 'token', label: def ? `&${def.label}` : 'token' })
   }
-
   return out
 })
 
-function pickKind(id: string): void {
-  kindId.value = id
-}
-
 function crumb(id: string | null): void {
-  if (id === null) {
-    reset()
-    return
-  }
-
-  kindId.value = null
+  if (id === null) { reset(); return }
+  if (id === 'kind') { cancelStep(); kindId.value = null; return }
 }
 
 function back(): void {
-  if (q.value.length) {
-    query.value = ''
-    return
-  }
-
+  if (pickedToken.value !== null) { cancelStep(); return }
+  if (q.value.length) { query.value = ''; return }
   kindId.value = null
 }
 
 function reset(): void {
   kindId.value = null
   query.value = ''
+  cancelStep()
 }
 
-function stage(c: { binding: Binding }): void {
-  if (!canWrite.value) {
-    return
-  }
-
-  emit('set', c.binding)
+function pickKind(id: string): void {
+  kindId.value = id
+  cancelStep()
 }
+
+function stage(c: Binding): void {
+  if (!canWrite.value) return
+  emit('set', c)
+}
+
+/* ---------------------------------------------------------------- bt / out / mouse helpers */
+
+const BT_ITEMS = [
+  { v: 0, label: 'clear profile' },
+  { v: 1, label: 'next profile' },
+  { v: 2, label: 'previous profile' },
+  { v: 3, label: 'select profile' },
+  { v: 4, label: 'clear all bonds' },
+  { v: 5, label: 'disconnect' },
+]
+
+const OUT_ITEMS = [
+  { v: 0, label: 'toggle' },
+  { v: 1, label: 'USB' },
+  { v: 2, label: 'BLE' },
+  { v: 3, label: 'none' },
+]
+
+const MOVE_ITEMS = ['MOVE_UP', 'MOVE_DOWN', 'MOVE_LEFT', 'MOVE_RIGHT']
+const SCRL_ITEMS = ['SCRL_UP', 'SCRL_DOWN', 'SCRL_LEFT', 'SCRL_RIGHT']
+const BUTTON_ITEMS = ['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5']
+
 </script>
 
 <template>
   <section class="palette">
     <header class="phead">
-      <h2>keycodes</h2>
+      <h2>keys</h2>
 
       <nav class="crumbs" aria-label="where you are in the catalog">
         <button
@@ -231,40 +361,54 @@ function stage(c: { binding: Binding }): void {
         />
       </label>
 
-      <span v-if="step === 'choices'" class="count" aria-live="polite">{{ total }} shown</span>
+      <span v-if="flow === 'choices'" class="count" aria-live="polite">{{ total }} shown</span>
 
       <span class="target">
         <template v-if="pos === null">no key selected</template>
         <template v-else>→ position {{ pos }} · {{ keymap.editingName }}</template>
       </span>
 
-      <button class="chip back" :disabled="step === 'kind' && !query" title="one step back" @click="back">back</button>
+      <button class="chip back" :disabled="flow === 'kind' && !query" title="one step back" @click="back">back</button>
     </header>
 
     <p v-if="reserved" class="note bad">position {{ pos }} is reserved: the firmware will not rebind it</p>
 
-    <!-- Step 1: what kind of key. -->
-    <div v-if="step === 'kind'" class="grid">
-      <button
-        v-for="k in KINDS"
-        :key="k.id"
-        class="big"
-        :disabled="pos === null || reserved"
-        :title="k.groups.length ? `${k.groups.length} group(s) inside` : k.id === 'mouse' ? 'these take arguments — opens the picker' : 'no arguments to fill in'"
-        @click="pickKind(k.id)"
-      >
-        {{ k.title }}
-        <small>{{ k.groups.length ? `${k.groups.length} groups` : k.id === 'mouse' ? 'picker…' : `${behaviors.length}` }}</small>
-      </button>
-    </div>
+    <!-- ================================================================
+         STEP 1 — Category grid (with tabs)
+         ================================================================ -->
+    <template v-if="flow === 'kind'">
+      <div class="tabs">
+        <button
+          v-for="t in TAB_IDS"
+          :key="t"
+          class="tab"
+          :class="{ on: tab === t }"
+          @click="tab = t"
+        >
+          {{ t === 'keycodes' ? 'Keys' : 'Behaviors' }}
+        </button>
+      </div>
 
-    <!-- The keys, grouped, all of them, narrowed by whatever has been typed.
-         There is no state where this panel is empty and waiting: the list is
-         drawn from the moment a category is chosen or a letter is typed. -->
-    <div v-else class="choices">
-      <div v-if="kind?.id !== 'behaviors'" class="variants">
+      <div class="grid">
+        <button
+          v-for="k in tabKinds"
+          :key="k.id"
+          class="big"
+          :disabled="pos === null || reserved"
+          @click="pickKind(k.id)"
+        >
+          {{ k.title }}
+          <small>{{ k.note || `${k.groups.length} groups` }}</small>
+        </button>
+      </div>
+    </template>
+
+    <!-- ================================================================
+         STEP 2a — Normal keycode groups (letters, symbols, modifiers, …)
+         ================================================================ -->
+    <div v-else-if="flow === 'choices'" class="choices">
+      <div class="variants">
         <span class="vlabel">variant</span>
-
         <button
           v-for="w in (['kp', 'kt', 'sk'] as const)"
           :key="w"
@@ -275,18 +419,13 @@ function stage(c: { binding: Binding }): void {
         >
           &amp;{{ w }}
         </button>
-
         <span v-if="wrapToken && !usable(wrapToken.id)" class="note bad">
           the keyboard did not report &amp;{{ wrap }} as available
         </span>
       </div>
 
       <section v-for="s in sections" :key="s.title" class="group">
-        <h3>
-          {{ s.title }}
-          <small>{{ s.items.length }}</small>
-        </h3>
-
+        <h3>{{ s.title }} <small>{{ s.items.length }}</small></h3>
         <div class="keys">
           <button
             v-for="c in s.items"
@@ -294,7 +433,7 @@ function stage(c: { binding: Binding }): void {
             class="key"
             :disabled="!canWrite"
             :title="`stage ${c.main} at position ${pos}`"
-            @click="stage(c)"
+            @click="stage(c.binding)"
           >
             {{ c.main }}
             <small>{{ c.sub }}</small>
@@ -303,6 +442,216 @@ function stage(c: { binding: Binding }): void {
       </section>
 
       <p v-if="!sections.length" class="note">nothing in the catalog matches “{{ query }}”</p>
+    </div>
+
+    <!-- ================================================================
+         STEP 2b — Token selection (layers, dual-function, system)
+         ================================================================ -->
+    <div v-else-if="flow === 'token'" class="choices">
+      <!-- layers -->
+      <template v-if="kind?.id === 'layers'">
+        <section class="group">
+          <h3>layer operation <small>{{ layerOps.length }}</small></h3>
+          <div class="keys">
+            <button
+              v-for="op in layerOps"
+              :key="op.label"
+              class="key"
+              :disabled="!canWrite"
+              @click="startToken(op.label)"
+            >
+              &amp;{{ op.label }}
+              <small>{{ op.name }}</small>
+            </button>
+          </div>
+        </section>
+      </template>
+
+      <!-- dual-function -->
+      <template v-if="kind?.id === 'dual'">
+        <section class="group">
+          <h3>dual-function <small>{{ dualOps.length }}</small></h3>
+          <div class="keys">
+            <button
+              v-for="op in dualOps"
+              :key="op.label"
+              class="key"
+              :disabled="!canWrite"
+              @click="startToken(op.label)"
+            >
+              &amp;{{ op.label }}
+              <small>{{ op.name }}</small>
+            </button>
+          </div>
+        </section>
+      </template>
+
+      <!-- system -->
+      <template v-if="kind?.id === 'system'">
+        <section class="group">
+          <h3>immediate <small>{{ systemItems.filter((x) => !x.hasParams).length }}</small></h3>
+          <div class="keys">
+            <button
+              v-for="op in systemItems.filter((x) => !x.hasParams)"
+              :key="op.label"
+              class="key"
+              :disabled="!canWrite"
+              @click="stage({ token: op.token, param1: 0, param2: 0 })"
+            >
+              &amp;{{ op.label }}
+              <small>{{ op.name }}</small>
+            </button>
+          </div>
+        </section>
+
+        <section class="group">
+          <h3>with parameters <small>{{ systemItems.filter((x) => x.hasParams).length }}</small></h3>
+          <div class="keys">
+            <button
+              v-for="op in systemItems.filter((x) => x.hasParams)"
+              :key="op.label"
+              class="key"
+              :disabled="!canWrite"
+              @click="startToken(op.label)"
+            >
+              &amp;{{ op.label }}
+              <small>{{ op.name }}</small>
+            </button>
+          </div>
+        </section>
+      </template>
+
+      <!-- mouse -->
+      <template v-if="kind?.id === 'mouse'">
+        <section class="group">
+          <h3>mouse <small>{{ mouseOps.length }}</small></h3>
+          <div class="keys">
+            <button
+              v-for="op in mouseOps"
+              :key="op.label"
+              class="key"
+              :disabled="!canWrite"
+              @click="startToken(op.label)"
+            >
+              &amp;{{ op.label }}
+              <small>{{ op.name }}</small>
+            </button>
+          </div>
+        </section>
+      </template>
+    </div>
+
+    <!-- ================================================================
+         STEP 3 — Parameter fill
+         ================================================================ -->
+    <div v-else-if="flow === 'param'" class="choices">
+      <div class="param-head">
+        <b>&amp;{{ TOKENS.find((t) => t.id === pickedToken)?.label ?? '?' }}</b>
+        <span class="note">{{ currentParamLabel }} (param {{ paramStep + 1 }})</span>
+        <button class="chip small" @click="cancelStep">change token</button>
+      </div>
+
+      <!-- layer param -->
+      <template v-if="currentParamKind === 'layer'">
+        <div class="chips">
+          <button
+            v-for="l in layerSlots"
+            :key="l.id"
+            class="chip layer"
+            :class="{ live: l.live }"
+            :disabled="!canWrite"
+            @click="setParam(l.id)"
+          >
+            {{ l.name }}
+          </button>
+        </div>
+      </template>
+
+      <!-- keycode param -->
+      <template v-else-if="currentParamKind === 'keycode'">
+        <input v-model="keySearch" class="search" placeholder="search keycodes…" spellcheck="false" />
+        <div class="keys">
+          <button
+            v-for="k in keycodeHits"
+            :key="k.name"
+            class="key"
+            @click="setParam(k.code)"
+          >
+            {{ k.label }}
+            <small>{{ k.name }}</small>
+          </button>
+        </div>
+        <p v-if="keySearch && !keycodeHits.length" class="note">no matches</p>
+      </template>
+
+      <!-- mouse vector param -->
+      <template v-else-if="currentParamKind === 'mouse-vector'">
+        <div class="keys">
+          <button
+            v-for="n in (TOKENS.find((t) => t.id === pickedToken)?.label === 'msc' ? SCRL_ITEMS : MOVE_ITEMS)"
+            :key="n"
+            class="key"
+            @click="setParam(KEYCODES[n] ?? 0)"
+          >
+            {{ n.replace(/^MOVE_/, '').replace(/^SCRL_/, '') }}
+            <small>{{ n }}</small>
+          </button>
+        </div>
+      </template>
+
+      <!-- button mask param -->
+      <template v-else-if="currentParamKind === 'button-mask'">
+        <div class="chips">
+          <button
+            v-for="(n, i) in BUTTON_ITEMS"
+            :key="n"
+            class="chip"
+            :class="{ on: ((paramValues[0] ?? 0) & (1 << i)) !== 0 }"
+            @click="setParam((paramValues[0] ?? 0) ^ (1 << i))"
+          >
+            {{ n }}
+          </button>
+        </div>
+      </template>
+
+      <!-- bt command param -->
+      <template v-else-if="currentParamKind === 'bt-cmd'">
+        <div class="keys">
+          <button
+            v-for="b in BT_ITEMS"
+            :key="b.v"
+            class="key"
+            @click="setParam(b.v)"
+          >
+            {{ b.label }}
+            <small>BT {{ b.v }}</small>
+          </button>
+        </div>
+      </template>
+
+      <!-- output param -->
+      <template v-else-if="currentParamKind === 'output'">
+        <div class="keys">
+          <button
+            v-for="o in OUT_ITEMS"
+            :key="o.v"
+            class="key"
+            @click="setParam(o.v)"
+          >
+            {{ o.label }}
+          </button>
+        </div>
+      </template>
+
+      <!-- plain number param -->
+      <template v-else>
+        <input
+          class="num"
+          type="number"
+          :value="paramValues[paramStep] ?? 0"
+          @change="setParam(Number(($event.target as HTMLInputElement).value))"
+        />
+      </template>
     </div>
   </section>
 </template>
@@ -350,8 +699,6 @@ h2 {
 .crumb::after { content: ' ›'; color: var(--line); }
 .crumb:last-child::after { content: none; }
 .crumb:hover { color: var(--ink); }
-/* The current category is part of the path, not a heading: it reads like the
- * "layer" label above the board — same size, same colour, no weight change. */
 .crumb.here { color: var(--mid); font-weight: 400; }
 
 .target {
@@ -360,8 +707,6 @@ h2 {
   color: var(--mid);
 }
 
-/* The search is always here: it is the shortcut, and it never has to be opened
- * before the list is worth looking at. */
 .find {
   flex: 0 1 170px;
   min-width: 110px;
@@ -385,6 +730,13 @@ h2 {
 .chip:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
 .chip.on { background: var(--mod); color: var(--ink); border-color: var(--ink); font-weight: 700; }
 .chip:disabled { opacity: 0.62; cursor: not-allowed; }
+.chip.small { font-size: 11px; }
+.chip.layer {
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 46px;
+}
+.chip.layer.live { background: var(--soft); }
 
 .grid {
   display: grid;
@@ -417,9 +769,6 @@ h2 {
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  /* The list is long on purpose — the whole group is there, not a page of it —
-   * so it takes whatever height is left under the board and scrolls inside
-   * itself rather than pushing the board off screen. */
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
@@ -457,8 +806,6 @@ h2 {
   color: var(--mid);
 }
 
-/* Wide on purpose: 26 letters on one line is a keyboard you can read, and a
- * chip you can hit with a mouse. */
 .keys {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
@@ -490,6 +837,12 @@ h2 {
 .key:hover:not(:disabled) small { color: var(--on-ink); opacity: 0.75; }
 .key:disabled { opacity: 0.62; cursor: not-allowed; }
 
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .search {
   width: 100%;
   border: 1px solid var(--line);
@@ -501,4 +854,49 @@ h2 {
 }
 
 .search:focus { border-color: var(--ink); }
+
+.param-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.num {
+  width: 120px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-inset);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.tab {
+  padding: 6px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--mid);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tab:hover { color: var(--ink); }
+
+.tab.on {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+  font-weight: 700;
+}
 </style>

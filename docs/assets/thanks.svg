@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" width="1280" height="720" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+  <!--
+    Фінальний слайд: дві половинки клавіатури й порожнина між ними.
+    Порожнина — це не порожнє місце, а радіоканал: саме там лежить текст.
+
+    Layout: 1280x720 = розмір слайда 16:9, тому `![bg cover]` масштабує 1:1.
+    Половинки defined once in <defs> as `#half` and mirrored with
+    `scale(-1,1)`, so the two halves are provably identical (like the firmware:
+    the same module, central and peripheral).
+    Left group: translate(100,205) scale(0.68) rotate(-6) -> spans x 100..407, y 176..528.
+    Right group is the mirror across x=640 -> x 873..1180.
+    Free band for the words: x 407..873. The title is ~520px wide, the subtitle
+    and the chips are narrower, so the text lives inside that band.
+
+    No <text> inside #half: the mirror would flip the glyphs. Every label is
+    placed in absolute coordinates instead, so docs/svg-check.py can measure it.
+  -->
+
+  <defs>
+    <linearGradient id="cap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#212c36"/>
+      <stop offset="1" stop-color="#11161b"/>
+    </linearGradient>
+    <linearGradient id="capLit" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#204832"/>
+      <stop offset="1" stop-color="#0f2118"/>
+    </linearGradient>
+    <radialGradient id="shade" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0b0e11" stop-opacity="0.8"/>
+      <stop offset="0.6" stop-color="#0b0e11" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#0b0e11" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="vignette" cx="0.5" cy="0.5" r="0.72">
+      <stop offset="0.55" stop-color="#05070a" stop-opacity="0"/>
+      <stop offset="1" stop-color="#05070a" stop-opacity="0.85"/>
+    </radialGradient>
+    <pattern id="dots" width="36" height="36" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="1" fill="#2b343c" opacity="0.5"/>
+    </pattern>
+    <filter id="glow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- One half, local coordinates. Plate 404x478, 5 columns x 4 rows + 3 thumb keys.
+         Column stagger [24,12,0,12,24] = the ergo "wave", so the halves read as
+         an ergonomic split and not as a flat 60% board. -->
+    <g id="half">
+      <rect x="0" y="0" width="404" height="478" rx="24" fill="#0e1317" stroke="#2b343c" stroke-width="1.5"/>
+      <rect x="10" y="10" width="384" height="458" rx="18" fill="none" stroke="#223039" stroke-width="1" stroke-dasharray="6 7"/>
+
+      <!-- nice!view screen + status LED + MCU footprint: the three things the deck talks about -->
+      <rect x="24" y="14" width="110" height="48" rx="8" fill="#06090c" stroke="#6ee7a0" stroke-opacity="0.45" stroke-width="1.2"/>
+      <g fill="#6ee7a0" opacity="0.85">
+        <rect x="34" y="26" width="46" height="5" rx="2"/>
+        <rect x="34" y="37" width="70" height="5" rx="2"/>
+        <rect x="34" y="48" width="30" height="5" rx="2"/>
+      </g>
+      <rect x="156" y="14" width="116" height="48" rx="6" fill="#141a20" stroke="#394853" stroke-width="1.2"/>
+      <g fill="#394853">
+        <rect x="150" y="22" width="6" height="4" rx="2"/><rect x="150" y="32" width="6" height="4" rx="2"/>
+        <rect x="150" y="42" width="6" height="4" rx="2"/><rect x="150" y="52" width="6" height="4" rx="2"/>
+        <rect x="272" y="22" width="6" height="4" rx="2"/><rect x="272" y="32" width="6" height="4" rx="2"/>
+        <rect x="272" y="42" width="6" height="4" rx="2"/><rect x="272" y="52" width="6" height="4" rx="2"/>
+      </g>
+      <circle cx="372" cy="38" r="6" fill="#6ee7a0" filter="url(#glow)"/>
+
+      <!-- 20 keys -->
+      <g fill="url(#cap)" stroke="#2b343c" stroke-width="1.2">
+        <rect x="24" y="100" width="64" height="64" rx="9"/><rect x="24" y="174" width="64" height="64" rx="9"/><rect x="24" y="248" width="64" height="64" rx="9"/><rect x="24" y="322" width="64" height="64" rx="9"/>
+        <rect x="98" y="88" width="64" height="64" rx="9"/><rect x="98" y="162" width="64" height="64" rx="9"/><rect x="98" y="236" width="64" height="64" rx="9"/><rect x="98" y="310" width="64" height="64" rx="9"/>
+        <rect x="172" y="76" width="64" height="64" rx="9"/><rect x="172" y="150" width="64" height="64" rx="9"/><rect x="172" y="224" width="64" height="64" rx="9"/><rect x="172" y="298" width="64" height="64" rx="9"/>
+        <rect x="246" y="88" width="64" height="64" rx="9"/><rect x="246" y="162" width="64" height="64" rx="9"/><rect x="246" y="236" width="64" height="64" rx="9"/><rect x="246" y="310" width="64" height="64" rx="9"/>
+        <rect x="320" y="100" width="64" height="64" rx="9"/><rect x="320" y="174" width="64" height="64" rx="9"/><rect x="320" y="248" width="64" height="64" rx="9"/><rect x="320" y="322" width="64" height="64" rx="9"/>
+      </g>
+      <g fill="#1b242d">
+        <rect x="31" y="107" width="50" height="50" rx="7"/><rect x="31" y="181" width="50" height="50" rx="7"/><rect x="31" y="255" width="50" height="50" rx="7"/><rect x="31" y="329" width="50" height="50" rx="7"/>
+        <rect x="105" y="95" width="50" height="50" rx="7"/><rect x="105" y="169" width="50" height="50" rx="7"/><rect x="105" y="243" width="50" height="50" rx="7"/><rect x="105" y="317" width="50" height="50" rx="7"/>
+        <rect x="179" y="83" width="50" height="50" rx="7"/><rect x="179" y="157" width="50" height="50" rx="7"/><rect x="179" y="231" width="50" height="50" rx="7"/><rect x="179" y="305" width="50" height="50" rx="7"/>
+        <rect x="253" y="95" width="50" height="50" rx="7"/><rect x="253" y="169" width="50" height="50" rx="7"/><rect x="253" y="243" width="50" height="50" rx="7"/><rect x="253" y="317" width="50" height="50" rx="7"/>
+        <rect x="327" y="107" width="50" height="50" rx="7"/><rect x="327" y="181" width="50" height="50" rx="7"/><rect x="327" y="255" width="50" height="50" rx="7"/><rect x="327" y="329" width="50" height="50" rx="7"/>
+      </g>
+
+      <!-- thumb cluster -->
+      <g fill="url(#cap)" stroke="#2b343c" stroke-width="1.2">
+        <rect x="172" y="404" width="64" height="54" rx="9"/><rect x="246" y="404" width="64" height="54" rx="9"/><rect x="320" y="404" width="64" height="54" rx="9"/>
+      </g>
+      <g fill="#1b242d">
+        <rect x="179" y="411" width="50" height="40" rx="7"/><rect x="253" y="411" width="50" height="40" rx="7"/><rect x="327" y="411" width="50" height="40" rx="7"/>
+      </g>
+
+      <!-- a few lit keys: the layer the deck demos (home) + one amber = a layer switch -->
+      <g filter="url(#glow)" fill="url(#capLit)" stroke="#6ee7a0" stroke-opacity="0.75" stroke-width="1.4">
+        <rect x="172" y="76" width="64" height="64" rx="9"/><rect x="98" y="236" width="64" height="64" rx="9"/><rect x="320" y="174" width="64" height="64" rx="9"/>
+      </g>
+      <g fill="#2a5b40">
+        <rect x="179" y="83" width="50" height="50" rx="7"/><rect x="105" y="243" width="50" height="50" rx="7"/><rect x="327" y="181" width="50" height="50" rx="7"/>
+      </g>
+      <rect x="24" y="322" width="64" height="64" rx="9" fill="#241c11" stroke="#f0b05e" stroke-opacity="0.7" stroke-width="1.4" filter="url(#glow)"/>
+      <rect x="31" y="329" width="50" height="50" rx="7" fill="#3a2c17"/>
+    </g>
+  </defs>
+
+  <!-- board ambience -->
+  <rect x="0" y="0" width="1280" height="720" fill="#0b0e11"/>
+  <rect x="0" y="0" width="1280" height="720" fill="url(#dots)"/>
+  <g fill="none" stroke="#1d2831" stroke-width="1.5">
+    <path d="M 64 648 H 196 L 236 608 H 340"/>
+    <path d="M 1216 648 H 1084 L 1044 608 H 940"/>
+    <path d="M 64 72 H 150 L 190 112"/>
+    <path d="M 1216 72 H 1130 L 1090 112"/>
+  </g>
+  <g fill="#2b343c">
+    <circle cx="64" cy="648" r="3.5"/><circle cx="340" cy="608" r="3.5"/>
+    <circle cx="1216" cy="648" r="3.5"/><circle cx="940" cy="608" r="3.5"/>
+  </g>
+
+  <!-- the halves: identical module, mirrored -->
+  <ellipse cx="250" cy="540" rx="182" ry="26" fill="#05070a" opacity="0.6"/>
+  <ellipse cx="1030" cy="540" rx="182" ry="26" fill="#05070a" opacity="0.6"/>
+  <use href="#half" transform="translate(100,205) scale(0.68) rotate(-6)"/>
+  <use href="#half" transform="translate(1180,205) scale(-0.68,0.68) rotate(-6)"/>
+
+  <!-- the gap: radio link between central and peripheral -->
+  <g fill="none" stroke="#6ee7a0" stroke-linecap="round">
+    <path d="M 390 185 Q 640 55 890 185" stroke-opacity="0.55" stroke-width="1.6" stroke-dasharray="8 7"/>
+    <path d="M 415 505 Q 640 600 865 505" stroke-opacity="0.22" stroke-width="1.4" stroke-dasharray="8 7"/>
+  </g>
+  <g fill="#6ee7a0" filter="url(#glow)">
+    <circle cx="465" cy="152" r="4"/><circle cx="815" cy="152" r="4"/>
+  </g>
+  <rect x="560" y="102" width="160" height="36" rx="18" fill="#10151a" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.2"/>
+  <text x="640" y="125" fill="#6ee7a0" font-size="12" letter-spacing="1" text-anchor="middle">TLV · BLE</text>
+
+  <!-- scrim for the words: the middle is the only place the art goes quiet -->
+  <ellipse cx="640" cy="350" rx="480" ry="205" fill="url(#shade)"/>
+
+  <text x="253" y="578" fill="#4c5a66" font-size="11" letter-spacing="1" text-anchor="middle">ЛІВА ПОЛОВИНКА · CENTRAL</text>
+  <text x="1027" y="578" fill="#4c5a66" font-size="11" letter-spacing="1" text-anchor="middle">ПРАВА ПОЛОВИНКА · PERIPHERAL</text>
+  <text x="640" y="655" fill="#4c5a66" font-size="11" letter-spacing="1" text-anchor="middle">72 позиції · 6×12 матриця · ZMK поверх Zephyr</text>
+  <text x="64" y="46" fill="#3d4a55" font-size="11" letter-spacing="2">KEEB · SPLIT · 2 × nRF52840</text>
+  <text x="1216" y="46" fill="#3d4a55" font-size="11" letter-spacing="2" text-anchor="end">КІНЕЦЬ</text>
+
+  <rect x="0" y="0" width="1280" height="720" fill="url(#vignette)"/>
+</svg>

@@ -7,7 +7,8 @@
     "deck": "node docs/build.mjs html pdf",
     "deck:html": "node docs/build.mjs",
     "deck:pdf": "node docs/build.mjs pdf",
-    "preview": "node docs/build.mjs preview"
+    "preview": "node docs/build.mjs preview",
+    "serve": "python3 -m http.server 8080 --directory docs/dist"
   },
   "devDependencies": {
     "@marp-team/marp-cli": "^4.5.1"

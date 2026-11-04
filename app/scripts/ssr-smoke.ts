@@ -139,13 +139,9 @@ const checks: Array<[string, boolean]> = [
   ['case outline drawn', html.includes('class="case"') && html.includes('data-layout="cosmotyl"')],
   ['layout presets selectable', html.includes('value="cosmotyl"') && html.includes('value="corne"')],
   ['log panel reachable from the footer', html.includes('term-btn')],
-  /* The sidebar is where a key gets rebound, so it has to carry the binding
-   * editor and the layer list it binds against. */
-  ['sidebar carries the binding editor', aside.includes('class="bind') && aside.includes('&amp;mo')],
-  /* One binding chip per layer slot the keyboard has, in the behaviour the
-   * surface offers. Measured on the sidebar: the grid spells out layer tokens
-   * too, and a whole-page match would pass even with nothing in the aside. */
-  ['sidebar lists every layer slot as a binding', [0, 1, 2, 3, 4, 5].every((id) => aside.includes(`&amp;mo ${id}`))],
+  /* The sidebar carries quick binding actions (trans, none, unstage).  The
+   * actual layer ops moved to the palette under the board. */
+  ['sidebar carries the binding editor', aside.includes('class="bind') && aside.includes('&amp;trans') && aside.includes('&amp;none')],
   /* What a person rebinds every session is on the surface; what they rebind once
    * in a build is behind a group that starts closed. The closed groups are not in
    * the markup at all, so this is a real assertion about the default state and
@@ -158,25 +154,16 @@ const checks: Array<[string, boolean]> = [
    * the state and the session are: no button opens it, and nothing is fixed over
    * the page. */
   [
-    'the advanced picker is a group in the sidebar',
-    aside.includes('advanced binding') && !html.includes('advanced…') && !html.includes('class="overlay"'),
+    'the advanced picker lives in the palette, not the sidebar',
+    palette.includes('layers') && palette.includes('dual-function') && !aside.includes('advanced binding') && !html.includes('class="overlay"'),
   ],
   [
-    'occasional bindings start closed',
-    ['&amp;kt', '&amp;sk', '&amp;to', '&amp;tog', '&amp;sl'].every((s) => !aside.includes(s)),
+    'occasional bindings are in the palette, not the sidebar',
+    ['&amp;mo', '&amp;to', '&amp;tog', '&amp;sl', '&amp;lt'].every((s) => !aside.includes(s)),
   ],
-  /* Only the momentary row is drawn: one staged-binding chip per layer slot, and
-   * none for the three behaviors behind the group header. */
-  ['only momentary layer chips are on the surface', (aside.match(/stage &amp;mo /g) ?? []).length === keymap.slots.length],
-  /* A group is a button that says it is closed. Counting the buttons and the
-   * marks separately catches a group that claims to be closed but is drawn open,
-   * and a mark with no button behind it. */
-  [
-    'closed groups say they can be opened',
-    (aside.match(/aria-expanded="false"/g) ?? []).length >= 3
-      && (aside.match(/\[\+\]/g) ?? []).length === (aside.match(/aria-expanded="false"/g) ?? []).length
-      && !aside.includes('aria-expanded="true"'),
-  ],
+  /* Layer ops are in the palette with a stepped flow: choose category, then op,
+   * then layer (and keycode for lt).  No hidden groups in the sidebar. */
+  ['palette has keys and behaviors tabs', palette.includes('Keys') && palette.includes('Behaviors')],
   /* The board is the page: the things you do to it are views of it, not rooms.
    * A tester is a second view of the same board; the panels and the layer list
    * are edited where they are drawn. */

@@ -11,7 +11,6 @@
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
-import KeyPicker from './components/KeyPicker.vue'
 import KeyPalette from './components/KeyPalette.vue'
 import TesterPanel from './components/TesterPanel.vue'
 import KeyReadout from './components/KeyReadout.vue'
@@ -476,8 +475,6 @@ function editPicked(): void {
   say(`position ${pickedPos.value} selected in ${keymap.editingName} - the binding editor is in the aside`)
 }
 
-const liveLayers = computed(() => keymap.slots.filter((s) => s.live).map((s) => s.name))
-
 /* Key properties panel: the selected position, read back through the same
  * resolver that draws the cap, so the aside and the grid can never disagree. */
 const pickedBinding = computed(() =>
@@ -680,18 +677,11 @@ applyTheme()
                  bluetooth, output - are edited in this group, the same kind of
                  group the state and the session are. It used to be a popup behind
                  a button: the popup hid the grid the write was for. -->
-            <Disclosure label="advanced binding" hint="tokens with arguments">
-              <KeyPicker
-                v-if="pickedPos !== null"
-                :pos="pickedPos"
-                :reserved="keymap.isReserved(pickedPos)"
-                @set="onSet"
-              />
-              <p v-else class="why">select a key on the board first</p>
-            </Disclosure>
+            <!-- All bindings are set from the KeyPalette under the board.
+                 The sidebar only shows quick state actions. -->
             </template>
 
-            <Disclosure label="state" hint="why this cap looks like this">
+            <Disclosure label="state" hint="why this cap looks like this" :open="true">
               <div class="mods">
                 <label><input type="checkbox" disabled :checked="pickedPos !== null && keymap.ownCell(keymap.editingSlot, pickedPos) !== null" title="this layer defines the cell itself" />own</label>
                 <label><input type="checkbox" disabled :checked="pickedDisplay.hold !== null" title="hold/tap binding" />hold/tap</label>
@@ -702,16 +692,6 @@ applyTheme()
               </div>
             </Disclosure>
 
-            <Disclosure label="session" hint="autosave · live layers">
-              <label class="l">
-                active layers
-                <input class="field" readonly :value="liveLayers.length ? liveLayers.join(' + ') : 'none'" />
-              </label>
-              <label class="l">
-                autosave
-                <input type="checkbox" :checked="keymap.autosave" :disabled="busy" @change="keymap.setAutosave(($event.target as HTMLInputElement).checked)" />
-              </label>
-            </Disclosure>
             </template>
 
             <template v-else>
@@ -753,7 +733,6 @@ applyTheme()
               <WidgetInspector />
             </template>
 
-            <a class="more" href="#" @click.prevent="help = true">more options</a>
           </div>
         </div>
       </template>

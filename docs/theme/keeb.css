@@ -135,6 +135,131 @@ section.title.flip h1 {
   max-width: 460px;
 }
 
+/* Full-bleed title: `![bg cover](...)` + `class: title hero` puts the photo
+   across the whole slide and centers the text on top of it. Marpit renders the
+   background as a layer *behind* the content section, so the content section
+   must stay transparent and the scrim has to come from a pseudo-element.
+   The scrim is soft and radial: readable text, but the keyboard still shows. */
+section.hero {
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+}
+
+/* Marpit paints an advanced background as three stacked copies of the section
+   (background / content / pseudo). The scrim belongs to the content layer only,
+   otherwise it stacks three times and crushes the photo. The photo is already
+   dark in the middle, so the scrim is a soft ellipse just deep enough for the
+   text, and the text keeps its own shadow. */
+section.hero:not([data-marpit-advanced-background='background']):not([data-marpit-advanced-background='pseudo'])::before {
+  background: radial-gradient(
+    46% 34% at 50% 50%,
+    rgba(11, 14, 17, 0.62) 0%,
+    rgba(11, 14, 17, 0.28) 62%,
+    rgba(11, 14, 17, 0) 100%
+  );
+  content: "";
+  inset: 0;
+  position: absolute;
+  z-index: 0;
+}
+
+section.hero h1,
+section.hero p {
+  max-width: 1000px;
+  position: relative;
+  z-index: 1;
+}
+
+section.hero h1 {
+  font-size: 2.2em;
+  margin: 0 auto 0.3em;
+  text-shadow: 0 2px 26px rgba(0, 0, 0, 0.8);
+}
+
+section.hero h1::before {
+  margin: 0 auto 0.45em;
+}
+
+section.hero p {
+  color: #dfe6ec;
+  font-size: 0.95em;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.85);
+}
+
+/* ---- closing slide (class: closing) ---- */
+/* The last slide: the artwork (docs/assets/thanks.svg) is a full-bleed 1280x720
+   drawing whose middle is deliberately empty, so the words sit in the gap
+   between the two halves. The SVG already paints its own dark radial (`#shade`)
+   under the text, so this class adds no scrim of its own — a second one would
+   flatten the drawing. Text keeps a shadow because it sits on artwork. */
+section.closing {
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+}
+
+/* Gradient-filled title. `background-clip: text` makes the gradient the fill,
+   so the shadow has to be a filter on the element: `text-shadow` paints *behind*
+   transparent glyphs and would show up as a solid blob. */
+section.closing h1 {
+  background: linear-gradient(180deg, #f4f8fb 0%, var(--kb-accent) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  border-bottom: none;
+  color: transparent;
+  filter: drop-shadow(0 3px 18px rgba(110, 231, 160, 0.3));
+  /* 2.35em = 75px -> "Дякую за увагу" is ~520px wide, i.e. inside the empty
+     band between the two halves in thanks.svg (x 407..873). */
+  font-size: 2.35em;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  line-height: 1.1;
+  margin: 0;
+  padding-bottom: 0;
+  -webkit-text-fill-color: transparent;
+}
+
+/* same accent rule as the title slide, centered */
+section.closing h1::before {
+  background: var(--kb-accent);
+  content: "";
+  display: block;
+  height: 5px;
+  margin: 0 auto 0.45em;
+  width: 2.6em;
+}
+
+/* One line, and deliberately short: a second line would reach the keycaps. */
+section.closing p {
+  color: #dfe6ec;
+  font-size: 0.95em;
+  margin: 0.5em auto 0;
+  max-width: 620px;
+  text-shadow: 0 1px 14px rgba(0, 0, 0, 0.85);
+}
+
+/* chips over artwork: keep a fill so they do not read as floating text.
+   Marp wraps the span run in a <p>, so the flex container has one child and
+   the centering comes from the inherited text-align, not from the flex axis. */
+section.closing .chips {
+  margin-top: 1.1em;
+}
+
+section.closing .chips p {
+  margin: 0;
+}
+
+section.closing .chip {
+  background: rgba(20, 26, 32, 0.9);
+}
+
+section.closing .chip a {
+  border-bottom: 1px dotted var(--kb-accent);
+  color: var(--kb-accent);
+  text-decoration: none;
+}
+
 /* ---- layout helpers ---- */
 /* Two side-by-side panels. Marpit does not support `:::container` blocks, and
    markdown inside an HTML block is not parsed, so structural blocks are plain
@@ -169,10 +294,13 @@ section .card.wide {
   grid-column: 1 / -1;
 }
 
-section .card h2 {
+section .card h2,
+section .card h3 {
   color: var(--kb-fg);
-  font-size: 1.02em;
+  font-size: 0.92em;
+  letter-spacing: 0.6px;
   margin: 0 0 0.3em;
+  text-transform: uppercase;
 }
 
 section .card h3 {
@@ -287,4 +415,272 @@ section .note {
 
 section .note strong {
   color: var(--kb-fg);
+}
+
+/* ------------------------------------------------------------------ *
+ * Visual-first layout
+ *
+ * The deck reads as: one big figure (diagram, screenshot or photo) that
+ * carries the argument, plus a sidenote rail that carries the caveats.
+ * A slide opts in with `<!-- _class: visual -->`; the split itself is
+ * `.stage`, the rail is `.sidenotes`.
+ * ------------------------------------------------------------------ */
+
+/* Tighter title and padding: the figure needs the vertical room. */
+section.visual {
+  padding: 44px 56px 50px;
+}
+
+section.visual h1 {
+  font-size: 1.1em;
+  letter-spacing: -0.3px;
+  margin-bottom: 0.3em;
+  padding-bottom: 0.2em;
+}
+
+/* Figure + sidenote rail.
+   Inside a visual slide the content box is 1280 - 2*56 = 1168px wide, so
+   2.35fr/1fr with a 30px gap is ~800px of figure and ~330px of rail: the
+   diagrams in docs/assets are drawn for a 800x500 box. */
+section .stage {
+  align-items: center;
+  display: grid;
+  gap: 12px 30px;
+  grid-template-columns: minmax(0, 2.35fr) minmax(0, 1fr);
+}
+
+/* Rail on the left, figure on the right (use when the rail is the lead-in). */
+section .stage.rail-left {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.35fr);
+}
+
+/* A rail with 4+ notes needs more of the width than a 2-note rail. */
+section .stage.balanced {
+  grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr);
+}
+
+/* Figure alone across the whole slide. */
+section .stage.full {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+section .stage figure {
+  margin: 0;
+}
+
+section .stage figure img {
+  display: block;
+  margin: 0 auto;
+  max-height: 520px;
+  width: 100%;
+}
+
+section .stage figcaption {
+  color: var(--kb-dim);
+  font-size: 0.6em;
+  letter-spacing: 0.3px;
+  margin-top: 0.3em;
+}
+
+/* ---- sidenote rail ---- */
+/* The paragraphs that used to be cards: heading + one line, no box, no card
+   background. Anything longer than a line belongs in the figure instead. */
+section .sidenotes {
+  align-content: center;
+  display: grid;
+  gap: 11px;
+}
+
+/* Under a full-width figure the rail lies down instead of standing aside. */
+section .sidenotes.rail-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+section .sidenotes.rail-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+section .sidenote {
+  border-left: 3px solid var(--kb-line);
+  padding: 1px 0 1px 14px;
+}
+
+section .sidenote h3 {
+  color: var(--kb-accent);
+  font-size: 0.58em;
+  letter-spacing: 1px;
+  margin: 0 0 0.18em;
+  text-transform: uppercase;
+}
+
+section .sidenote p {
+  color: var(--kb-dim);
+  font-size: 0.65em;
+  line-height: 1.35;
+  margin: 0;
+}
+
+section .sidenote strong {
+  color: var(--kb-fg);
+}
+
+section .sidenote.warn {
+  border-left-color: var(--kb-warn);
+}
+
+section .sidenote.warn h3 {
+  color: var(--kb-warn);
+}
+
+/* ---- photo frames ---- */
+/* A fixed-aspect frame with cover: a photo dominates the same area whatever
+   the camera produced, and the mosaic stays a grid instead of a collage.
+   The frame is positioned, the image is absolute inside it: `height: 100%` on
+   a child does not resolve against a height that comes from `aspect-ratio`
+   (Chrome treats it as auto), so the image would fall back to its intrinsic
+   ratio and overflow the frame — cover/contain then crops instead of fitting. */
+section .photo {
+  aspect-ratio: 16 / 10;
+  background: var(--kb-bg-soft);
+  border: 1px solid var(--kb-line);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+section .photo img {
+  height: 100%;
+  left: 0;
+  object-fit: cover;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+/* contain: screenshots and diagrams where cropping loses the point. */
+section .photo.contain img {
+  object-fit: contain;
+}
+
+/* ---- video frames (embedded player) ---- */
+/* Same frame language as .photo, but the media is an iframe, so the fit is
+   done by the frame size, not by object-fit: 16/9 is fixed and the height is
+   the knob. On a 1280x720 slide a `visual` page has ~626px of content box,
+   the title eats ~66px of it, so 500px is the largest 16/9 player that still
+   leaves room for the caption line. */
+section .video {
+  aspect-ratio: 16 / 9;
+  background: var(--kb-bg-soft) center / cover no-repeat;
+  border: 1px solid var(--kb-line);
+  border-radius: 12px;
+  margin: 0 auto;
+  overflow: hidden;
+  position: relative;
+}
+
+/* The iframe is the interactive layer; the poster behind it is what survives
+   PDF export, where the embed cannot play. */
+section .video iframe {
+  border: 0;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+section .video.hero {
+  height: 500px;
+  width: auto;
+}
+
+/* labelled photo (label under the frame, not burned into the image) */
+section .shot {
+  margin: 0;
+}
+
+section .shot figcaption {
+  color: var(--kb-dim);
+  font-size: 0.58em;
+  letter-spacing: 0.4px;
+  margin-top: 0.25em;
+  text-align: center;
+}
+
+/* photo mosaic: 2x2 by default, one line of captions under each frame */
+section .mosaic {
+  display: grid;
+  gap: 12px 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+section .mosaic-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* A text tile inside a photo mosaic: framed like the photos around it, so a
+   grid of five photos plus one note reads as one block instead of a stray note. */
+section .sidenote.tile {
+  background: var(--kb-bg-soft);
+  border: 1px solid var(--kb-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+/* ---- chips: a label instead of a paragraph ---- */
+section .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+section .chip {
+  background: var(--kb-bg-soft);
+  border: 1px solid var(--kb-line);
+  border-radius: 999px;
+  color: var(--kb-dim);
+  font-size: 0.6em;
+  padding: 0.28em 0.85em;
+}
+
+section .chip b {
+  color: var(--kb-accent);
+  font-weight: 600;
+}
+
+section .chip.warn b {
+  color: var(--kb-warn);
+}
+
+/* ---- stat callouts: a number instead of a sentence ---- */
+section .stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 30px;
+}
+
+section .stat {
+  border-top: 3px solid var(--kb-accent);
+  padding-top: 0.2em;
+}
+
+section .stat b {
+  color: var(--kb-fg);
+  display: block;
+  font-size: 1.15em;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+section .stat span {
+  color: var(--kb-dim);
+  font-size: 0.58em;
+}
+
+/* one-line takeaway under a figure, when the figure is the whole slide */
+section .lead {
+  color: var(--kb-fg);
+  font-size: 0.82em;
+  margin: 0.35em 0 0;
 }

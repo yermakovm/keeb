@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+  <!--
+    How the wire contract stays honest: the C headers are the source of truth,
+    the app's TypeScript is generated from them (app/scripts/gen-contract.mjs →
+    app/src/proto/protocol.gen.ts) and the framing itself is compiled for the
+    host too (make tlv-test). A size change breaks both builds instead of
+    silently diverging.
+  -->
+
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6ee7a0"/>
+    </marker>
+    <marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#4c5a66"/>
+    </marker>
+  </defs>
+
+  <!-- row 1: firmware headers -> generator -> app -->
+  <rect x="40" y="46" width="230" height="80" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.55" stroke-width="1.5"/>
+  <text x="56" y="70" fill="#6ee7a0" font-size="11.5" letter-spacing="1">ДЖЕРЕЛО ІСТИНИ</text>
+  <text x="56" y="90" fill="#e8ecf0" font-size="11.5">keeb_tlv_wire.h</text>
+  <text x="56" y="106" fill="#e8ecf0" font-size="11.5">keeb_tlv_records.h</text>
+  <text x="56" y="120" fill="#4c5a66" font-size="10.5">packed · little-endian · assert</text>
+
+  <line x1="270" y1="86" x2="298" y2="86" stroke="#6ee7a0" stroke-width="2" marker-end="url(#a)"/>
+
+  <rect x="300" y="46" width="230" height="80" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="316" y="70" fill="#97a3af" font-size="11.5" letter-spacing="1">ГЕНЕРАТОР</text>
+  <text x="316" y="90" fill="#e8ecf0" font-size="11.5">app/scripts/gen-contract.mjs</text>
+  <text x="316" y="106" fill="#97a3af" font-size="10.5">перевиводить кожен розмір</text>
+  <text x="316" y="120" fill="#97a3af" font-size="10.5">зі списку полів</text>
+
+  <line x1="530" y1="86" x2="558" y2="86" stroke="#6ee7a0" stroke-width="2" marker-end="url(#a)"/>
+
+  <rect x="560" y="46" width="200" height="80" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="576" y="70" fill="#97a3af" font-size="11.5" letter-spacing="1">КОНФІГУРАТОР</text>
+  <text x="576" y="90" fill="#e8ecf0" font-size="11.5">app/src/proto/protocol.gen.ts</text>
+  <text x="576" y="106" fill="#97a3af" font-size="10.5">typи, id, розміри —</text>
+  <text x="576" y="120" fill="#97a3af" font-size="10.5">не рукописні</text>
+
+  <!-- row 2: same C file on the host -> test harness -> proof -->
+  <rect x="40" y="196" width="230" height="80" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="56" y="220" fill="#97a3af" font-size="11.5" letter-spacing="1">ТОЙ САМИЙ КОД</text>
+  <text x="56" y="240" fill="#e8ecf0" font-size="11.5">keeb_tlv.c</text>
+  <text x="56" y="256" fill="#97a3af" font-size="10.5">компілюється без Zephyr,</text>
+  <text x="56" y="270" fill="#97a3af" font-size="10.5">без клавіатури</text>
+
+  <line x1="270" y1="236" x2="298" y2="236" stroke="#6ee7a0" stroke-width="2" marker-end="url(#a)"/>
+
+  <rect x="300" y="196" width="230" height="80" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="316" y="220" fill="#97a3af" font-size="11.5" letter-spacing="1">HOST-ТЕСТ</text>
+  <text x="316" y="240" fill="#e8ecf0" font-size="11.5">make tlv-test</text>
+  <text x="316" y="256" fill="#97a3af" font-size="10.5">framing · CRC-32 · фрагменти ·</text>
+  <text x="316" y="270" fill="#97a3af" font-size="10.5">ACK · реassembly</text>
+
+  <line x1="530" y1="236" x2="558" y2="236" stroke="#6ee7a0" stroke-width="2" marker-end="url(#a)"/>
+
+  <rect x="560" y="196" width="200" height="80" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.55" stroke-width="1.5"/>
+  <text x="576" y="220" fill="#6ee7a0" font-size="11.5" letter-spacing="1">ДОКАЗ</text>
+  <text x="576" y="240" fill="#e8ecf0" font-size="11.5">ДРІФТ У РОЗМІРі</text>
+  <text x="576" y="256" fill="#97a3af" font-size="10.5">= не «можливо, щось</text>
+  <text x="576" y="270" fill="#97a3af" font-size="10.5">зламалось», а падіння</text>
+
+  <!-- vertical link between the two rows -->
+  <line x1="155" y1="126" x2="155" y2="194" stroke="#4c5a66" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#d)"/>
+  <text x="168" y="166" fill="#4c5a66" font-size="10.5">ті самі заголовки</text>
+
+  <!-- takeaway -->
+  <rect x="40" y="300" width="720" height="52" rx="10" fill="#10151a" stroke="#394853" stroke-width="1.5"/>
+  <text x="56" y="322" fill="#e8ecf0" font-size="12">UI, прошивка і host-тест бачать одні й ті самі числа — контракт не «домовленість», а згенерований файл</text>
+  <text x="56" y="340" fill="#4c5a66" font-size="11">і app не збирається, якщо згенеровані розміри не збігаються з C-assert</text>
+</svg>

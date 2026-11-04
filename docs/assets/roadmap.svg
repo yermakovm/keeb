@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 420" width="800" height="420" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+  <!--
+    Project status as stages, not as paragraphs. Colours: green = already works
+    (hand-wired build, keeb-module, app/), amber = in progress (PCB revision),
+    grey = later. Evidence is named on each card so the claim is checkable.
+  -->
+
+  <text x="36" y="30" fill="#6ee7a0" font-size="12" letter-spacing="1">статус: що вже працює, а що ні</text>
+  <g font-size="10.5">
+    <circle cx="600" cy="26" r="5" fill="#6ee7a0"/><text x="612" y="30" fill="#97a3af">ГОТОВО</text>
+    <circle cx="672" cy="26" r="5" fill="#f0b05e"/><text x="684" y="30" fill="#97a3af">В РОБОТІ</text>
+    <circle cx="744" cy="26" r="5" fill="#4c5a66"/><text x="790" y="30" fill="#97a3af" text-anchor="end">ДАЛІ</text>
+  </g>
+
+  <!-- 0 -->
+  <rect x="36" y="52" width="180" height="196" rx="12" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.5"/>
+  <text x="56" y="78" fill="#4c5a66" font-size="11">0</text>
+  <text x="56" y="100" fill="#e8ecf0" font-size="13">ПРОТОТИП</text>
+  <circle cx="196" cy="72" r="5" fill="#6ee7a0"/>
+  <g font-size="10.5" fill="#97a3af">
+    <text x="56" y="126">hand-wired збірка</text>
+    <text x="56" y="144">2 половинки · 2 екрани</text>
+    <text x="56" y="162">LiPo · RGB · п'єзо</text>
+  </g>
+  <text x="56" y="196" fill="#4c5a66" font-size="10.5">компоненти доступні</text>
+  <text x="56" y="212" fill="#4c5a66" font-size="10.5">на українському ринку</text>
+
+  <!-- 1 -->
+  <rect x="228" y="52" width="180" height="196" rx="12" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.5"/>
+  <text x="248" y="78" fill="#4c5a66" font-size="11">1</text>
+  <text x="248" y="100" fill="#e8ecf0" font-size="13">TLV-КАНАЛ</text>
+  <circle cx="388" cy="72" r="5" fill="#6ee7a0"/>
+  <g font-size="10.5" fill="#97a3af">
+    <text x="248" y="126">framing 16 B + CRC-32</text>
+    <text x="248" y="144">SYS · KEYMAP · DISPLAY</text>
+    <text x="248" y="162">ACK, notify, tester</text>
+  </g>
+  <text x="248" y="196" fill="#4c5a66" font-size="10.5">той самий keeb_tlv.c</text>
+  <text x="248" y="212" fill="#4c5a66" font-size="10.5">на хості: make tlv-test</text>
+
+  <!-- 2 -->
+  <rect x="420" y="52" width="180" height="196" rx="12" fill="#12251c" stroke="#6ee7a0" stroke-opacity="0.5" stroke-width="1.5"/>
+  <text x="440" y="78" fill="#4c5a66" font-size="11">2</text>
+  <text x="440" y="100" fill="#e8ecf0" font-size="13">КОНФІГУРАТОР</text>
+  <circle cx="580" cy="72" r="5" fill="#6ee7a0"/>
+  <g font-size="10.5" fill="#97a3af">
+    <text x="440" y="126">розкладка · панелі</text>
+    <text x="440" y="144">тестер switches</text>
+    <text x="440" y="162">Web Bluetooth + mock</text>
+  </g>
+  <text x="440" y="196" fill="#4c5a66" font-size="10.5">контракт генерується</text>
+  <text x="440" y="212" fill="#4c5a66" font-size="10.5">з C-заголовків прошивки</text>
+
+  <!-- 3 -->
+  <rect x="612" y="52" width="180" height="196" rx="12" fill="#1a1710" stroke="#f0b05e" stroke-opacity="0.55" stroke-width="1.5"/>
+  <text x="632" y="78" fill="#4c5a66" font-size="11">3</text>
+  <text x="632" y="100" fill="#e8ecf0" font-size="13">ПЛАТИ Й КОРПУС</text>
+  <circle cx="772" cy="72" r="5" fill="#f0b05e"/>
+  <g font-size="10.5" fill="#97a3af">
+    <text x="632" y="126">KiCAD: 3 частини + FPC</text>
+    <text x="632" y="144">гнучкі / криволінійні</text>
+    <text x="632" y="162">корпус і кріплення</text>
+  </g>
+  <text x="632" y="196" fill="#4c5a66" font-size="10.5">геометрія ще не</text>
+  <text x="632" y="212" fill="#4c5a66" font-size="10.5">обрана — це і є робота</text>
+
+  <!-- arrows -->
+  <g fill="#4c5a66">
+    <path d="M218 150 l10 -6 v12 z"/>
+    <path d="M410 150 l10 -6 v12 z"/>
+    <path d="M602 150 l10 -6 v12 z"/>
+  </g>
+
+  <!-- 4 · the open licensing question -->
+  <rect x="36" y="268" width="756" height="72" rx="12" fill="#10151a" stroke="#394853" stroke-width="1.5" stroke-dasharray="7 6"/>
+  <text x="56" y="292" fill="#97a3af" font-size="11" letter-spacing="1">4 · далі — серія: попередньо зібрані плати та аксесуари</text>
+  <text x="56" y="312" fill="#4c5a66" font-size="11">корпус · екрани · світчі · кейкапи · батареї — кастомізація у розкладці й налаштуваннях, не в пайці</text>
+  <text x="56" y="330" fill="#4c5a66" font-size="11">доступність для непідготовленого користувача — окремий трек, не побічний ефект заліза</text>
+
+  <text x="36" y="374" fill="#f0b05e" font-size="11.5">відкрита прошивка (спільнота, довіра, готова база) ⇄ закрита власна реалізація (контроль, повторюваність, захист продукту)</text>
+  <text x="36" y="394" fill="#4c5a66" font-size="11">рішення не ухвалено: від нього залежать ціна, підтримка й темп розробки</text>
+</svg>
