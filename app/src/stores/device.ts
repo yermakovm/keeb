@@ -47,14 +47,27 @@ import {
   KEEB_T_TOKEN_PARAMS,
   KEEB_T_DISPLAY,
   KEEB_T_DISPLAY_BLANK,
+  KEEB_T_PEER_DISPLAY,
+  KEEB_T_PEER_DISPLAY_BLANK,
+  KEEB_T_PEER_DISPLAY_DISCARD,
+  KEEB_T_PEER_DISPLAY_GET,
+  KEEB_T_PEER_DISPLAY_INFO,
+  KEEB_T_PEER_DISPLAY_RESET,
+  KEEB_T_PEER_DISPLAY_SAVE,
+  KEEB_T_PEER_TEXT_SET,
   KEEB_T_DISPLAY_DISCARD,
   KEEB_T_DISPLAY_GET,
   KEEB_T_DISPLAY_INFO,
   KEEB_T_DISPLAY_RESET,
   KEEB_T_DISPLAY_SAVE,
-  KEEB_T_PRESET_NAME,
-  KEEB_T_PRESET_SET,
+  KEEB_T_SETTINGS,
+  KEEB_T_SETTINGS_DISCARD,
+  KEEB_T_SETTINGS_GET,
+  KEEB_T_SETTINGS_SAVE,
   KEEB_T_TEXT_SET,
+  KEEB_T_TUNE,
+  KEEB_T_TUNE_GET,
+  KEEB_T_SOUND_MAP,
   KEEB_T_VALUE_SET,
   KEEB_T_TEST_SET,
   KEEB_T_TOKENS,
@@ -82,15 +95,21 @@ import {
   readLayers as decodeLayers,
   readNotify,
   readParamValue,
-  readPresetName,
+  readSettings as decodeSettings,
+  readSoundMap,
   readTextSlot,
   readTokenRec,
   readTokensHeader,
+  readTune,
   readValueSlot,
   tokenTableHash,
   writeDisplayTable,
   writeLayerName,
+  writeSettingsSet,
+  writeSoundMapSet,
   writeTextSlot,
+  writeTunePlay,
+  writeTuneSet,
   writeValueSlot,
   writeWidgetSet,
 } from '../proto/tlv.ts'
@@ -104,8 +123,10 @@ import type {
   InfoPayload,
   LayersPayload,
   ParamValue,
-  PresetName,
+  SettingsPayload,
+  SoundPayload,
   TokenRecord,
+  TuneStep,
   Widget,
 } from '../proto/types.ts'
 import { BleTransport, forgetGrants } from '../transport/ble.ts'
@@ -116,6 +137,9 @@ import { MockKeyboard } from '../transport/mockKeyboard.ts'
 import type { KeebTransport, TransportState } from '../transport/types.ts'
 
 export type TransportKind = 'mock' | 'ble'
+
+/** 0 = the panel of the half holding this link; 1 = the other half's. */
+export type PanelTarget = 0 | 1
 
 export interface DeviceEvent {
   event: number
@@ -868,43 +892,80 @@ export const useDeviceStore = defineStore('device', () => {
    * readout. The limits come from DISPLAY_INFO rather than from a table the UI
    * was generated with, because the panel is not in devicetree. */
 
-  async function readDisplayInfo(): Promise<{ info: DisplayInfoPayload; presets: PresetName[] }> {
+  /**
+   * Which half a panel request is about. 0 is the half holding this link; 1 is
+   * the other half, which a split peripheral cannot answer for itself - the
+   * central keeps that table, answers the PEER records from it, and relays the
+   * result over the split link. The payload layouts are identical, which is
+   * why only the record ids differ.
+   */
+  const PANEL_RECORDS = [
+    {
+      info: KEEB_T_DISPLAY_INFO,
+      get: KEEB_T_DISPLAY_GET,
+      table: KEEB_T_DISPLAY,
+      text: KEEB_T_TEXT_SET,
+      save: KEEB_T_DISPLAY_SAVE,
+      discard: KEEB_T_DISPLAY_DISCARD,
+      reset: KEEB_T_DISPLAY_RESET,
+      blank: KEEB_T_DISPLAY_BLANK,
+    },
+    {
+      info: KEEB_T_PEER_DISPLAY_INFO,
+      get: KEEB_T_PEER_DISPLAY_GET,
+      table: KEEB_T_PEER_DISPLAY,
+      text: KEEB_T_PEER_TEXT_SET,
+      save: KEEB_T_PEER_DISPLAY_SAVE,
+      discard: KEEB_T_PEER_DISPLAY_DISCARD,
+      reset: KEEB_T_PEER_DISPLAY_RESET,
+      blank: KEEB_T_PEER_DISPLAY_BLANK,
+    },
+  ] as const
+
+  function panelRecords(target: PanelTarget) {
+    return PANEL_RECORDS[target]
+  }
+
+  async function readDisplayInfo(target: PanelTarget = 0): Promise<DisplayInfoPayload> {
+    const rec = panelRecords(target)
     let got: DisplayInfoPayload | null = null
-    const presets: PresetName[] = []
 
     await request(
-      (m) => m.add(KEEB_T_DISPLAY_INFO, 0),
+      (m) => m.add(rec.info, 0),
       (type, value) => {
-        if (type === KEEB_T_DISPLAY_INFO) {
+        if (type === rec.info) {
           got = decodeDisplayInfo(value)
-        } else if (type === KEEB_T_PRESET_NAME) {
-          presets.push(readPresetName(value))
         }
       },
     )
 
     if (!got) {
-      throw new Error('DISPLAY_INFO reply had no DISPLAY_INFO record')
+      throw new Error(
+        target === 1
+          ? 'this firmware build does not expose the other half\'s panel'
+          : 'DISPLAY_INFO reply had no DISPLAY_INFO record',
+      )
     }
 
-    return { info: got, presets }
+    return got
   }
 
-  async function readDisplay(): Promise<DisplayTablePayload> {
+  async function readDisplay(target: PanelTarget = 0): Promise<DisplayTablePayload> {
+    const rec = panelRecords(target)
     let table: DisplayTablePayload | null = null
 
     await request(
-      (m) => m.add(KEEB_T_DISPLAY_GET, 0),
+      (m) => m.add(rec.get, 0),
       (type, value) => {
-        if (type === KEEB_T_DISPLAY) {
+        if (type === rec.table) {
           const hdr = readDisplayHeader(value)
 
           table = { ...hdr, widgets: readDisplayWidgets(value), texts: {}, values: {} }
-        } else if (type === KEEB_T_TEXT_SET && table) {
+        } else if (type === rec.text && table) {
           const slot = readTextSlot(value)
 
           table.texts[slot.slot] = slot.text
-        } else if (type === KEEB_T_VALUE_SET && table) {
+        } else if (target === 0 && type === KEEB_T_VALUE_SET && table) {
           const slot = readValueSlot(value)
 
           table.values[slot.slot] = slot.value
@@ -913,15 +974,19 @@ export const useDeviceStore = defineStore('device', () => {
     )
 
     if (!table) {
-      throw new Error('DISPLAY reply had no DISPLAY record')
+      throw new Error(
+        target === 1
+          ? 'this firmware build does not expose the other half\'s panel'
+          : 'DISPLAY reply had no DISPLAY record',
+      )
     }
 
     return table
   }
 
-  const writeDisplay = (widgets: Widget[]) =>
+  const writeDisplay = (widgets: Widget[], target: PanelTarget = 0) =>
     request((m) => {
-      writeDisplayTable(m, widgets)
+      writeDisplayTable(m, widgets, target)
     })
 
   const writeWidget = (index: number, w: Widget) =>
@@ -929,9 +994,9 @@ export const useDeviceStore = defineStore('device', () => {
       writeWidgetSet(m, index, w)
     })
 
-  const writeText = (slot: number, text: string) =>
+  const writeText = (slot: number, text: string, target: PanelTarget = 0) =>
     request((m) => {
-      writeTextSlot(m, slot, text)
+      writeTextSlot(m, slot, text, target)
     })
 
   const writeValue = (slot: number, value: number) =>
@@ -939,20 +1004,90 @@ export const useDeviceStore = defineStore('device', () => {
       writeValueSlot(m, slot, value)
     })
 
-  const applyPreset = (preset: number) =>
-    request((m) => {
-      const dv = m.add(KEEB_T_PRESET_SET, 2)
+  const displaySave = (target: PanelTarget = 0) => request((m) => m.add(panelRecords(target).save, 0))
+  const displayDiscard = (target: PanelTarget = 0) => request((m) => m.add(panelRecords(target).discard, 0))
+  const displayReset = (target: PanelTarget = 0) => request((m) => m.add(panelRecords(target).reset, 0))
+  const displayBlank = (target: PanelTarget = 0) => request((m) => m.add(panelRecords(target).blank, 0))
 
-      if (dv) {
-        dv.setUint8(0, preset & 0xff)
-        dv.setUint8(1, 0)
-      }
+  /* ---------------------------------------------------------------- settings ops
+   *
+   * The firmware holds the two activity timeouts in RAM (keeb_settings.c), so
+   * SET changes what the keyboard does right now and SAVE is what survives a
+   * reboot — the same split as the keymap and the panel. The record is fixed
+   * size and carries its own "which fields are present" mask, so the codec
+   * helper sends both. */
+
+  async function readSettings(): Promise<SettingsPayload> {
+    let got: SettingsPayload | null = null
+
+    await request(
+      (m) => m.add(KEEB_T_SETTINGS_GET, 0),
+      (type, value) => {
+        if (type === KEEB_T_SETTINGS) {
+          got = decodeSettings(value)
+        }
+      },
+    )
+
+    if (!got) {
+      throw new Error('SETTINGS reply had no SETTINGS record')
+    }
+
+    return got
+  }
+
+  /** SETTINGS_SET: a partial record; only the fields whose flag is set are written. */
+  const writeSettings = (settings: Partial<SettingsPayload> & { flags?: number }) =>
+    request((m) => {
+      writeSettingsSet(m, { flags: settings.flags ?? 0, ...settings })
     })
 
-  const displaySave = () => request((m) => m.add(KEEB_T_DISPLAY_SAVE, 0))
-  const displayDiscard = () => request((m) => m.add(KEEB_T_DISPLAY_DISCARD, 0))
-  const displayReset = () => request((m) => m.add(KEEB_T_DISPLAY_RESET, 0))
-  const displayBlank = () => request((m) => m.add(KEEB_T_DISPLAY_BLANK, 0))
+  const settingsSave = () => request((m) => m.add(KEEB_T_SETTINGS_SAVE, 0))
+  const settingsDiscard = () => request((m) => m.add(KEEB_T_SETTINGS_DISCARD, 0))
+
+  /* ---------------------------------------------------------------- sound ops
+   *
+   * The tune shapes and the event -> tune map live in the buzzer driver's RAM
+   * (keeb_sound.c). One TUNE_GET answers with the map and every tune, so the
+   * page costs one round trip. TUNE_SET and SOUND_MAP_SET change what the
+   * keyboard does now; the same SETTINGS_SAVE as the settings page is what
+   * persists them, which is why there are no sound-specific save verbs here. */
+
+  async function readSound(): Promise<SoundPayload> {
+    const got: SoundPayload = { events: {}, tunes: {} }
+
+    await request(
+      (m) => m.add(KEEB_T_TUNE_GET, 0),
+      (type, value) => {
+        if (type === KEEB_T_SOUND_MAP) {
+          const rec = readSoundMap(value)
+
+          got.events[rec.event] = rec.tune
+        } else if (type === KEEB_T_TUNE) {
+          const rec = readTune(value)
+
+          got.tunes[rec.tune] = rec.steps
+        }
+      },
+    )
+
+    return got
+  }
+
+  const writeTune = (tune: number, steps: TuneStep[]) =>
+    request((m) => {
+      writeTuneSet(m, tune, steps)
+    })
+
+  const writeSoundMap = (event: number, tune: number) =>
+    request((m) => {
+      writeSoundMapSet(m, event, tune)
+    })
+
+  const playTune = (tune: number) =>
+    request((m) => {
+      writeTunePlay(m, tune)
+    })
 
   async function readTokenParams(token: number): Promise<ParamValue[]> {
     if (token === KEEB_TOKEN_NONE || token === KEEB_TOKEN_UNKNOWN) {
@@ -980,8 +1115,10 @@ export const useDeviceStore = defineStore('device', () => {
     readLayerCells, writeCells, readLayers, renameLayer, moveLayer, addLayer, removeLayer, restoreLayer,
     save, discard, reset, readTokenParams,
     testMode, setTestMode, mockKey,
-    readDisplayInfo, readDisplay, writeDisplay, writeWidget, writeText, writeValue, applyPreset,
+    readDisplayInfo, readDisplay, writeDisplay, writeWidget, writeText, writeValue,
     displaySave, displayDiscard, displayReset, displayBlank,
+    readSettings, writeSettings, settingsSave, settingsDiscard,
+    readSound, writeTune, writeSoundMap, playTune,
     traceLog, clearTraceLog,
     onEvent,
   }

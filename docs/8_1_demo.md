@@ -2,42 +2,28 @@
 
 # Апаратна демонстрація
 
+<!--
+  Відео замість мозаїки фото (раніше — окремий слайд 8_2): 60 с показують і
+  RGB, і екрани, і обидві половинки, тобто те, для чого було три плитки.
+
+  Рамка `.video.hero` (theme/keeb.css) — фіксовані 500px висоти й 16/9:
+  максимум, що лишається після заголовка й ряду chips на слайді 1280×720.
+  Постер `assets/demo-video-poster.jpg` лишається фоном під iframe: у deck.pdf
+  embed не грає, і видно кадр із посиланням.
+-->
+
 <div class="stage full">
 
-<div class="mosaic mosaic-3">
-
 <figure class="shot">
-<div class="photo"><img src="assets/led.gif" alt="Фото збірки прототипу, вид 1"/></div>
-<figcaption>LED</figcaption>
-</figure>
-
-<figure class="shot">
-<div class="photo contain"><img src="assets/hw-02.jpg" alt="Фото збірки прототипу, вид 2"/></div>
-<figcaption>Половинка з підставкою під запʼястя</figcaption>
-</figure>
-
-<figure class="shot">
-<div class="photo"><img src="assets/screen.gif" alt="Фото збірки прототипу, вид 3"/></div>
-<figcaption>Стани і віджети екранів</figcaption>
-</figure>
-
+<div class="video hero" style="background-image: url(assets/demo-video-poster.jpg); height: 400px">
+<iframe src="https://www.youtube.com/embed/Vu30jgNvCN0?rel=0" title="Відеодемонстрація клавіатури, 60 с" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 </div>
+<figcaption>60 с · <a href="https://youtu.be/Vu30jgNvCN0">youtu.be/Vu30jgNvCN0</a></figcaption>
+</figure>
 
 <div class="chips">
 
-<span class="chip"><b>Bluetooth</b> профілі, з'єднання половинок</span>
-<span class="chip"><b>Клавіші / шари</b> home, nav, func, mouse, game</span>
-<span class="chip"><b>Екрани</b> заряд, поточний профіль, лінк</span>
-<span class="chip"><b>RGB / buzzer</b>, статус BLE, reset / bootloader mode</span>
-
-</div>
-
-<div class="sidenotes rail-2">
-
-<div class="sidenote">
-<h3>Що не видно на фото</h3>
-<p>TLV-канал і конфігуратор: розкладка змінюється у працюючій клавіатурі, без перепрошивки</p>
-</div>
+<span class="chip"><b>Bluetooth</b> профілі, з'єднання половинок</span> <span class="chip"><b>Шари</b> home, nav, func, mouse, game</span> <span class="chip"><b>Екрани</b> заряд, профіль, лінк</span> <span class="chip"><b>RGB / buzzer</b> статус BLE, reset / bootloader</span>
 
 </div>
 

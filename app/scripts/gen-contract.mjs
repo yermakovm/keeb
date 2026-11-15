@@ -816,37 +816,45 @@ if (leftHalf.length + rightHalf.length !== grid.length) {
   guardFailures.push(`the two halves cover ${leftHalf.length + rightHalf.length} of ${grid.length} positions — the position table is not the whole keyboard`)
 }
 
-/* 6d. The names are mirror-symmetric: _L_THUMB_1 and _R_THUMB_1 are the same key
- * of the two hands, which is what makes a trigger list reviewable. */
-for (const name of positionMacros.keys()) {
-  const m = /^KEEB_POS_L_(.+)_([0-9]+)$/.exec(name)
+/* 6d. The names are mirror-symmetric: every key one half has, the other half
+ * has at the same column of its own half.  The index in a name is not the
+ * column - KEEB_POS_L_EXTRA and KEEB_POS_R_EXTRA are both declared outer ->
+ * inner, which pairs L_EXTRA_0 with R_EXTRA_1 on this wiring - so the check is
+ * per group and per row, on the set of local columns each half claims. */
+const sameCols = (a, b) => a.length === b.length && a.every((c) => b.includes(c))
+const groupCols = new Map()
+
+for (const [name, def] of positionMacros) {
+  const m = /^KEEB_POS_([LR])_(.+)_([0-9]+)$/.exec(name)
 
   if (!m) {
     continue
   }
 
-  const mirror = `KEEB_POS_R_${m[1]}_${m[2]}`
+  const cell = grid[numberList(def.body)[0]]
 
-  if (!positionMacros.has(mirror)) {
-    guardFailures.push(`${name} has no mirror ${mirror}`)
+  if (!cell) {
+    guardFailures.push(`${name} points outside the ${grid.length}-position grid`)
     continue
   }
 
-  const ca = grid[numberList(positionMacros.get(name).body)[0]]
-  const cb = grid[numberList(positionMacros.get(mirror).body)[0]]
+  /* Each half numbers its own columns 0-5 and keeb_right.overlay adds
+   * col-offset 6, so the local column of global col c is c % 6. */
+  const rows = groupCols.get(m[2]) ?? new Map()
+  const perRow = rows.get(cell.row) ?? { L: [], R: [] }
 
-  if (!ca || !cb) {
-    guardFailures.push(`${name} / ${mirror} point outside the ${grid.length}-position grid`)
-    continue
-  }
+  perRow[m[1]].push(cell.col % 6)
+  rows.set(cell.row, perRow)
+  groupCols.set(m[2], rows)
+}
 
-  /* "Same key of the two hands" is the same LOCAL column: each half numbers its
-   * own columns 0-5 and keeb_right.overlay adds col-offset 6, so the mirror of
-   * global col c is c+6. Every row of this map obeys that. */
-  if (ca.row !== cb.row || ca.col % 6 !== cb.col % 6) {
-    guardFailures.push(
-      `${name} (row ${ca.row}, col ${ca.col}) and ${mirror} (row ${cb.row}, col ${cb.col}) are not the same column of their own half`,
-    )
+for (const [group, rows] of groupCols) {
+  for (const [row, perRow] of rows) {
+    if (!sameCols(perRow.L, perRow.R)) {
+      guardFailures.push(
+        `group ${group} row ${row}: the left half has columns [${perRow.L.join(', ')}], the right half [${perRow.R.join(', ')}] - not the same columns of their own half`,
+      )
+    }
   }
 }
 
@@ -1078,7 +1086,7 @@ function parseEnums(src, evaluate) {
 }
 
 /** Field list → byte offsets. The structs are KEEB_PACKED, so the sum is the size. */
-function parseWireStructs(src) {
+function parseWireStructs(src, evaluate) {
   const out = []
 
   for (const m of src.matchAll(/\bstruct\s+KEEB_PACKED\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{([^}]*)\}/g)) {
@@ -1092,7 +1100,7 @@ function parseWireStructs(src) {
         continue
       }
 
-      const fm = /^(u?int(8|16|32)_t)\s+([A-Za-z_][A-Za-z0-9_]*)\s*;$/.exec(line)
+      const fm = /^(u?int(8|16|32)_t)\s+([A-Za-z_][A-Za-z0-9_]*)(?:\[([0-9]+|[A-Za-z_][A-Za-z0-9_]*)\])?\s*;$/.exec(line)
 
       if (!fm) {
         throw new Error(`unparsable field in struct ${m[1]}: ${line}`)
@@ -1104,8 +1112,10 @@ function parseWireStructs(src) {
         throw new Error(`unknown wire type ${fm[1]} in struct ${m[1]}`)
       }
 
-      fields.push({ name: fm[3], type: fm[1], width, offset: off })
-      off += width
+      const count = fm[4] ? evaluate(fm[4].trim(), new Map()) >>> 0 : 1
+
+      fields.push({ name: fm[3], type: fm[1], width: width * count, elemWidth: width, count, offset: off })
+      off += width * count
     }
 
     const seen = new Set()
@@ -1206,7 +1216,7 @@ for (const { path, body, comments } of protoFiles) {
     protoEnums.push(e)
   }
 
-  for (const s of parseWireStructs(body)) {
+  for (const s of parseWireStructs(body, protoEval)) {
     protoStructs.push(s)
   }
 
@@ -1292,7 +1302,7 @@ for (const s of protoStructs) {
   }
 
   protoLines.push(`/** struct ${s.name} — the packed field widths in order, and where each field sits. */`)
-  protoLines.push(`export const ${base}_FIELDS: number[] = [${s.fields.map((f) => f.width).join(', ')}]`)
+  protoLines.push(`export const ${base}_FIELDS: number[] = [${s.fields.flatMap((f) => Array(f.count).fill(f.elemWidth)).join(', ')}]`)
   protoLines.push(`export const ${base}_OFFSETS: Record<string, number> = ${JSON.stringify(Object.fromEntries(s.fields.map((f) => [f.name, f.offset])), null, 2)}`)
   protoLines.push('')
 }

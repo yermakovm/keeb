@@ -30,10 +30,14 @@ import {
   KEEB_SRC_LINK,
   KEEB_SRC_LINK_SHORT,
   KEEB_SRC_NONE,
+  KEEB_SRC_PROFILE_PIPS,
+  KEEB_SRC_RSSI,
+  KEEB_SRC_WPM,
   KEEB_WID_ART,
   KEEB_WID_BAR,
   KEEB_WID_BATTERY,
   KEEB_WID_BOLT,
+  KEEB_WID_BONGO,
   KEEB_WID_FRAME,
   KEEB_WID_NONE,
   KEEB_WID_PIPS,
@@ -53,6 +57,7 @@ export const KIND_LABELS: Record<number, string> = {
   [KEEB_WID_PIPS]: 'pips',
   [KEEB_WID_BOLT]: 'bolt',
   [KEEB_WID_ART]: 'artwork',
+  [KEEB_WID_BONGO]: 'typing cat',
 }
 
 /** Ordered list the kind picker offers. */
@@ -66,6 +71,7 @@ export const KIND_ORDER = [
   KEEB_WID_PIPS,
   KEEB_WID_BOLT,
   KEEB_WID_ART,
+  KEEB_WID_BONGO,
 ]
 
 export const SOURCE_LABELS: Record<number, string> = {
@@ -85,11 +91,19 @@ export const SOURCE_LABELS: Record<number, string> = {
   [KEEB_SRC_CHARGING]: 'charging / host',
   [KEEB_SRC_DEVICE_ID]: 'connected device',
   [KEEB_SRC_DEVICE_NAME]: 'device name',
+  [KEEB_SRC_WPM]: 'words per minute',
+  [KEEB_SRC_PROFILE_PIPS]: 'BLE profile pips',
+  [KEEB_SRC_RSSI]: 'host signal %',
 }
 
 /** Sources a kind can actually be fed from — the same pairing rule
- * kind_source_ok() in keeb-module/.../widget_model.c enforces. */
-export function sourcesForKind(kind: number, srcBase: number, srcValue: number): number[] {
+ * kind_source_ok() in keeb-module/.../widget_model.c enforces.
+ *
+ * CUSTOM_TEXT stands for "a text slot of this widget's own": the slot number is
+ * the store's business, not something the picker offers. */
+export const CUSTOM_TEXT = -1
+
+export function sourcesForKind(kind: number, srcValue: number): number[] {
   switch (kind) {
     case KEEB_WID_TEXT:
       return [
@@ -104,13 +118,14 @@ export function sourcesForKind(kind: number, srcBase: number, srcValue: number):
         KEEB_SRC_CHARGING,
         KEEB_SRC_DEVICE_ID,
         KEEB_SRC_DEVICE_NAME,
-        srcBase,
+        KEEB_SRC_WPM,
+        CUSTOM_TEXT,
       ]
     case KEEB_WID_BAR:
     case KEEB_WID_BATTERY:
-      return [KEEB_SRC_BATT_LEFT, KEEB_SRC_BATT_RIGHT, srcValue]
+      return [KEEB_SRC_BATT_LEFT, KEEB_SRC_BATT_RIGHT, KEEB_SRC_RSSI, srcValue]
     case KEEB_WID_PIPS:
-      return [KEEB_SRC_LAYER_PIPS]
+      return [KEEB_SRC_LAYER_PIPS, KEEB_SRC_PROFILE_PIPS]
     case KEEB_WID_ART:
       return [KEEB_SRC_LAYER_ART]
     default:
@@ -149,7 +164,9 @@ export function describeWidget(
   const kindName = KIND_LABELS[kind] ?? `kind ${kind}`
 
   if (isTextSlot(source, textBase, textSlots)) {
-    return `${kindName} · text ${slotIndexOf(source, textBase)}`
+    /* The slot is the editor's bookkeeping; the string it holds is what the row
+     * is for, and the caller prints that next to this. */
+    return kindName
   }
 
   if (source >= valueBase && source < valueBase + 4) {

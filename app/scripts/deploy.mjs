@@ -4,7 +4,7 @@
  *
  * SPDX-License-Identifier: MIT
  *
- * Ship the built configurator to the home server (nginx on the Arch box).
+ * Ship the built configurator to keeb.live (nginx on the Oracle Cloud box).
  *
  * Why a script and not a bare rsync line in package.json: the failure mode we
  * actually hit is not a broken transfer, it is uploading the wrong thing. A
@@ -38,12 +38,12 @@ import { fileURLToPath } from 'node:url'
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-// The home server: nginx serves this directory as its site root.
-// Directory ownership is `admin`, so the sync user must be `admin` too.
+// nginx serves this directory as its site root (/etc/nginx/conf.d/keeb.conf).
+// Directory ownership is `opc`, so the sync user must be `opc` too.
 const TARGET = {
-  user: process.env.DEPLOY_USER ?? 'admin',
-  host: process.env.DEPLOY_HOST ?? '192.168.1.150',
-  path: (process.env.DEPLOY_PATH ?? '/srv/http/keeb').replace(/\/?$/, '/'),
+  user: process.env.DEPLOY_USER ?? 'opc',
+  host: process.env.DEPLOY_HOST ?? '92.5.48.29',
+  path: (process.env.DEPLOY_PATH ?? '/var/www/keeb').replace(/\/?$/, '/'),
 }
 
 const argv = process.argv.slice(2)
@@ -151,7 +151,7 @@ rsyncArgs.push('--', `${distDir}/`, remote) // `--` so a path is never parsed as
 console.log(`\ndeploy: ${distDir}/ -> ${remote}${dryRun ? '  (dry run: nothing written)' : ''}`)
 run('rsync', rsyncArgs)
 
-// 5. nginx on Arch runs as `http`. Whatever umask the build ran under, the
+// 5. nginx on OL9 runs as `nginx`. Whatever umask the build ran under, the
 //    served tree must be world-readable, or nginx answers 403 on directories.
 //    --chmod is unreliable on macOS openrsync, so this is done on the server.
 if (!has('--no-chmod')) {

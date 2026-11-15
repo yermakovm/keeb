@@ -18,6 +18,9 @@
  *     left and restore shifts right (zmk/app/src/keymap.c)
  *   - notifications for layer state / cells set / saved / discarded / layer
  *     changed
+ *   - the SETTINGS namespace: the two activity timeouts as RAM values, with
+ *     SAVE (survives a reboot) and DISCARD (back to the compiled-in defaults)
+ *     as separate operations
  *
  * What it does NOT model: ZMK's behavior metadata for real behaviors (the
  * param table below is the shape of KEEB_T_TOKEN_PARAMS, sized like the real
@@ -46,6 +49,7 @@ import {
   KEEB_INFO_F_DISPLAY,
   KEEB_INFO_F_REORDERING,
   KEEB_INFO_F_RESERVED_FROZEN,
+  KEEB_INFO_F_SETTINGS,
   KEEB_PKT_F_NOTIFY,
   KEEB_PKT_F_REPLY,
   KEEB_STATUS_ERR,
@@ -56,6 +60,15 @@ import {
   KEEB_T_CELLS_SET,
   KEEB_T_DISPLAY,
   KEEB_T_DISPLAY_BLANK,
+  KEEB_T_PEER_DISPLAY,
+  KEEB_T_PEER_DISPLAY_BLANK,
+  KEEB_T_PEER_DISPLAY_DISCARD,
+  KEEB_T_PEER_DISPLAY_GET,
+  KEEB_T_PEER_DISPLAY_INFO,
+  KEEB_T_PEER_DISPLAY_RESET,
+  KEEB_T_PEER_DISPLAY_SAVE,
+  KEEB_T_PEER_DISPLAY_SET,
+  KEEB_T_PEER_TEXT_SET,
   KEEB_T_DISPLAY_DISCARD,
   KEEB_T_DISPLAY_GET,
   KEEB_T_DISPLAY_INFO,
@@ -77,7 +90,19 @@ import {
   KEEB_T_RESET,
   KEEB_T_SAVE,
   KEEB_T_DISCARD,
+  KEEB_T_SETTINGS,
+  KEEB_T_SETTINGS_DISCARD,
+  KEEB_T_SETTINGS_GET,
+  KEEB_T_SETTINGS_RESET,
+  KEEB_T_SETTINGS_SAVE,
+  KEEB_T_SETTINGS_SET,
+  KEEB_T_SOUND_MAP,
+  KEEB_T_SOUND_MAP_SET,
   KEEB_T_TEXT_SET,
+  KEEB_T_TUNE,
+  KEEB_T_TUNE_GET,
+  KEEB_T_TUNE_PLAY,
+  KEEB_T_TUNE_SET,
   KEEB_T_VALUE_SET,
   KEEB_T_WIDGET_SET,
   KEEB_T_TOKEN_PARAMS,
@@ -92,6 +117,7 @@ import {
   KEEB_TX_FAIL,
   KEEB_WID_ART,
   KEEB_WID_BAR,
+  KEEB_WID_BONGO,
   KEEB_WID_BATTERY,
   KEEB_WID_COUNT,
   KEEB_WID_FRAME,
@@ -104,7 +130,6 @@ import {
   KEEB_SRC_BATT_RIGHT_PCT,
   KEEB_SRC_CHARGING,
   KEEB_SRC_DEVICE_ID,
-  KEEB_SRC_DEVICE_NAME,
   KEEB_SRC_LAYER_ART,
   KEEB_SRC_LAYER_INDEX,
   KEEB_SRC_LAYER_NAME,
@@ -112,16 +137,22 @@ import {
   KEEB_SRC_LAYER_POS,
   KEEB_SRC_LINK_SHORT,
   KEEB_SRC_NONE,
+  KEEB_SRC_PROFILE_PIPS,
+  KEEB_SRC_RSSI,
   KEEB_SRC_TEXT_BASE,
   KEEB_SRC_VALUE_BASE,
+  KEEB_SRC_WPM,
   KEEB_PIPS_GEOMETRY,
   KEEB_PIPS_LARGE,
   KEEB_TEXT_STYLE,
-  KBEEB_PRESET_CUSTOM,
+  KEEB_PRESET_CUSTOM,
   KEEB_DISPLAY_INFO_F_ART,
+  KEEB_DISPLAY_INFO_F_PEER,
   KEEB_DISPLAY_F_DIRTY,
   KEEB_EV_CELLS_SET,
   KEEB_EV_DISPLAY_SAVED,
+  KEEB_EV_PEER_DISPLAY_SAVED,
+  KEEB_EV_PEER_DISPLAY_SET,
   KEEB_EV_KEY,
   KEEB_EV_DISPLAY_SET,
   KEEB_EV_TEXT_SET,
@@ -129,14 +160,87 @@ import {
   KEEB_EV_LAYER_CHANGED,
   KEEB_EV_LAYER_STATE,
   KEEB_EV_SAVED,
+  KEEB_EV_SETTINGS_CHANGED,
+  KEEB_SETTINGS_B_ALL,
+  KEEB_SETTINGS_B_BLANK_ON_IDLE,
+  KEEB_SETTINGS_B_SLEEP_ALLOWED,
+  KEEB_SETTINGS_F_ALL,
+  KEEB_SETTINGS_F_BLANK_ON_IDLE,
+  KEEB_SETTINGS_F_DEBOUNCE_PRESS,
+  KEEB_SETTINGS_F_DEBOUNCE_RELEASE,
+  KEEB_SETTINGS_F_HOLD_TAP_FLAVOR,
+  KEEB_SETTINGS_F_IDLE_TIMEOUT,
+  KEEB_SETTINGS_F_LED_BRIGHTNESS,
+  KEEB_SETTINGS_F_LED_COLOR_BLUE,
+  KEEB_SETTINGS_F_LED_COLOR_GREEN,
+  KEEB_SETTINGS_F_LED_COLOR_RED,
+  KEEB_SETTINGS_F_LED_LAYERS,
+  KEEB_SETTINGS_F_PRIOR_IDLE,
+  KEEB_SETTINGS_F_QUICK_TAP,
+  KEEB_SETTINGS_F_SLEEP_ALLOWED,
+  KEEB_SETTINGS_F_SLEEP_TIMEOUT,
+  KEEB_SETTINGS_F_TAPPING_TERM,
+  KEEB_SETTINGS_FLAVOR_AUTO,
+  KEEB_SETTINGS_SIZE,
+  KEEB_SOUND_EVENT_COUNT,
+  KEEB_SOUND_MAP_SIZE,
+  KEEB_SOUND_PLAY_SIZE,
+  KEEB_SOUND_STEPS_MAX,
+  KEEB_SOUND_TUNE_COUNT,
+  KEEB_TUNE_HDR_SIZE,
+  KEEB_TUNE_STEP_SIZE,
+  KEEB_INFO_F_SOUND,
 } from '../proto/constants.ts'
-import { MessageReceiver, MessageSender, TlvMessage, iterateMessage, tokenTableHash } from '../proto/tlv.ts'
+import { MessageReceiver, MessageSender, TlvMessage, iterateMessage, readSettings, tokenTableHash } from '../proto/tlv.ts'
 import { EXPECTED_TOKEN_HASH, KEY_COUNT, LAYER_CAPACITY, RESERVED_POSITIONS, STOCK_LAYERS, STOCK_LAYER_NAMES, TOKENS } from '../proto/zmk.gen.ts'
-import type { Binding, Widget } from '../proto/types.ts'
+import type { Binding, SettingsPayload, SoundPayload, TuneStep, Widget } from '../proto/types.ts'
 import type { KeebTransport, TransportState } from './types.ts'
 
 export const LAYER_ID_INVALID = 0xff
 export const LAYER_NAME_MAX = 20 /* CONFIG_ZMK_KEYMAP_LAYER_NAME_MAX_LEN */
+
+/** What the flashed image boots with: CONFIG_ZMK_IDLE_TIMEOUT (ZMK's default,
+ * config/keeb.conf does not set it) and CONFIG_ZMK_IDLE_SLEEP_TIMEOUT
+ * (keeb-module/boards/shields/keeb/keeb_left.conf / keeb_right.conf). */
+const DEFAULT_IDLE_TIMEOUT_MS = 30000
+const DEFAULT_SLEEP_TIMEOUT_MS = 900000
+
+/** What a freshly-flashed keyboard boots with, mirroring keeb_settings.c's
+ * compiled-in values: the two activity timeouts, the kscan debounce timings,
+ * the hold-tap timings from keeb.keymap, and the status-LED palette. */
+const DEFAULT_SETTINGS: SettingsPayload = {
+  idleTimeoutMs: DEFAULT_IDLE_TIMEOUT_MS,
+  sleepTimeoutMs: DEFAULT_SLEEP_TIMEOUT_MS,
+  debouncePressMs: 5,
+  debounceReleaseMs: 5,
+  tappingTermMs: 280,
+  quickTapMs: 175,
+  priorIdleMs: 150,
+  ledBrightnessPercent: 50,
+  ledColorRed: 0xff0000,
+  ledColorGreen: 0x00ff00,
+  ledColorBlue: 0x0000ff,
+  /* home off, then the four non-home layers, pinned to the layer index */
+  ledLayerColors: [0, 0x00ff00, 0x0000ff, 0x00ff00, 0x0000ff, 0, 0, 0],
+  flags: KEEB_SETTINGS_F_ALL,
+  booleans: KEEB_SETTINGS_B_SLEEP_ALLOWED | KEEB_SETTINGS_B_BLANK_ON_IDLE,
+  holdTapFlavor: 1 /* balanced */,
+}
+
+/** The compiled-in tune shapes and event map, mirroring buzzer/src/buzzer.c.
+ * Tune 0 (random) has no table; the other ids are enum zmk_buzzer_tune order and
+ * event ids are enum zmk_buzzer_event order. */
+const DEFAULT_TUNES: TuneStep[][] = [
+  [],
+  [{ pitchPct: 90, onMs: 45, gapMs: 30 }, { pitchPct: 115, onMs: 80, gapMs: 0 }],
+  [{ pitchPct: 115, onMs: 45, gapMs: 30 }, { pitchPct: 90, onMs: 80, gapMs: 0 }],
+  [{ pitchPct: 120, onMs: 60, gapMs: 20 }, { pitchPct: 100, onMs: 60, gapMs: 20 }, { pitchPct: 80, onMs: 120, gapMs: 0 }],
+  [{ pitchPct: 105, onMs: 55, gapMs: 25 }, { pitchPct: 125, onMs: 110, gapMs: 0 }],
+  [{ pitchPct: 80, onMs: 120, gapMs: 80 }, { pitchPct: 80, onMs: 160, gapMs: 0 }],
+  [{ pitchPct: 95, onMs: 35, gapMs: 20 }, { pitchPct: 120, onMs: 55, gapMs: 0 }],
+]
+
+const DEFAULT_SOUND_MAP = [1, 2, 4, 5, 6] /* layer_on, layer_off, update_ok, update_fail, wake */
 
 /** Tokens whose driver is not in this build. In firmware this is
  * zmk_behavior_get_binding() returning NULL; the UI must not offer them.
@@ -148,7 +252,7 @@ const UNAVAILABLE_TOKENS = new Set(['bl', 'rgb_ug'])
  * Panel model
  *
  * Mirrors keeb-module/boards/shields/keeb/ui/widget_model.c for the central
- * half as the shipped build configures it (CONFIG_KBEEB_UI_ROTATION_90, so the
+ * half as the shipped build configures it (CONFIG_KEEB_UI_ROTATION_90, so the
  * logical space is 68x160 and the panel is rotated into 160x68). The preset
  * tables below are the firmware's, copied by hand: the mock stands in for the
  * engine's behaviour, it is not a second source of truth, and a drift between
@@ -218,6 +322,23 @@ export const PANEL_PRESETS: { name: string; widgets: Widget[]; texts: string[] }
   },
 ]
 
+/** Preset 2 on the peripheral: CONFIG_KEEB_UI_PEER_PRESET / the TYPING table in
+ * widget_model.c. The mock stands in for the *central*, so this is the table it
+ * seeds its copy of the other half with. */
+export const PEER_TYPING: Widget[] = [
+  wFrame(0, 0, 68, 160, 4),
+  { kind: KEEB_WID_BONGO, source: KEEB_SRC_NONE, x: 0, y: 8, w: 68, h: 40, style: 0 },
+  wRule(4, 54, 60),
+  wText(4, 58, 60, 0, slot(0), 0, 1),
+  wText(4, 70, 60, 30, KEEB_SRC_WPM, 2, 1),
+  wRule(4, 106, 60),
+  wPips(4, 112, 7, 5, KEEB_PIPS_LARGE),
+  wBar(10, 122, 48, 6, KEEB_SRC_RSSI),
+  wText(4, 136, 60, 0, KEEB_SRC_DEVICE_ID, 0, 1),
+]
+
+const PEER_TEXTS = ['WPM']
+
 interface PanelState {
   widgets: Widget[]
   preset: number
@@ -227,6 +348,15 @@ interface PanelState {
   /** what DISPLAY_DISCARD returns to, i.e. the last DISPLAY_SAVE */
   saved: { widgets: Widget[]; preset: number; texts: string[] } | null
 }
+
+const peerPanelState = (): PanelState => ({
+  widgets: PEER_TYPING.map((w) => ({ ...w })),
+  preset: 2,
+  texts: Array.from({ length: PANEL_TEXT_SLOTS }, (_, i) => PEER_TEXTS[i] ?? ''),
+  values: Array.from({ length: PANEL_VALUE_SLOTS }, () => 0),
+  dirty: false,
+  saved: null,
+})
 
 const panelFromPreset = (id: number): PanelState => {
   const p = PANEL_PRESETS[id] ?? PANEL_PRESETS[0]
@@ -243,7 +373,7 @@ const panelFromPreset = (id: number): PanelState => {
 
 /** A source the firmware can actually resolve (keeb_ui_validate_widget). */
 const sourceKnown = (src: number): boolean => {
-  if (src >= KEEB_SRC_NONE && src <= KEEB_SRC_DEVICE_NAME) {
+  if (src >= KEEB_SRC_NONE && src <= KEEB_SRC_RSSI) {
     return true
   }
 
@@ -263,17 +393,20 @@ const kindSourceOk = (w: Widget): boolean => {
         w.source !== KEEB_SRC_LAYER_PIPS &&
         w.source !== KEEB_SRC_LAYER_ART &&
         w.source !== KEEB_SRC_BATT_LEFT &&
-        w.source !== KEEB_SRC_BATT_RIGHT
+        w.source !== KEEB_SRC_BATT_RIGHT &&
+        w.source !== KEEB_SRC_PROFILE_PIPS &&
+        w.source !== KEEB_SRC_RSSI
       )
     case KEEB_WID_BAR:
     case KEEB_WID_BATTERY:
       return (
         w.source === KEEB_SRC_BATT_LEFT ||
         w.source === KEEB_SRC_BATT_RIGHT ||
+        w.source === KEEB_SRC_RSSI ||
         (w.source >= KEEB_SRC_VALUE_BASE && w.source < KEEB_SRC_VALUE_BASE + PANEL_VALUE_SLOTS)
       )
     case KEEB_WID_PIPS:
-      return w.source === KEEB_SRC_LAYER_PIPS
+      return w.source === KEEB_SRC_LAYER_PIPS || w.source === KEEB_SRC_PROFILE_PIPS
     case KEEB_WID_ART:
       return w.source === KEEB_SRC_LAYER_ART
     default:
@@ -329,6 +462,16 @@ export class MockKeyboard implements KeebTransport {
 
   private layerState = 0x01 /* HOME active at boot */
   private panel: PanelState = panelFromPreset(0)
+  /** The central's copy of the other half's panel (KEEB_T_PEER_*). */
+  private peerPanel: PanelState = peerPanelState()
+
+  /** The runtime settings, as keeb_settings.c holds them in RAM. */
+  private settings: SettingsPayload = { ...DEFAULT_SETTINGS }
+  /** Whether SETTINGS_SAVE has been accepted since the last DISCARD. */
+  private settingsSaved = false
+  private tunes: TuneStep[][] = DEFAULT_TUNES.map((t) => t.map((s) => ({ ...s })))
+  private soundMap: number[] = [...DEFAULT_SOUND_MAP]
+  private tunePlays: number[] = []
   private locked = 0
   private notifySeq = 0
 
@@ -636,6 +779,88 @@ export class MockKeyboard implements KeebTransport {
         case KEEB_T_DISPLAY_BLANK:
           break
 
+        /* The other half's panel: the same records with a PEER prefix, answered
+         * from the central's copy (keeb-module/display/keeb_peer_panel.c). */
+        case KEEB_T_PEER_DISPLAY_INFO:
+          this.writeDisplayInfo(reply, true)
+          break
+
+        case KEEB_T_PEER_DISPLAY_GET:
+          this.writeDisplay(reply, true)
+          break
+
+        case KEEB_T_PEER_DISPLAY_SET: {
+          const applied = this.applyDisplaySet(rec.value, fail, true)
+
+          if (status === KEEB_STATUS_OK) {
+            detail = applied
+            this.notify(KEEB_EV_PEER_DISPLAY_SET, new Uint8Array([applied & 0xff, KEEB_DISPLAY_F_DIRTY]))
+          }
+          break
+        }
+
+        case KEEB_T_PEER_TEXT_SET: {
+          this.applyTextSlot(rec.value, fail, true)
+
+          if (status === KEEB_STATUS_OK) {
+            this.notify(KEEB_EV_PEER_DISPLAY_SET, new Uint8Array([this.peerPanel.widgets.length & 0xff, KEEB_DISPLAY_F_DIRTY]))
+          }
+          break
+        }
+
+        case KEEB_T_PEER_DISPLAY_SAVE:
+          this.savePanel(true)
+          this.notify(KEEB_EV_PEER_DISPLAY_SAVED, new Uint8Array())
+          break
+
+        case KEEB_T_PEER_DISPLAY_DISCARD:
+          this.discardPanel(true)
+          break
+
+        case KEEB_T_PEER_DISPLAY_RESET:
+          this.resetPanel(true)
+          break
+
+        case KEEB_T_PEER_DISPLAY_BLANK:
+          break
+
+        case KEEB_T_SETTINGS_GET:
+          this.writeSettings(reply)
+          break
+
+        case KEEB_T_SETTINGS_SET:
+          this.applySettings(rec.value, fail)
+          break
+
+        case KEEB_T_SETTINGS_SAVE:
+          /* One flash verb for both subtrees, exactly as the engine wires it. */
+          this.settingsSaved = true
+          break
+
+        /* keeb_settings_discard() goes back to the compiled-in defaults and
+         * deletes the saved subtree — it does not restore a saved snapshot. */
+        case KEEB_T_SETTINGS_DISCARD:
+        case KEEB_T_SETTINGS_RESET:
+          this.discardSettings()
+          break
+
+        case KEEB_T_TUNE_GET:
+          this.writeSound(reply)
+          break
+
+        case KEEB_T_TUNE_SET:
+          this.applyTune(rec.value, fail)
+          break
+
+        case KEEB_T_SOUND_MAP_SET:
+          this.applySoundMap(rec.value, fail)
+          break
+
+        /* Preview: a sound and nothing else, so the page can stay clean. */
+        case KEEB_T_TUNE_PLAY:
+          this.playTune(rec.value)
+          break
+
         case KEEB_T_TEST_SET: {
           this.testMode = (rec.value[0] ?? 0) !== 0
           detail = this.testMode ? 1 : 0
@@ -672,7 +897,7 @@ export class MockKeyboard implements KeebTransport {
     }
 
     dv.setUint16(0, 1, true) /* proto */
-    dv.setUint16(2, 1, true) /* fw_version: CONFIG_KBEEB_ENGINE_FW_VERSION */
+    dv.setUint16(2, 1, true) /* fw_version: CONFIG_KEEB_ENGINE_FW_VERSION */
     dv.setUint16(4, LAYER_CAPACITY, true)
     dv.setUint16(6, KEY_COUNT, true)
     dv.setUint16(8, LAYER_NAME_MAX, true)
@@ -681,37 +906,44 @@ export class MockKeyboard implements KeebTransport {
     dv.setUint32(
       16,
       KEEB_INFO_F_RESERVED_FROZEN | KEEB_INFO_F_PERSISTENT | KEEB_INFO_F_REORDERING |
-        KEEB_INFO_F_DISPLAY,
+        KEEB_INFO_F_DISPLAY | KEEB_INFO_F_SETTINGS | KEEB_INFO_F_SOUND,
       true,
     )
   }
 
   /* ---------------------------------------------------------------- display */
 
-  private writeDisplayInfo(msg: TlvMessage): void {
+  private writeDisplayInfo(msg: TlvMessage, peer = false): void {
     /* struct keeb_display_info is 21 bytes. */
-    const dv = msg.add(KEEB_T_DISPLAY_INFO, 21)
+    const dv = msg.add(peer ? KEEB_T_PEER_DISPLAY_INFO : KEEB_T_DISPLAY_INFO, 21)
 
     if (!dv) {
       return
     }
 
-    dv.setUint8(0, 1) /* editable: the central owns its panel */
-    dv.setUint8(1, PANEL_PRESETS.length)
+    dv.setUint8(0, 1) /* editable: the central owns both tables */
+    dv.setUint8(1, peer ? 3 : PANEL_PRESETS.length)
     dv.setUint8(2, PANEL_WIDGET_MAX)
     dv.setUint8(3, PANEL_TEXT_SLOTS)
     dv.setUint8(4, PANEL_TEXT_MAX)
-    dv.setUint8(5, PANEL_VALUE_SLOTS)
+    /* The peer's value slots are not relayed, exactly as keeb_peer_panel_info
+     * reports: the editor hides them instead of offering a control that cannot
+     * reach the other half. */
+    dv.setUint8(5, peer ? 0 : PANEL_VALUE_SLOTS)
     dv.setUint8(6, KEEB_WID_COUNT)
-    dv.setUint8(7, KEEB_SRC_VALUE_BASE + PANEL_VALUE_SLOTS - 1)
+    dv.setUint8(7, peer ? KEEB_SRC_RSSI : KEEB_SRC_VALUE_BASE + PANEL_VALUE_SLOTS - 1)
     dv.setUint16(8, PANEL_LOGICAL_W, true)
     dv.setUint16(10, PANEL_LOGICAL_H, true)
     dv.setUint16(12, PANEL_PANEL_W, true)
     dv.setUint16(14, PANEL_PANEL_H, true)
     dv.setUint16(16, PANEL_ROTATION, true)
     dv.setUint8(18, 7) /* sizeof(struct keeb_widget) */
-    dv.setUint8(19, KEEB_DISPLAY_INFO_F_ART) /* the mock's model can draw art */
+    dv.setUint8(19, KEEB_DISPLAY_INFO_F_ART | (peer ? 0 : KEEB_DISPLAY_INFO_F_PEER))
     dv.setUint8(20, PANEL_LAYER_COUNT)
+
+    if (peer) {
+      return /* the peer's preset names are not part of the record set */
+    }
 
     for (let id = 0; id < PANEL_PRESETS.length; id++) {
       const name = PANEL_PRESETS[id].name
@@ -729,18 +961,19 @@ export class MockKeyboard implements KeebTransport {
 
   /** One KEEB_T_DISPLAY record, then the slots as their own records: the same
    * shape keeb_display_dump() builds. */
-  private writeDisplay(msg: TlvMessage): void {
-    const widgets = this.panel.widgets
-    const dv = msg.add(KEEB_T_DISPLAY, 4 + widgets.length * 7)
+  private writeDisplay(msg: TlvMessage, peer = false): void {
+    const panel = peer ? this.peerPanel : this.panel
+    const widgets = panel.widgets
+    const dv = msg.add(peer ? KEEB_T_PEER_DISPLAY : KEEB_T_DISPLAY, 4 + widgets.length * 7)
 
     if (!dv) {
       return
     }
 
     dv.setUint8(0, widgets.length)
-    dv.setUint8(1, this.panel.preset)
-    dv.setUint8(2, this.panel.dirty ? KEEB_DISPLAY_F_DIRTY : 0)
-    dv.setUint8(3, 0)
+    dv.setUint8(1, panel.preset)
+    dv.setUint8(2, panel.dirty ? KEEB_DISPLAY_F_DIRTY : 0)
+    dv.setUint8(3, peer ? 1 : 0)
 
     for (let i = 0; i < widgets.length; i++) {
       const at = 4 + i * 7
@@ -755,9 +988,9 @@ export class MockKeyboard implements KeebTransport {
     }
 
     for (let s = 0; s < PANEL_TEXT_SLOTS; s++) {
-      const text = this.panel.texts[s] ?? ''
+      const text = panel.texts[s] ?? ''
       const enc = new TextEncoder().encode(text)
-      const rec = msg.add(KEEB_T_TEXT_SET, 2 + enc.length)
+      const rec = msg.add(peer ? KEEB_T_PEER_TEXT_SET : KEEB_T_TEXT_SET, 2 + enc.length)
 
       if (!rec) {
         return
@@ -766,6 +999,10 @@ export class MockKeyboard implements KeebTransport {
       rec.setUint8(0, s)
       rec.setUint8(1, enc.length)
       msg.buf.set(enc, msg.len - enc.length)
+    }
+
+    if (peer) {
+      return /* no live value slots cross the split link */
     }
 
     for (let s = 0; s < PANEL_VALUE_SLOTS; s++) {
@@ -782,7 +1019,7 @@ export class MockKeyboard implements KeebTransport {
   }
 
   /** Validate the whole table before replacing any of it. */
-  private applyDisplaySet(value: Uint8Array, fail: (c: number) => void): number {
+  private applyDisplaySet(value: Uint8Array, fail: (c: number) => void, peer = false): number {
     if (value.length < 4) {
       fail(KEEB_ERR_BAD_LEN)
       return 0
@@ -823,9 +1060,11 @@ export class MockKeyboard implements KeebTransport {
       next.push(w)
     }
 
-    this.panel.widgets = next
-    this.panel.preset = KBEEB_PRESET_CUSTOM
-    this.panel.dirty = true
+    const panel = peer ? this.peerPanel : this.panel
+
+    panel.widgets = next
+    panel.preset = KEEB_PRESET_CUSTOM
+    panel.dirty = true
 
     return count
   }
@@ -871,13 +1110,13 @@ export class MockKeyboard implements KeebTransport {
     }
 
     this.panel.widgets = next
-    this.panel.preset = KBEEB_PRESET_CUSTOM
+    this.panel.preset = KEEB_PRESET_CUSTOM
     this.panel.dirty = true
 
     return index
   }
 
-  private applyTextSlot(value: Uint8Array, fail: (c: number) => void): number {
+  private applyTextSlot(value: Uint8Array, fail: (c: number) => void, peer = false): number {
     if (value.length < 2) {
       fail(KEEB_ERR_BAD_LEN)
       return -1
@@ -901,8 +1140,10 @@ export class MockKeyboard implements KeebTransport {
       return -1
     }
 
-    this.panel.texts[slotId] = new TextDecoder().decode(value.subarray(2, 2 + len))
-    this.panel.dirty = true
+    const panel = peer ? this.peerPanel : this.panel
+
+    panel.texts[slotId] = new TextDecoder().decode(value.subarray(2, 2 + len))
+    panel.dirty = true
 
     return slotId
   }
@@ -941,28 +1182,41 @@ export class MockKeyboard implements KeebTransport {
     return id
   }
 
-  private savePanel(): void {
-    this.panel.saved = {
-      widgets: this.panel.widgets.map((w) => ({ ...w })),
-      preset: this.panel.preset,
-      texts: [...this.panel.texts],
+  private savePanel(peer = false): void {
+    const panel = peer ? this.peerPanel : this.panel
+
+    panel.saved = {
+      widgets: panel.widgets.map((w) => ({ ...w })),
+      preset: panel.preset,
+      texts: [...panel.texts],
     }
-    this.panel.dirty = false
+    panel.dirty = false
   }
 
-  private discardPanel(): void {
-    if (this.panel.saved) {
-      this.panel.widgets = this.panel.saved.widgets.map((w) => ({ ...w }))
-      this.panel.preset = this.panel.saved.preset
-      this.panel.texts = [...this.panel.saved.texts]
+  private discardPanel(peer = false): void {
+    const panel = peer ? this.peerPanel : this.panel
+
+    if (panel.saved) {
+      panel.widgets = panel.saved.widgets.map((w) => ({ ...w }))
+      panel.preset = panel.saved.preset
+      panel.texts = [...panel.saved.texts]
+    } else if (peer) {
+      this.peerPanel = peerPanelState()
     } else {
       this.panel = { ...panelFromPreset(0), saved: null }
     }
 
-    this.panel.dirty = false
+    const current = peer ? this.peerPanel : this.panel
+
+    current.dirty = false
   }
 
-  private resetPanel(): void {
+  private resetPanel(peer = false): void {
+    if (peer) {
+      this.peerPanel = peerPanelState()
+      return
+    }
+
     this.panel = panelFromPreset(0)
   }
 
@@ -1328,6 +1582,229 @@ export class MockKeyboard implements KeebTransport {
   private reset(): void {
     this.persisted = null
     this.discard()
+  }
+
+  /* ------------------------------------------------------------------ settings */
+
+  private writeSettings(msg: TlvMessage): void {
+    const dv = msg.add(KEEB_T_SETTINGS, KEEB_SETTINGS_SIZE)
+
+    if (!dv) {
+      return
+    }
+
+    dv.setUint32(0, this.settings.idleTimeoutMs, true)
+    dv.setUint32(4, this.settings.sleepTimeoutMs, true)
+    dv.setUint32(8, this.settings.debouncePressMs, true)
+    dv.setUint32(12, this.settings.debounceReleaseMs, true)
+    dv.setInt32(16, this.settings.tappingTermMs, true)
+    dv.setInt32(20, this.settings.quickTapMs, true)
+    dv.setInt32(24, this.settings.priorIdleMs, true)
+    dv.setUint32(28, this.settings.ledBrightnessPercent, true)
+    dv.setUint32(32, this.settings.ledColorRed, true)
+    dv.setUint32(36, this.settings.ledColorGreen, true)
+    dv.setUint32(40, this.settings.ledColorBlue, true)
+    this.settings.ledLayerColors.forEach((c, i) => dv.setUint32(44 + 4 * i, c, true))
+    dv.setUint16(76, this.settings.flags & 0xffff, true)
+    dv.setUint8(78, this.settings.booleans)
+    dv.setUint8(79, this.settings.holdTapFlavor)
+  }
+
+  /** keeb_settings_set(): a fixed-size record, fields written only where the
+   * flag is set, unknown flags/hold-tap flavor refused. */
+  private applySettings(value: Uint8Array, fail: (code: number) => void): void {
+    if (value.length < KEEB_SETTINGS_SIZE) {
+      fail(KEEB_ERR_BAD_LEN)
+
+      return
+    }
+
+    const incoming = readSettings(value)
+
+    if ((incoming.flags & ~KEEB_SETTINGS_F_ALL) !== 0) {
+      fail(KEEB_ERR_OUT_OF_RANGE)
+
+      return
+    }
+
+    if ((incoming.booleans & ~KEEB_SETTINGS_B_ALL) !== 0) {
+      fail(KEEB_ERR_OUT_OF_RANGE)
+
+      return
+    }
+
+    if (incoming.holdTapFlavor > 3 && incoming.holdTapFlavor !== KEEB_SETTINGS_FLAVOR_AUTO) {
+      fail(KEEB_ERR_OUT_OF_RANGE)
+
+      return
+    }
+
+    const setBool = (bit: number): void => {
+      if (incoming.booleans & bit) {
+        this.settings.booleans |= bit
+      } else {
+        this.settings.booleans &= ~bit
+      }
+    }
+
+    if (incoming.flags & KEEB_SETTINGS_F_IDLE_TIMEOUT) this.settings.idleTimeoutMs = incoming.idleTimeoutMs
+    if (incoming.flags & KEEB_SETTINGS_F_SLEEP_TIMEOUT) this.settings.sleepTimeoutMs = incoming.sleepTimeoutMs
+    if (incoming.flags & KEEB_SETTINGS_F_DEBOUNCE_PRESS) this.settings.debouncePressMs = incoming.debouncePressMs
+    if (incoming.flags & KEEB_SETTINGS_F_DEBOUNCE_RELEASE) this.settings.debounceReleaseMs = incoming.debounceReleaseMs
+    if (incoming.flags & KEEB_SETTINGS_F_TAPPING_TERM) this.settings.tappingTermMs = incoming.tappingTermMs
+    if (incoming.flags & KEEB_SETTINGS_F_QUICK_TAP) this.settings.quickTapMs = incoming.quickTapMs
+    if (incoming.flags & KEEB_SETTINGS_F_PRIOR_IDLE) this.settings.priorIdleMs = incoming.priorIdleMs
+    if (incoming.flags & KEEB_SETTINGS_F_HOLD_TAP_FLAVOR) this.settings.holdTapFlavor = incoming.holdTapFlavor
+    if (incoming.flags & KEEB_SETTINGS_F_LED_BRIGHTNESS) this.settings.ledBrightnessPercent = Math.min(100, incoming.ledBrightnessPercent)
+    if (incoming.flags & KEEB_SETTINGS_F_LED_COLOR_RED) this.settings.ledColorRed = incoming.ledColorRed & 0xffffff
+    if (incoming.flags & KEEB_SETTINGS_F_LED_COLOR_GREEN) this.settings.ledColorGreen = incoming.ledColorGreen & 0xffffff
+    if (incoming.flags & KEEB_SETTINGS_F_LED_COLOR_BLUE) this.settings.ledColorBlue = incoming.ledColorBlue & 0xffffff
+    if (incoming.flags & KEEB_SETTINGS_F_LED_LAYERS) {
+      this.settings.ledLayerColors = incoming.ledLayerColors.map((c) => c & 0xffffff)
+    }
+    if (incoming.flags & KEEB_SETTINGS_F_SLEEP_ALLOWED) setBool(KEEB_SETTINGS_B_SLEEP_ALLOWED)
+    if (incoming.flags & KEEB_SETTINGS_F_BLANK_ON_IDLE) setBool(KEEB_SETTINGS_B_BLANK_ON_IDLE)
+
+    this.settings.flags = incoming.flags
+
+    this.notify(KEEB_EV_SETTINGS_CHANGED, new Uint8Array([incoming.flags & 0xff, (incoming.flags >> 8) & 0xff]))
+  }
+
+  private discardSettings(): void {
+    this.settings = { ...DEFAULT_SETTINGS, ledLayerColors: [...DEFAULT_SETTINGS.ledLayerColors] }
+    this.tunes = DEFAULT_TUNES.map((t) => t.map((s) => ({ ...s })))
+    this.soundMap = [...DEFAULT_SOUND_MAP]
+    this.settingsSaved = false
+
+    this.notify(KEEB_EV_SETTINGS_CHANGED, new Uint8Array([KEEB_SETTINGS_F_ALL & 0xff, (KEEB_SETTINGS_F_ALL >> 8) & 0xff]))
+  }
+
+  /** Test hook: what SETTINGS_SAVE has written, mirroring `savedToSettings`. */
+  get settingsSavedToFlash(): boolean {
+    return this.settingsSaved
+  }
+
+  /** Test hook: the RAM values ZMK reads. */
+  settingsLive(): SettingsPayload {
+    return { ...this.settings, booleans: this.settings.booleans }
+  }
+
+  /* ---------------------------------------------------------------- sound */
+
+  private writeSound(msg: TlvMessage): void {
+    for (let event = 0; event < KEEB_SOUND_EVENT_COUNT; event++) {
+      const dv = msg.add(KEEB_T_SOUND_MAP, KEEB_SOUND_MAP_SIZE)
+
+      if (!dv) {
+        return
+      }
+
+      dv.setUint8(0, event)
+      dv.setUint8(1, this.soundMap[event] ?? 0)
+    }
+
+    for (let tune = 0; tune < KEEB_SOUND_TUNE_COUNT; tune++) {
+      const steps = this.tunes[tune] ?? []
+      const dv = msg.add(KEEB_T_TUNE, KEEB_TUNE_HDR_SIZE + steps.length * KEEB_TUNE_STEP_SIZE)
+
+      if (!dv) {
+        return
+      }
+
+      dv.setUint8(0, tune)
+      dv.setUint8(1, steps.length)
+      dv.setUint16(2, 0, true)
+
+      steps.forEach((step, i) => {
+        const at = KEEB_TUNE_HDR_SIZE + i * KEEB_TUNE_STEP_SIZE
+        dv.setUint16(at, step.pitchPct, true)
+        dv.setUint16(at + 2, step.onMs, true)
+        dv.setUint16(at + 4, step.gapMs, true)
+      })
+    }
+  }
+
+  /** Mirrors zmk_buzzer_tune_set(): the whole tune is refused if one step is
+   * outside the piezo's ranges, so a bad write never half-lands. */
+  private applyTune(value: Uint8Array, fail: (err: number) => void): void {
+    if (value.length < KEEB_TUNE_HDR_SIZE) {
+      fail(KEEB_ERR_BAD_LEN)
+      return
+    }
+
+    const tune = value[0]
+    const count = value[1]
+
+    if (
+      tune <= 0 ||
+      tune >= KEEB_SOUND_TUNE_COUNT ||
+      count < 1 ||
+      count > KEEB_SOUND_STEPS_MAX ||
+      value.length < KEEB_TUNE_HDR_SIZE + count * KEEB_TUNE_STEP_SIZE
+    ) {
+      fail(KEEB_ERR_OUT_OF_RANGE)
+      return
+    }
+
+    const dv = new DataView(value.buffer, value.byteOffset, value.byteLength)
+    const steps: TuneStep[] = []
+
+    for (let i = 0; i < count; i++) {
+      const at = KEEB_TUNE_HDR_SIZE + i * KEEB_TUNE_STEP_SIZE
+      const step = {
+        pitchPct: dv.getUint16(at, true),
+        onMs: dv.getUint16(at + 2, true),
+        gapMs: dv.getUint16(at + 4, true),
+      }
+
+      if (step.pitchPct < 50 || step.pitchPct > 400 || step.onMs < 10 || step.onMs > 1000 || step.gapMs > 1000) {
+        fail(KEEB_ERR_OUT_OF_RANGE)
+        return
+      }
+
+      steps.push(step)
+    }
+
+    this.tunes[tune] = steps
+  }
+
+  private applySoundMap(value: Uint8Array, fail: (err: number) => void): void {
+    if (value.length < KEEB_SOUND_MAP_SIZE) {
+      fail(KEEB_ERR_BAD_LEN)
+      return
+    }
+
+    const event = value[0]
+    const tune = value[1]
+
+    if (event >= KEEB_SOUND_EVENT_COUNT || tune >= KEEB_SOUND_TUNE_COUNT) {
+      fail(KEEB_ERR_OUT_OF_RANGE)
+      return
+    }
+
+    this.soundMap[event] = tune
+  }
+
+  private playTune(value: Uint8Array): void {
+    if (value.length >= KEEB_SOUND_PLAY_SIZE && value[0] < KEEB_SOUND_TUNE_COUNT) {
+      this.tunePlays.push(value[0])
+    }
+  }
+
+  /** Test hook: the RAM the buzzer would play. */
+  soundLive(): SoundPayload {
+    const tunes: Record<number, TuneStep[]> = {}
+
+    for (let tune = 0; tune < KEEB_SOUND_TUNE_COUNT; tune++) {
+      tunes[tune] = (this.tunes[tune] ?? []).map((s) => ({ ...s }))
+    }
+
+    return { events: { ...this.soundMap.reduce<Record<number, number>>((m, t, i) => ({ ...m, [i]: t }), {}) }, tunes }
+  }
+
+  /** Test hook: tune ids the host asked to hear, in order. */
+  tunePlayed(): number[] {
+    return [...this.tunePlays]
   }
 
   private sendAck(msgId: number, status: number, err: number): void {

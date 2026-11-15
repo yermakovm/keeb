@@ -23,10 +23,11 @@
 #include "../boards/shields/keeb/ui/widget_model.h"
 #include "../proto/keeb_tlv.h"
 #include "keeb_display.h"
+#include "keeb_peer_panel.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
-#if IS_ENABLED(CONFIG_KBEEB_UI)
+#if IS_ENABLED(CONFIG_KEEB_UI)
 
 /* --------------------------------------------------------------------------
  * What gets saved
@@ -40,11 +41,11 @@ struct keeb_ui_saved_table {
 	uint8_t count;
 	uint8_t preset;
 	uint8_t rsvd[2];
-	struct keeb_widget widgets[KBEEB_UI_WIDGET_MAX];
+	struct keeb_widget widgets[KEEB_UI_WIDGET_MAX];
 };
 
 struct keeb_ui_saved_text {
-	char text[KBEEB_UI_TEXT_SLOTS][KBEEB_UI_TEXT_MAX + 1];
+	char text[KEEB_UI_TEXT_SLOTS][KEEB_UI_TEXT_MAX + 1];
 };
 
 #define KEEB_UI_SETTINGS_TABLE "keebui/table"
@@ -73,20 +74,28 @@ void keeb_display_info(struct keeb_display_info *info) {
 	 * its own panel. */
 	info->editable = 1;
 	info->preset_count = keeb_ui_preset_count();
-	info->widget_max = KBEEB_UI_WIDGET_MAX;
-	info->text_slots = KBEEB_UI_TEXT_SLOTS;
-	info->text_max = KBEEB_UI_TEXT_MAX;
-	info->value_slots = KBEEB_UI_VALUE_SLOTS;
+	info->widget_max = KEEB_UI_WIDGET_MAX;
+	info->text_slots = KEEB_UI_TEXT_SLOTS;
+	info->text_max = KEEB_UI_TEXT_MAX;
+	info->value_slots = KEEB_UI_VALUE_SLOTS;
 	info->kind_max = KEEB_WID_COUNT;
-	info->source_max = KEEB_SRC_VALUE_BASE + KBEEB_UI_VALUE_SLOTS - 1;
-	info->logical_w = KBEEB_UI_W;
-	info->logical_h = KBEEB_UI_H;
-	info->panel_w = KBEEB_PANEL_W;
-	info->panel_h = KBEEB_PANEL_H;
-	info->rotation = KBEEB_UI_ROTATION_DEG;
+	info->source_max = KEEB_SRC_VALUE_BASE + KEEB_UI_VALUE_SLOTS - 1;
+	info->logical_w = KEEB_UI_W;
+	info->logical_h = KEEB_UI_H;
+	info->panel_w = KEEB_PANEL_W;
+	info->panel_h = KEEB_PANEL_H;
+	info->rotation = KEEB_UI_ROTATION_DEG;
 	info->widget_size = sizeof(struct keeb_widget);
 	info->flags = keeb_ui_art_available() ? KEEB_DISPLAY_INFO_F_ART : 0;
-	info->layers = KBEEB_LAYER_COUNT;
+
+	/* The host can edit the *other* half's panel too: it is the same records
+	 * with a PEER prefix, answered by display/keeb_peer_panel.c. The flag says
+	 * so up front, so a build without it does not look like a broken screen 2. */
+	if (keeb_peer_panel_available()) {
+		info->flags |= KEEB_DISPLAY_INFO_F_PEER;
+	}
+
+	info->layers = KEEB_LAYER_COUNT;
 }
 
 int keeb_display_names(struct keeb_tlv_msg *msg) {
@@ -136,8 +145,8 @@ int keeb_display_dump(struct keeb_tlv_msg *msg) {
 
 	/* Slots ride as their own records, the same way a layer dump carries
 	 * one name record per layer: no nested records in the codec. */
-	for (uint8_t slot = 0; slot < KBEEB_UI_TEXT_SLOTS; slot++) {
-		char text[KBEEB_UI_TEXT_MAX + 1];
+	for (uint8_t slot = 0; slot < KEEB_UI_TEXT_SLOTS; slot++) {
+		char text[KEEB_UI_TEXT_MAX + 1];
 
 		if (keeb_ui_get_text(slot, text, sizeof(text))) {
 			continue;
@@ -156,7 +165,7 @@ int keeb_display_dump(struct keeb_tlv_msg *msg) {
 		memcpy(((uint8_t *)rec) + sizeof(*rec), text, len);
 	}
 
-	for (uint8_t slot = 0; slot < KBEEB_UI_VALUE_SLOTS; slot++) {
+	for (uint8_t slot = 0; slot < KEEB_UI_VALUE_SLOTS; slot++) {
 		struct keeb_value_slot *rec =
 				keeb_tlv_rec_add(msg, KEEB_T_VALUE_SET, sizeof(*rec));
 
@@ -185,7 +194,7 @@ int keeb_display_set_table(const uint8_t *data, uint16_t len, uint16_t *applied)
 
 	memcpy(&hdr, data, sizeof(hdr));
 
-	if (hdr.count > KBEEB_UI_WIDGET_MAX) {
+	if (hdr.count > KEEB_UI_WIDGET_MAX) {
 		return -KEEB_ERR_NO_SPACE;
 	}
 
@@ -220,7 +229,7 @@ int keeb_display_set_widget(const uint8_t *data, uint16_t len) {
 
 	memcpy(&set, data, sizeof(set));
 
-	struct keeb_widget next[KBEEB_UI_WIDGET_MAX];
+	struct keeb_widget next[KEEB_UI_WIDGET_MAX];
 	uint8_t count = keeb_ui_widget_count();
 
 	memcpy(next, keeb_ui_widgets(), sizeof(next));
@@ -320,8 +329,8 @@ static int collect_saved(struct keeb_ui_saved_table *table, struct keeb_ui_saved
 	memset(table->rsvd, 0, sizeof(table->rsvd));
 	memcpy(table->widgets, keeb_ui_widgets(), sizeof(table->widgets));
 
-	for (uint8_t slot = 0; slot < KBEEB_UI_TEXT_SLOTS; slot++) {
-		if (keeb_ui_get_text(slot, text->text[slot], KBEEB_UI_TEXT_MAX + 1)) {
+	for (uint8_t slot = 0; slot < KEEB_UI_TEXT_SLOTS; slot++) {
+		if (keeb_ui_get_text(slot, text->text[slot], KEEB_UI_TEXT_MAX + 1)) {
 			text->text[slot][0] = '\0';
 		}
 	}
@@ -443,7 +452,7 @@ static int keeb_ui_settings_commit(void) {
 	if (pending_has_table) {
 		struct keeb_ui_saved_table *t = &pending_table;
 
-		if (t->count <= KBEEB_UI_WIDGET_MAX) {
+		if (t->count <= KEEB_UI_WIDGET_MAX) {
 			/* keeb_ui_set_widgets requests the redraw itself. */
 			if (keeb_ui_set_widgets(t->widgets, t->count)) {
 				LOG_WRN("saved panel layout is not drawable here; keeping the "
@@ -451,14 +460,14 @@ static int keeb_ui_settings_commit(void) {
 			}
 		} else {
 			LOG_WRN("saved panel layout has %u widgets, this build holds %u", t->count,
-				KBEEB_UI_WIDGET_MAX);
+				KEEB_UI_WIDGET_MAX);
 		}
 
 		pending_has_table = false;
 	}
 
 	if (pending_has_text) {
-		for (uint8_t slot = 0; slot < KBEEB_UI_TEXT_SLOTS; slot++) {
+		for (uint8_t slot = 0; slot < KEEB_UI_TEXT_SLOTS; slot++) {
 			keeb_ui_set_text(slot, pending_text.text[slot],
 					 (uint8_t)strlen(pending_text.text[slot]));
 		}
@@ -480,7 +489,7 @@ SETTINGS_STATIC_HANDLER_DEFINE(keeb_ui_store, "keebui", NULL, keeb_ui_settings_s
 
 #endif /* CONFIG_SETTINGS */
 
-#else /* !CONFIG_KBEEB_UI: the engine answers, but there is no panel to change */
+#else /* !CONFIG_KEEB_UI: the engine answers, but there is no panel to change */
 
 uint32_t keeb_display_capabilities(void) { return 0; }
 
@@ -533,4 +542,4 @@ int keeb_display_reset(void) { return -KEEB_ERR_NOT_SUPPORTED; }
 int keeb_display_blank(void) { return -KEEB_ERR_NOT_SUPPORTED; }
 bool keeb_display_dirty(void) { return false; }
 
-#endif /* CONFIG_KBEEB_UI */
+#endif /* CONFIG_KEEB_UI */

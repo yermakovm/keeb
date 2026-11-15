@@ -17,7 +17,7 @@
  *   - A widget names a *source*, never a value. Layer, battery, link, charging
  *     and the connected device are read from ZMK at draw time, so the panel
  *     cannot be made to lie about the keyboard's state.
- *   - The table is bounded (KBEEB_UI_WIDGET_MAX) and every entry is validated
+ *   - The table is bounded (KEEB_UI_WIDGET_MAX) and every entry is validated
  *     against the panel's own geometry before it is accepted.
  *   - The only values a host may write are the text slots and the number slots
  *     a widget explicitly opts into, and they live in fixed-size buffers.
@@ -37,28 +37,28 @@
 
 #include "../../../../proto/keeb_tlv.h"
 #include "keeb_ui.h"
-#include "panels.h" /* KBEEB_LAYER_NAME_MAX */
+#include "panels.h" /* KEEB_LAYER_NAME_MAX */
 
 /** How many primitives the panel can hold, and how much a host may write. */
-#define KBEEB_UI_WIDGET_MAX 24
-#define KBEEB_UI_TEXT_SLOTS 8
-#define KBEEB_UI_TEXT_MAX 24
-#define KBEEB_UI_VALUE_SLOTS 4
+#define KEEB_UI_WIDGET_MAX 24
+#define KEEB_UI_TEXT_SLOTS 8
+#define KEEB_UI_TEXT_MAX 24
+#define KEEB_UI_VALUE_SLOTS 4
 
 /** Which half this build is. Same rule the config engine uses: an unsplitted
  * board is its own central, and only the central owns the readouts. */
 #if !IS_ENABLED(CONFIG_ZMK_SPLIT) || IS_ENABLED(CONFIG_ZMK_SPLIT_ROLE_CENTRAL)
-#define KBEEB_UI_CENTRAL 1
+#define KEEB_UI_CENTRAL 1
 #else
-#define KBEEB_UI_CENTRAL 0
+#define KEEB_UI_CENTRAL 0
 #endif
 
 /** keeb_display_hdr.preset value once a host has replaced the built-in table. */
-#define KBEEB_PRESET_CUSTOM 0xffu
+#define KEEB_PRESET_CUSTOM 0xffu
 
 /** Longest connected-device name the model can carry. ZMK's own endpoint
  * string is ZMK_ENDPOINT_STR_LEN (10); a BLE peer profile name can be longer. */
-#define KBEEB_DEVICE_NAME_MAX 16
+#define KEEB_DEVICE_NAME_MAX 16
 
 /** Everything one panel shows. The panel fills the ZMK-owned fields, the model
  * fills the host-owned ones, and keeb_ui_render() formats the strings.
@@ -70,7 +70,7 @@
 struct keeb_ui_state {
 	/* ZMK-owned: read from ZMK by the panel at draw time. */
 	uint8_t layer;
-	char layer_name[KBEEB_LAYER_NAME_MAX];
+	char layer_name[KEEB_LAYER_NAME_MAX];
 	uint8_t left_level;
 	uint8_t right_level;
 	bool left_valid;
@@ -80,14 +80,22 @@ struct keeb_ui_state {
 	bool charging;
 	/** KEEB_DEV_NONE, KEEB_DEV_USB, or 1..N for a BLE profile. */
 	uint8_t device_id;
-	char device_name[KBEEB_DEVICE_NAME_MAX];
+	char device_name[KEEB_DEVICE_NAME_MAX];
 	/** Which layer's artwork KEEB_SRC_LAYER_ART draws. On the peripheral
 	 * this is the layer the central pushed, not a local keymap layer. */
 	uint8_t art_layer;
+	/** Words per minute, whole keyboard. On the peripheral this is the
+	 * central's rate plus this half's own. */
+	uint8_t wpm;
+	/** Active BLE profile index (KEEB_PROFILE_NONE for none), how many
+	 * profiles exist, and the host link signal in percent. */
+	uint8_t profile_active;
+	uint8_t profile_count;
+	uint8_t rssi_pct;
 
 	/* Host-owned: copied out of the model at the start of every render. */
-	char text[KBEEB_UI_TEXT_SLOTS][KBEEB_UI_TEXT_MAX + 1];
-	int16_t value[KBEEB_UI_VALUE_SLOTS];
+	char text[KEEB_UI_TEXT_SLOTS][KEEB_UI_TEXT_MAX + 1];
+	int16_t value[KEEB_UI_VALUE_SLOTS];
 
 	/* Formatted once per render by keeb_ui_state_format(). */
 	char layer_str[4];
@@ -99,7 +107,8 @@ struct keeb_ui_state {
 	char host_str[12];
 	char charging_str[12];
 	char device_str[8];
-	char value_str[KBEEB_UI_VALUE_SLOTS][8];
+	char wpm_str[4];
+	char value_str[KEEB_UI_VALUE_SLOTS][8];
 };
 
 /** One built-in layout: a widget table plus the strings its slots need. */
@@ -107,15 +116,26 @@ struct keeb_ui_preset {
 	const char *name;
 	const struct keeb_widget *widgets;
 	uint8_t count;
-	const char *texts[KBEEB_UI_TEXT_SLOTS];
+	const char *texts[KEEB_UI_TEXT_SLOTS];
 };
 
 /** Presets this build ships: 0 is the panel's own default look. */
 uint8_t keeb_ui_preset_count(void);
 const struct keeb_ui_preset *keeb_ui_preset(uint8_t id);
 
+/*
+ * The other half's presets and validator. Only the central compiles these
+ * (CONFIG_KEEB_UI_PEER_PANEL): it keeps the peer panel's table and has to
+ * check a host-written one against the geometry the peripheral draws in.
+ */
+#if KEEB_UI_CENTRAL && IS_ENABLED(CONFIG_KEEB_UI_PEER_PANEL)
+uint8_t keeb_ui_peer_preset_count(void);
+const struct keeb_ui_preset *keeb_ui_peer_preset(uint8_t id);
+int keeb_ui_peer_validate_widget(const struct keeb_widget *w);
+#endif
+
 /** Current table (read-only view), how many entries it has, and which preset
- * it came from (KBEEB_PRESET_CUSTOM once a host wrote its own). */
+ * it came from (KEEB_PRESET_CUSTOM once a host wrote its own). */
 uint8_t keeb_ui_widget_count(void);
 const struct keeb_widget *keeb_ui_widgets(void);
 uint8_t keeb_ui_preset_id(void);

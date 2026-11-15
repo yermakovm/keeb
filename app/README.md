@@ -181,7 +181,7 @@ matrix transform.
   custom property is substituted where it is **declared**, so declaring them
   against the fallback cell size measures the halves at 46px while the grid draws
   them smaller — which is how one screen ended up exactly on top of the other.
-- The menu is `keymap`, `tester`, `settings`. Layers and panels are edited where
+- The menu is `keymap`, `tester`, `settings`, `sound`. Layers and panels are edited where
   they are drawn, so they are not menu items.
 - Below the board is one slot that holds whatever the board is pointing at: the
   **keycode palette** for a key, the **widget table** for a panel, the **event
@@ -270,17 +270,99 @@ button must never be confused for each other.
     count, slot length in **bytes**, which kinds exist, which sources can feed
     them, whether artwork is drawable here, and how many pips a pip row draws.
     The panel is not in devicetree, so there is nothing to generate them from.
-  - **Text slots** are the only strings the app can write, and a widget has to
-    point at a slot to show it. **Value slots** are live numbers: they redraw,
-    and `Save` never writes them, because a number pushed from a browser is not
-    a setting.
+  - **Custom text**: a text widget shows either what the keyboard reports or a
+    string you type. Picking *custom text* gives that widget one of the panel's
+    text slots — the lowest one no other widget uses, chosen here, so the editor
+    never shows a slot number — and one text box appears in its properties. The
+    string is a `TEXT_SET` and lands at once; the widget points at its slot only
+    after **Apply**. **Value slots** are live numbers: they redraw, and `Save`
+    never writes them, because a number pushed from a browser is not a setting.
   - Values the keyboard owns are not editable: layer, battery, link, charging
     and the connected device are read from ZMK at draw time. The preview shows
     placeholders where they will land.
+  - **screen 2 is the other half's panel.** Only the central can serve the
+    configurator, so the central keeps a copy of the peripheral's table and text
+    (`DISPLAY_INFO`'s `KEEB_DISPLAY_INFO_F_PEER` flag says a build can), answers
+    `PEER_DISPLAY_*` from it, persists it under its own `keebpeer` settings key,
+    and relays the table over the split link (`keeb,panel`). Apply redraws the
+    right half immediately; Save survives a reboot of the central; a peripheral
+    that links up later is sent the saved table on the connect edge. The peer's
+    `DISPLAY_INFO` reports `value_slots = 0` — live numbers are not relayed, so
+    the editor does not offer them. `Preset` switching is not exposed for it; the
+    panel comes up as the built-in `TYPING` table (`CONFIG_KEEB_UI_PEER_PRESET`).
 - The **?** button (bottom right) holds the reference text: what the cap styling
   means, how slots and ids differ, staging vs applying vs saving, and what to do
   when the token table, the pairing, or the advertising is the problem. Esc or a
   click outside closes it.
+
+## Settings
+
+The settings page is the keyboard's own values read over `SETTINGS_GET`, not a
+local table. A row exists only for a build value the firmware exposes over the
+link, so the set grows and shrinks with the build. Today that is:
+
+- the two activity timeouts, `CONFIG_ZMK_IDLE_TIMEOUT` and
+  `CONFIG_ZMK_IDLE_SLEEP_TIMEOUT`;
+- the kscan debounce press/release pair;
+- the hold-tap timings (tapping term, quick tap, prior idle), which live on the
+  central half, which is the half that resolves hold-taps;
+- two booleans: deep sleep (`CONFIG_ZMK_SLEEP`) and blank-on-idle
+  (`CONFIG_ZMK_DISPLAY_BLANK_ON_IDLE`);
+- the status-LED palette: brightness (`CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT`)
+  and the three signal colors (battery error red, connected flash green,
+  advertising pulse blue);
+- the per-layer status-LED colors: one color per keymap layer, pinned to the
+  layer index so a layer that moves keeps its color, `0` meaning off. These are
+  a separate table from the palette above and travel as one whole table under
+  one flag — changing a layer color does not touch the BLE/status signals, and
+  retuning the palette does not move a layer color.
+
+Every change is one `SETTINGS_SET` record; only the fields whose flag is set
+are written, so one value can change without sending the rest.
+
+- **Apply** sends `SETTINGS_SET`: live on the half holding the connection, and
+  relayed to the other half over ZMK's split transport (the `keeb,timeouts`
+  behaviour — two numbers per invocation, so the settings travel two at a time
+  with a group id in the same `position` field the op travels in; the eight
+  layer colors are four of those groups). It has to be
+  relayed: deep sleep is decided per half, because each half runs its own ZMK
+  activity timer, scans its own matrix, and drives its own status LED.
+- **save to flash** sends `SETTINGS_SAVE`, and each half persists its own copy in
+  its own flash. Only this survives a reboot.
+- **discard** sends `SETTINGS_DISCARD`: both halves go back to the flashed values
+  and drop their saved copies.
+- A half that connects later is told the current values on the connect edge, in
+  the persistence state the central is actually in, so the two halves cannot end
+  up sleeping on different clocks.
+- The sleep timeout only bites on battery: ZMK skips the sleep branch while USB
+  power is present, and what it does is `sys_poweroff()` — waking a half means
+  power-cycling it.
+
+The firmware support comes from four small ZMK patches in
+`../zmk-patches/` (activity timeouts + a deep-sleep off switch, display
+blanking, matrix debounce, hold-tap timings) and the settings module in
+`../keeb-module/settings/`.
+
+## Sound
+
+The Sound page is the buzzer's own page, with the same apply/save split as the
+settings page:
+
+- **what plays for each event** — the keyboard sounds on its own for a layer
+  turning on or off, an accepted or refused update, and a wake from sleep. Each
+  row picks one of the tunes; the `▶` applies that tune's current shape and plays
+  it.
+- **the sounds** — each tune is a short list of `(pitch %, on ms, gap ms)` steps.
+  Pitch is a percentage of the build's base pitch, so the same shape fits another
+  piezo; the last step's gap is not played.
+
+The shapes live in the buzzer driver's RAM and the page reads them back after
+every write, so a row is the keyboard's value, not a local guess. `apply` lands in
+RAM (live from the next press, gone on reboot), `save to flash` is the same
+settings-storage write the settings page uses, and `discard` puts the
+compiled-in shapes back. A tune the keyboard refuses — a step outside the piezo's
+ranges — is refused here first, and the whole tune is rejected rather than
+partially written.
 
 ## Testing the switches
 
@@ -354,10 +436,13 @@ line per record, and a WRN for every error ACK. Read it with `make monitor`
   but nothing retries it on a timer.
 - `.keymap` text export (the app writes into the firmware's settings store; the
   devicetree file stays the factory default).
-- Settings and image namespaces (`SETTINGS`, `IMAGE`) — protocol constants are
-  already mirrored, no UI. The panel (`DISPLAY`) is implemented on both sides;
-  image upload is not, so the screen can only pick compiled-in artwork.
-- Panel edits reach the half that owns the engine (the central). The peripheral's
-  table is compiled in and receives the connected device id from the central;
-  there is no host-driven peripheral panel yet.
+- Image namespace (`IMAGE`) — protocol constants are already mirrored, no UI.
+  The panel (`DISPLAY`) is implemented on both sides; image upload is not, so the
+  screen can only pick compiled-in artwork.
+- The peer panel's persisted copy lives on the central, because that is the half
+  with a host and with the `keebpeer` settings subtree. The peripheral's copy is
+  RAM only: a right half that boots while the split link is down shows its
+  compiled-in `KEEB_UI_PERIPHERAL_PRESET` until the central connects and re-pushes.
+  Preset switching and live value slots are not relayed (the peer reports zero
+  value slots); the widget table and the text slots are.
 - Everything is untested against real hardware.

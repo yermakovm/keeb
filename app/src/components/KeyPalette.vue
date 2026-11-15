@@ -1,15 +1,21 @@
 <!--
-  Keycode palette — Oryx-style stepped binding.
+  Keycode dock — the Stage reference's floating tray under the keyboard.
 
-  Everything you can bind lives in one place under the keyboard.  Categories
-  are the first step; inside a category you either pick an item directly or
-  walk through a short param chain (layer → keycode, modifier → keycode, …).
+  Collapsed it is just a pill: a search field and a row of category buttons.
+  Clicking a category grows the dock upward into a panel that rises from the
+  bottom — a light, translucent tray ~a third of the screen tall, so the board
+  stays fully visible above it while you assign keys. The panel carries the
+  category's keys as keycap-shaped tiles with sub-groups (numbers, F-keys,
+  numpad, …) as tabs along its top edge.
 
-  The palette never hides the grid: it is under it, so the cap you clicked and
-  the chip you are about to click are both visible at once.
+  Assigning: select a key on the board, then click a tile (or drag one onto a
+  cap). Search replaces the category view with results across every category.
+
+  Closing: Esc, clicking the open category again, or clicking empty space
+  collapses it back to the dock.
 -->
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import { CATALOG } from '../data/keycodes.ts'
 import { paramKinds } from '../model/cap.ts'
@@ -18,10 +24,17 @@ import type { Binding } from '../proto/types.ts'
 import { useDeviceStore } from '../stores/device.ts'
 import { LAYER_ID_INVALID, useKeymapStore } from '../stores/keymap.ts'
 
-const props = defineProps<{ pos: number | null; reserved: boolean }>()
+const props = withDefaults(
+  defineProps<{ pos: number | null; reserved: boolean; busy?: boolean }>(),
+  { reserved: false, busy: false },
+)
 
 const emit = defineEmits<{
   (e: 'set', binding: Binding): void
+  (e: 'apply'): void
+  (e: 'revert'): void
+  (e: 'save'): void
+  (e: 'discard'): void
 }>()
 
 const device = useDeviceStore()
@@ -29,17 +42,17 @@ const keymap = useKeymapStore()
 
 /* ---------------------------------------------------------------- categories */
 
-const KINDS: Array<{ id: string; title: string; groups: string[]; note: string }> = [
-  { id: 'letters', title: 'letters · numbers', groups: ['letters', 'numbers'], note: '' },
-  { id: 'symbols', title: 'symbols', groups: ['symbols', 'shifted'], note: '' },
-  { id: 'modifiers', title: 'modifiers', groups: ['modifiers'], note: '' },
-  { id: 'navigation', title: 'navigation', groups: ['navigation'], note: '' },
-  { id: 'function', title: 'function · keypad', groups: ['function', 'keypad'], note: '' },
-  { id: 'media', title: 'media', groups: ['media'], note: '' },
-  { id: 'layers', title: 'layers', groups: [], note: 'mo · to · tog · sl' },
-  { id: 'dual', title: 'dual-function', groups: [], note: 'lt · mt · gresc' },
-  { id: 'system', title: 'system', groups: [], note: 'reset · bt · out · caps' },
-  { id: 'mouse', title: 'mouse', groups: [], note: 'mkp · mmv · msc' },
+const KINDS: Array<{ id: string; title: string; short: string; groups: string[]; note: string }> = [
+  { id: 'letters', title: 'letters · numbers', short: 'Letters', groups: ['letters', 'numbers'], note: '' },
+  { id: 'symbols', title: 'symbols', short: 'Symbols', groups: ['symbols', 'shifted'], note: '' },
+  { id: 'modifiers', title: 'modifiers', short: 'Modifiers', groups: ['modifiers'], note: '' },
+  { id: 'navigation', title: 'navigation', short: 'Navigation', groups: ['navigation'], note: '' },
+  { id: 'function', title: 'function · keypad', short: 'Function', groups: ['function', 'keypad'], note: '' },
+  { id: 'media', title: 'media', short: 'Media', groups: ['media'], note: '' },
+  { id: 'layers', title: 'layers', short: 'Layers', groups: [], note: 'mo · to · tog · sl' },
+  { id: 'dual', title: 'dual-function', short: 'Dual', groups: [], note: 'lt · mt · gresc' },
+  { id: 'system', title: 'system', short: 'System', groups: [], note: 'reset · bt · out · caps' },
+  { id: 'mouse', title: 'mouse', short: 'Mouse', groups: [], note: 'mkp · mmv · msc' },
 ]
 
 const GROUP_TITLE: Record<string, string> = {
@@ -59,17 +72,15 @@ const GROUP_TITLE: Record<string, string> = {
 
 const KEYCODE_GROUPS = Object.keys(CATALOG)
 
+/** The dock's row of category buttons: letters/symbols/modifiers/navigation up
+ * front, the rest (function, media and the behaviour kinds) folded behind the
+ * "More" dropup. */
+const MORE_IDS = ['function', 'media', 'layers', 'dual', 'system', 'mouse']
+
+const primaryKinds = computed(() => KINDS.filter((k) => !MORE_IDS.includes(k.id)))
+const moreKinds = computed(() => KINDS.filter((k) => MORE_IDS.includes(k.id)))
+
 /* ---------------------------------------------------------------- tabs */
-
-const TAB_IDS = ['keycodes', 'behaviors'] as const
-type TabId = (typeof TAB_IDS)[number]
-
-const TAB_KINDS: Record<TabId, string[]> = {
-  keycodes: ['letters', 'symbols', 'modifiers', 'navigation', 'function', 'media'],
-  behaviors: ['layers', 'dual', 'system', 'mouse'],
-}
-
-const tab = ref<TabId>('keycodes')
 
 /* ---------------------------------------------------------------- state */
 
@@ -169,11 +180,10 @@ const sections = computed(() =>
     .filter((s) => s.items.length > 0),
 )
 
-const total = computed(() => sections.value.reduce((n, s) => n + s.items.length, 0))
 
 /* ---------------------------------------------------------------- step machine */
 
-/* kind      → category grid
+/* kind      → category chosen (panel is open)
  * choices   → normal keycode groups (letters, symbols, …)
  * token     → choose a specific token (layer ops, dual-function ops, system ops)
  * param     → fill the next parameter for the chosen token
@@ -232,12 +242,6 @@ const mouseOps = computed(() =>
   }).filter(Boolean) as Array<{ label: string; name: string; token: number }>,
 )
 
-/* ---------------------------------------------------------------- tab filtering */
-
-const tabKinds = computed(() =>
-  q.value.length ? KINDS : KINDS.filter((k) => TAB_KINDS[tab.value].includes(k.id)),
-)
-
 /* ---------------------------------------------------------------- param UI data */
 
 const currentParamKind = computed(() => {
@@ -271,43 +275,175 @@ const keycodeHits = computed(() => {
   return all.filter((k) => k.name.includes(qv) || k.label.toUpperCase().includes(qv)).slice(0, 30)
 })
 
-/* ---------------------------------------------------------------- breadcrumb */
+/* ---------------------------------------------------------------- dock state */
 
-const crumbs = computed(() => {
-  const out: Array<{ id: string | null; label: string }> = [{ id: null, label: 'category' }]
-  if (kind.value) out.push({ id: 'kind', label: kind.value.title })
-  if (pickedToken.value !== null) {
-    const def = TOKENS.find((t) => t.id === pickedToken.value)
-    out.push({ id: 'token', label: def ? `&${def.label}` : 'token' })
+const open = ref(false)
+const showMore = ref(false)
+const groupTab = ref<'*' | string>('*')
+const menuOpen = ref(false)
+
+/** The panel is up when a category is chosen or a search is live. */
+const isOpen = computed(() => open.value && (kindId.value !== null || q.value.length > 0))
+const paramMode = computed(() => flow.value === 'param')
+const searching = computed(() => q.value.length > 0)
+
+/* Writing state, driven from the same stores the rest of the page uses. */
+const canApply = computed(() => !props.busy && keymap.isDirty)
+const canRevert = computed(() => !props.busy && keymap.isDirty)
+const canWriteNext = computed(() => !props.busy && device.writable)
+
+/** The "More" button lights when its menu is open or a folded category is active. */
+const moreHasActive = computed(() => showMore.value || moreKinds.value.some((k) => k.id === kindId.value))
+
+const moreWrapTitle = computed(() => `more: ${moreKinds.value.map((k) => k.short).join(', ')}`)
+
+/** The category's sub-groups as tabs along the panel's top edge. */
+const shownSections = computed(() =>
+  groupTab.value === '*' ? sections.value : sections.value.filter((s) => s.title === groupTab.value),
+)
+
+/** Cross-category search: replaces the category view with every matching key. */
+const searchResults = computed(() => {
+  const qv = q.value
+  if (!qv) return []
+  const wrapTok = wrapToken.value
+  if (!wrapTok) return []
+  const out: Array<{ main: string; sub: string; binding: Binding }> = []
+  for (const k of KINDS) {
+    for (const gid of k.groups) {
+      const items = (CATALOG as Record<string, Array<{ name: string; label: string; code: number }>>)[gid]
+      for (const item of items ?? []) {
+        if (item.name.toUpperCase().includes(qv) || item.label.toUpperCase().includes(qv)) {
+          out.push({ main: item.label, sub: item.name, binding: { token: wrapTok.id, param1: item.code, param2: 0 } })
+        }
+      }
+    }
   }
-  return out
+  return out.slice(0, 60)
 })
 
-function crumb(id: string | null): void {
-  if (id === null) { reset(); return }
-  if (id === 'kind') { cancelStep(); kindId.value = null; return }
-}
-
-function back(): void {
-  if (pickedToken.value !== null) { cancelStep(); return }
-  if (q.value.length) { query.value = ''; return }
-  kindId.value = null
-}
-
-function reset(): void {
-  kindId.value = null
+function toggleKind(id: string): void {
   query.value = ''
   cancelStep()
+  showMore.value = false
+  if (kindId.value === id) {
+    collapse()
+    return
+  }
+  pickKind(id)
+  groupTab.value = '*'
+  open.value = true
+}
+
+function collapse(): void {
+  kindId.value = null
+  cancelStep()
+  groupTab.value = '*'
+  showMore.value = false
+  menuOpen.value = false
+  open.value = false
 }
 
 function pickKind(id: string): void {
   kindId.value = id
   cancelStep()
+  groupTab.value = '*'
+}
+
+/** After a binding is fully filled in, collapse back to the dock bar. */
+function reset(): void {
+  collapse()
 }
 
 function stage(c: Binding): void {
   if (!canWrite.value) return
   emit('set', c)
+}
+
+/* ---------------------------------------------------------------- dock actions */
+
+function runAction(kind: 'apply' | 'revert' | 'save' | 'discard'): void {
+  menuOpen.value = false
+  showMore.value = false
+  ;(emit as (e: string) => void)(kind)
+}
+
+/* ---------------------------------------------------------------- dock open/close */
+
+/** A click anywhere inside the dock bar falls here: outside the two menus
+ * (write actions and the More dropup) it is just a tap on the bar, so both
+ * menus fold shut. The menus' own items handle their clicks themselves. */
+function onBarClick(e: MouseEvent): void {
+  const t = e.target as Element | null
+  if (t && (t.closest('.d-actions') || t.closest('.more-wrap'))) return
+  menuOpen.value = false
+  showMore.value = false
+}
+
+function onDocClick(e: MouseEvent): void {
+  const t = e.target as Element | null
+  /* clicks outside the dock also fold the menus, even if the panel is already
+   * collapsed */
+  if (t && !t.closest('.dock')) {
+    if (menuOpen.value) menuOpen.value = false
+    if (showMore.value) showMore.value = false
+  }
+  if (!open.value) return
+  if (!t) return
+  if (t.closest('.dock')) return
+  if (t.closest('.cap')) return
+  collapse()
+}
+
+function onEsc(e: KeyboardEvent): void {
+  if (e.key !== 'Escape' || !open.value) return
+  if (pickedToken.value !== null) {
+    cancelStep()
+    return
+  }
+  collapse()
+}
+
+onMounted(() => {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('click', onDocClick)
+    document.addEventListener('keydown', onEsc)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('click', onDocClick)
+    document.removeEventListener('keydown', onEsc)
+  }
+})
+
+/* ---------------------------------------------------------------- drag source */
+
+/** Shared clipboard for drag-and-drop: tiles write here, caps/App read it.
+ * Backed by the window so the drag source (dock) and the drop target (keycap)
+ * can be far apart; accessed lazily so SSR (no window) stays happy. */
+const dragWin = {
+  get __keebDragBinding(): Binding | undefined {
+    return typeof window !== 'undefined' ? (window as unknown as { __keebDragBinding?: Binding }).__keebDragBinding : undefined
+  },
+  set __keebDragBinding(b: Binding | undefined) {
+    if (typeof window !== 'undefined') {
+      ;(window as unknown as { __keebDragBinding?: Binding }).__keebDragBinding = b
+    }
+  },
+}
+
+function onTileDragStart(e: DragEvent, binding: Binding): void {
+  dragWin.__keebDragBinding = binding
+  if (e.dataTransfer) {
+    e.dataTransfer.setData('text/plain', 'keeb-binding')
+    e.dataTransfer.effectAllowed = 'move'
+  }
+}
+
+function onTileDragEnd(): void {
+  dragWin.__keebDragBinding = undefined
 }
 
 /* ---------------------------------------------------------------- bt / out / mouse helpers */
@@ -335,464 +471,617 @@ const BUTTON_ITEMS = ['LCLK', 'RCLK', 'MCLK', 'MB4', 'MB5']
 </script>
 
 <template>
-  <section class="palette">
-    <header class="phead">
-      <h2>keys</h2>
+  <section class="dock" :class="{ open: isOpen }" aria-label="Key dock">
+    <!-- The panel, which rises from the bottom when a category is chosen or a
+         search is live. @click.stop keeps a panel-internal click from being
+         read as a click on empty space. -->
+    <div v-if="isOpen" class="panel" @click.stop>
+      <p v-if="reserved" class="note bad">
+        position {{ pos }} is reserved — the firmware will not rebind it
+      </p>
 
-      <nav class="crumbs" aria-label="where you are in the catalog">
-        <button
-          v-for="(c, i) in crumbs"
-          :key="c.label"
-          class="crumb"
-          :class="{ here: i === crumbs.length - 1 }"
-          @click="crumb(c.id)"
-        >
-          {{ c.label }}
-        </button>
-      </nav>
+      <!-- STEP: fill a parameter for a chosen token (layers, dual, system, mouse). -->
+      <template v-if="paramMode">
+        <div class="param-head">
+          <button class="chip back" title="back to the token" @click="cancelStep">‹&nbsp;{{ TOKENS.find((t) => t.id === pickedToken)?.label ?? '?' }}</button>
+          <span class="note">{{ currentParamLabel }} · param {{ paramStep + 1 }}</span>
+          <button class="chip small" title="throw this step away" @click="cancelStep">Cancel</button>
+        </div>
 
-      <label class="find">
-        <input
-          v-model="query"
-          class="search"
-          type="search"
-          placeholder="PRINTSCREEN · caps_word"
-          aria-label="narrow the keycodes by name or label"
-        />
-      </label>
+        <div class="tiles">
+          <!-- layer -->
+          <template v-if="currentParamKind === 'layer'">
+            <button
+              v-for="l in layerSlots"
+              :key="l.id"
+              class="tile layer"
+              :class="{ live: l.live }"
+              :disabled="!canWrite"
+              @click="setParam(l.id)"
+            >
+              {{ l.name }}
+              <small>{{ l.live ? 'live' : 'slot' }}</small>
+            </button>
+          </template>
 
-      <span v-if="flow === 'choices'" class="count" aria-live="polite">{{ total }} shown</span>
+          <!-- keycode -->
+          <template v-else-if="currentParamKind === 'keycode'">
+            <button
+              v-for="k in keycodeHits"
+              :key="k.name"
+              class="tile"
+              @click="setParam(k.code)"
+            >
+              {{ k.label }}
+              <small>{{ k.name }}</small>
+            </button>
+          </template>
 
-      <span class="target">
-        <template v-if="pos === null">no key selected</template>
-        <template v-else>→ position {{ pos }} · {{ keymap.editingName }}</template>
-      </span>
+          <!-- mouse vector -->
+          <template v-else-if="currentParamKind === 'mouse-vector'">
+            <button
+              v-for="n in (TOKENS.find((t) => t.id === pickedToken)?.label === 'msc' ? SCRL_ITEMS : MOVE_ITEMS)"
+              :key="n"
+              class="tile"
+              @click="setParam(KEYCODES[n] ?? 0)"
+            >
+              {{ n.replace(/^MOVE_/, '').replace(/^SCRL_/, '') }}
+              <small>{{ n }}</small>
+            </button>
+          </template>
 
-      <button class="chip back" :disabled="flow === 'kind' && !query" title="one step back" @click="back">back</button>
-    </header>
+          <!-- button mask -->
+          <template v-else-if="currentParamKind === 'button-mask'">
+            <button
+              v-for="(n, i) in BUTTON_ITEMS"
+              :key="n"
+              class="tile"
+              :class="{ on: ((paramValues[0] ?? 0) & (1 << i)) !== 0 }"
+              @click="setParam((paramValues[0] ?? 0) ^ (1 << i))"
+            >
+              {{ n }}
+              <small>button</small>
+            </button>
+          </template>
 
-    <p v-if="reserved" class="note bad">position {{ pos }} is reserved: the firmware will not rebind it</p>
+          <!-- bt command -->
+          <template v-else-if="currentParamKind === 'bt-cmd'">
+            <button
+              v-for="b in BT_ITEMS"
+              :key="b.v"
+              class="tile"
+              @click="setParam(b.v)"
+            >
+              {{ b.label }}
+              <small>BT {{ b.v }}</small>
+            </button>
+          </template>
 
-    <!-- ================================================================
-         STEP 1 — Category grid (with tabs)
-         ================================================================ -->
-    <template v-if="flow === 'kind'">
-      <div class="tabs">
-        <button
-          v-for="t in TAB_IDS"
-          :key="t"
-          class="tab"
-          :class="{ on: tab === t }"
-          @click="tab = t"
-        >
-          {{ t === 'keycodes' ? 'Keys' : 'Behaviors' }}
-        </button>
-      </div>
+          <!-- output -->
+          <template v-else-if="currentParamKind === 'output'">
+            <button
+              v-for="o in OUT_ITEMS"
+              :key="o.v"
+              class="tile"
+              @click="setParam(o.v)"
+            >
+              {{ o.label }}
+              <small>output</small>
+            </button>
+          </template>
 
-      <div class="grid">
-        <button
-          v-for="k in tabKinds"
-          :key="k.id"
-          class="big"
-          :disabled="pos === null || reserved"
-          @click="pickKind(k.id)"
-        >
-          {{ k.title }}
-          <small>{{ k.note || `${k.groups.length} groups` }}</small>
-        </button>
-      </div>
-    </template>
+          <!-- plain number -->
+          <template v-else>
+            <input
+              class="num"
+              type="number"
+              :value="paramValues[paramStep] ?? 0"
+              placeholder="value…"
+              @change="setParam(Number(($event.target as HTMLInputElement).value))"
+            />
+          </template>
+        </div>
+      </template>
 
-    <!-- ================================================================
-         STEP 2a — Normal keycode groups (letters, symbols, modifiers, …)
-         ================================================================ -->
-    <div v-else-if="flow === 'choices'" class="choices">
-      <div class="variants">
-        <span class="vlabel">variant</span>
-        <button
-          v-for="w in (['kp', 'kt', 'sk'] as const)"
-          :key="w"
-          class="chip"
-          :class="{ on: wrap === w }"
-          :title="`&${w} — ${WRAP_NOTE[w]}`"
-          @click="wrap = w"
-        >
-          &amp;{{ w }}
-        </button>
-        <span v-if="wrapToken && !usable(wrapToken.id)" class="note bad">
-          the keyboard did not report &amp;{{ wrap }} as available
-        </span>
-      </div>
-
-      <section v-for="s in sections" :key="s.title" class="group">
-        <h3>{{ s.title }} <small>{{ s.items.length }}</small></h3>
-        <div class="keys">
+      <!-- SEARCH: results across every category. -->
+      <template v-else-if="searching">
+        <div class="ptabs">
+          <span class="ptab-note">matches across all categories</span>
+          <span class="count">{{ searchResults.length }}</span>
+        </div>
+        <div class="tiles">
           <button
-            v-for="c in s.items"
-            :key="c.id"
-            class="key"
+            v-for="(r, i) in searchResults"
+            :key="`${r.sub}-${i}`"
+            class="tile"
             :disabled="!canWrite"
-            :title="`stage ${c.main} at position ${pos}`"
+            draggable="true"
+            @dragstart="onTileDragStart($event, r.binding)"
+            @dragend="onTileDragEnd"
+            @click="stage(r.binding)"
+          >
+            {{ r.main }}
+            <small>{{ r.sub }}</small>
+          </button>
+        </div>
+        <p v-if="!searchResults.length" class="note">nothing matches “{{ query }}”</p>
+      </template>
+
+      <!-- CATEGORY: either keycodes (with sub-group tabs) or a token flow. -->
+      <template v-else>
+        <!-- sub-group tabs on the panel's top edge -->
+        <div v-if="sections.length > 1" class="ptabs">
+          <button class="ptab" :class="{ on: groupTab === '*' }" @click="groupTab = '*'">All</button>
+          <button
+            v-for="s in sections"
+            :key="s.title"
+            class="ptab"
+            :class="{ on: groupTab === s.title }"
+            @click="groupTab = s.title"
+          >
+            {{ s.title }}
+          </button>
+        </div>
+
+        <!-- normal keycodes: the wrap variant stays as a quiet chip row. -->
+        <div v-if="flow === 'choices'" class="wraprow">
+          <span class="vlabel">variant</span>
+          <button
+            v-for="w in (['kp', 'kt', 'sk'] as const)"
+            :key="w"
+            class="chip"
+            :class="{ on: wrap === w }"
+            :title="`&${w} — ${WRAP_NOTE[w]}`"
+            @click="wrap = w"
+          >
+            &amp;{{ w }}
+          </button>
+          <span v-if="wrapToken && !usable(wrapToken.id)" class="note bad">
+            the keyboard did not report &amp;{{ wrap }} as available
+          </span>
+        </div>
+
+        <!-- keycode tiles for the active sub-group -->
+        <div v-if="flow === 'choices'" class="tiles">
+          <button
+            v-for="c in shownSections.flatMap((s) => s.items)"
+            :key="c.id"
+            class="tile"
+            :disabled="!canWrite"
+            draggable="true"
+            :title="`assign ${c.main}${c.sub !== c.main ? ` (${c.sub})` : ''} to position ${pos}`"
+            @dragstart="onTileDragStart($event, c.binding)"
+            @dragend="onTileDragEnd"
             @click="stage(c.binding)"
           >
             {{ c.main }}
             <small>{{ c.sub }}</small>
           </button>
         </div>
-      </section>
 
-      <p v-if="!sections.length" class="note">nothing in the catalog matches “{{ query }}”</p>
-    </div>
-
-    <!-- ================================================================
-         STEP 2b — Token selection (layers, dual-function, system)
-         ================================================================ -->
-    <div v-else-if="flow === 'token'" class="choices">
-      <!-- layers -->
-      <template v-if="kind?.id === 'layers'">
-        <section class="group">
-          <h3>layer operation <small>{{ layerOps.length }}</small></h3>
-          <div class="keys">
+        <!-- token flow: layers / dual / system / mouse -->
+        <div v-if="flow === 'token'" class="tiles">
+          <template v-if="kind?.id === 'layers'">
             <button
               v-for="op in layerOps"
               :key="op.label"
-              class="key"
+              class="tile"
               :disabled="!canWrite"
               @click="startToken(op.label)"
             >
               &amp;{{ op.label }}
               <small>{{ op.name }}</small>
             </button>
-          </div>
-        </section>
-      </template>
-
-      <!-- dual-function -->
-      <template v-if="kind?.id === 'dual'">
-        <section class="group">
-          <h3>dual-function <small>{{ dualOps.length }}</small></h3>
-          <div class="keys">
+          </template>
+          <template v-if="kind?.id === 'dual'">
             <button
               v-for="op in dualOps"
               :key="op.label"
-              class="key"
+              class="tile"
               :disabled="!canWrite"
               @click="startToken(op.label)"
             >
               &amp;{{ op.label }}
               <small>{{ op.name }}</small>
             </button>
-          </div>
-        </section>
-      </template>
-
-      <!-- system -->
-      <template v-if="kind?.id === 'system'">
-        <section class="group">
-          <h3>immediate <small>{{ systemItems.filter((x) => !x.hasParams).length }}</small></h3>
-          <div class="keys">
+          </template>
+          <template v-if="kind?.id === 'system'">
             <button
               v-for="op in systemItems.filter((x) => !x.hasParams)"
               :key="op.label"
-              class="key"
+              class="tile"
               :disabled="!canWrite"
               @click="stage({ token: op.token, param1: 0, param2: 0 })"
             >
               &amp;{{ op.label }}
               <small>{{ op.name }}</small>
             </button>
-          </div>
-        </section>
-
-        <section class="group">
-          <h3>with parameters <small>{{ systemItems.filter((x) => x.hasParams).length }}</small></h3>
-          <div class="keys">
             <button
               v-for="op in systemItems.filter((x) => x.hasParams)"
               :key="op.label"
-              class="key"
+              class="tile needs-param"
               :disabled="!canWrite"
               @click="startToken(op.label)"
             >
               &amp;{{ op.label }}
-              <small>{{ op.name }}</small>
+              <small>{{ op.name }} ·param</small>
             </button>
-          </div>
-        </section>
-      </template>
-
-      <!-- mouse -->
-      <template v-if="kind?.id === 'mouse'">
-        <section class="group">
-          <h3>mouse <small>{{ mouseOps.length }}</small></h3>
-          <div class="keys">
+          </template>
+          <template v-if="kind?.id === 'mouse'">
             <button
               v-for="op in mouseOps"
               :key="op.label"
-              class="key"
+              class="tile"
               :disabled="!canWrite"
               @click="startToken(op.label)"
             >
               &amp;{{ op.label }}
               <small>{{ op.name }}</small>
             </button>
-          </div>
-        </section>
+          </template>
+        </div>
+
+        <p v-if="flow === 'choices' && !sections.length" class="note">nothing in this category</p>
       </template>
     </div>
 
-    <!-- ================================================================
-         STEP 3 — Parameter fill
-         ================================================================ -->
-    <div v-else-if="flow === 'param'" class="choices">
-      <div class="param-head">
-        <b>&amp;{{ TOKENS.find((t) => t.id === pickedToken)?.label ?? '?' }}</b>
-        <span class="note">{{ currentParamLabel }} (param {{ paramStep + 1 }})</span>
-        <button class="chip small" @click="cancelStep">change token</button>
+    <!-- The collapsed dock: search + category buttons + write actions. -->
+    <div class="bar" @click.stop="onBarClick">
+      <label class="grow">
+        <input
+          v-model="query"
+          class="search"
+          type="search"
+          placeholder="search keys…"
+          aria-label="search keys across all categories"
+          @focus="open = true"
+        />
+      </label>
+
+      <div class="cats">
+        <button
+          v-for="k in primaryKinds"
+          :key="k.id"
+          class="cat"
+          :class="{ on: kindId === k.id }"
+          :title="k.note"
+          @click="toggleKind(k.id)"
+        >
+          {{ k.short }}
+        </button>
+
+        <!-- The folded categories (function, media, layers, dual, system, mouse)
+             live behind a dropup menu that rises above the dock bar. -->
+        <div class="more-wrap">
+          <button
+            class="cat more"
+            :class="{ on: moreHasActive }"
+            :aria-expanded="showMore"
+            :title="moreWrapTitle"
+            @click="showMore = !showMore"
+          >
+            More
+            <small :class="{ up: showMore }">▴</small>
+          </button>
+
+          <div v-if="showMore" class="more-menu">
+            <button
+              v-for="k in moreKinds"
+              :key="k.id"
+              class="more-item"
+              :class="{ on: kindId === k.id }"
+              :title="k.note"
+              @click="toggleKind(k.id)"
+            >
+              {{ k.short }}
+              <small>{{ k.note }}</small>
+            </button>
+          </div>
+        </div>
       </div>
 
-      <!-- layer param -->
-      <template v-if="currentParamKind === 'layer'">
-        <div class="chips">
-          <button
-            v-for="l in layerSlots"
-            :key="l.id"
-            class="chip layer"
-            :class="{ live: l.live }"
-            :disabled="!canWrite"
-            @click="setParam(l.id)"
-          >
-            {{ l.name }}
-          </button>
-        </div>
-      </template>
+      <!-- Write actions: Apply is the loud one, the rest fold under it. -->
+      <div class="d-actions">
+        <button
+          class="go-apply"
+          :disabled="!canApply"
+          title="send one CELLS_SET per dirty layer"
+          @click.stop="runAction('apply')"
+        >
+          Apply{{ keymap.dirtyTotal ? ` (${keymap.dirtyTotal})` : '' }}
+        </button>
 
-      <!-- keycode param -->
-      <template v-else-if="currentParamKind === 'keycode'">
-        <input v-model="keySearch" class="search" placeholder="search keycodes…" spellcheck="false" />
-        <div class="keys">
+        <div class="d-menu">
           <button
-            v-for="k in keycodeHits"
-            :key="k.name"
-            class="key"
-            @click="setParam(k.code)"
+            class="go-more"
+            :class="{ on: menuOpen }"
+            :aria-expanded="menuOpen"
+            :aria-label="menuOpen ? 'close more actions' : 'more actions: revert, save, discard'"
+            title="revert · save · discard"
+            @click.stop="menuOpen = !menuOpen"
           >
-            {{ k.label }}
-            <small>{{ k.name }}</small>
+            ⋯
           </button>
-        </div>
-        <p v-if="keySearch && !keycodeHits.length" class="note">no matches</p>
-      </template>
 
-      <!-- mouse vector param -->
-      <template v-else-if="currentParamKind === 'mouse-vector'">
-        <div class="keys">
-          <button
-            v-for="n in (TOKENS.find((t) => t.id === pickedToken)?.label === 'msc' ? SCRL_ITEMS : MOVE_ITEMS)"
-            :key="n"
-            class="key"
-            @click="setParam(KEYCODES[n] ?? 0)"
-          >
-            {{ n.replace(/^MOVE_/, '').replace(/^SCRL_/, '') }}
-            <small>{{ n }}</small>
-          </button>
+          <div v-if="menuOpen" class="d-drop" @click.stop>
+            <button :disabled="!canRevert" title="throw the staged edits away; the keyboard was never asked to change" @click="runAction('revert')">Revert{{ keymap.dirtyTotal ? ` (${keymap.dirtyTotal})` : '' }}</button>
+            <button :disabled="!canWriteNext" title="tell the keyboard to persist the layout it has now" @click="runAction('save')">Save to keyboard</button>
+            <button :disabled="!canWriteNext" title="reload the layout from the keyboard's saved settings" @click="runAction('discard')">Discard</button>
+          </div>
         </div>
-      </template>
-
-      <!-- button mask param -->
-      <template v-else-if="currentParamKind === 'button-mask'">
-        <div class="chips">
-          <button
-            v-for="(n, i) in BUTTON_ITEMS"
-            :key="n"
-            class="chip"
-            :class="{ on: ((paramValues[0] ?? 0) & (1 << i)) !== 0 }"
-            @click="setParam((paramValues[0] ?? 0) ^ (1 << i))"
-          >
-            {{ n }}
-          </button>
-        </div>
-      </template>
-
-      <!-- bt command param -->
-      <template v-else-if="currentParamKind === 'bt-cmd'">
-        <div class="keys">
-          <button
-            v-for="b in BT_ITEMS"
-            :key="b.v"
-            class="key"
-            @click="setParam(b.v)"
-          >
-            {{ b.label }}
-            <small>BT {{ b.v }}</small>
-          </button>
-        </div>
-      </template>
-
-      <!-- output param -->
-      <template v-else-if="currentParamKind === 'output'">
-        <div class="keys">
-          <button
-            v-for="o in OUT_ITEMS"
-            :key="o.v"
-            class="key"
-            @click="setParam(o.v)"
-          >
-            {{ o.label }}
-          </button>
-        </div>
-      </template>
-
-      <!-- plain number param -->
-      <template v-else>
-        <input
-          class="num"
-          type="number"
-          :value="paramValues[paramStep] ?? 0"
-          @change="setParam(Number(($event.target as HTMLInputElement).value))"
-        />
-      </template>
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.palette {
+/* The dock: a floating tray pinned to the bottom. Collapsed it is one pill
+ * (the bar); open it grows a translucent panel upward, roughly a third of the
+ * viewport tall, so the board above stays visible while you assign keys. */
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: min(920px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.dock * {
+  pointer-events: auto;
+}
+
+/* The risen panel: a glass tray that opens upward from the dock. */
+.panel {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border: 1px solid var(--line);
-  background: var(--panel);
-  padding: 14px 14px 12px;
-  min-width: 0;
+  max-height: 34vh;
   min-height: 0;
+  overflow: auto;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(14, 11, 9, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
 }
 
-.phead {
+/* The dock bar itself: a warm pill the width of its content, centred, so there
+ * is no empty run trailing past Apply. (The risen panel, by contrast, still
+ * stretches to the dock's width.) */
+.bar {
+  align-self: center;
+  width: fit-content;
+  max-width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+/* A compact inline filter, not a full-width field. */
+.grow {
+  flex: none;
+  width: 168px;
+  min-width: 0;
+}
+
+.search {
+  width: 100%;
+  padding: 8px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.search::placeholder { color: var(--mid); }
+.search:focus { border-color: var(--accent); outline: none; }
+
+.cats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-h2 {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink);
-}
-
-.crumbs { display: flex; gap: 4px; align-items: center; }
-
-.crumb {
-  border: 0;
-  background: transparent;
+.cat {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   color: var(--mid);
   font: inherit;
-  font-size: 12px;
-  padding: 2px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.crumb::after { content: ' ›'; color: var(--line); }
-.crumb:last-child::after { content: none; }
-.crumb:hover { color: var(--ink); }
-.crumb.here { color: var(--mid); font-weight: 400; }
+.cat:hover:not(.more) { color: var(--ink); }
 
-.target {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--mid);
+.cat.on {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(110, 231, 160, 0.6);
+  color: var(--ink);
+  font-weight: 600;
 }
 
-.find {
-  flex: 0 1 170px;
-  min-width: 110px;
-}
+.cat.more { color: var(--mid); display: inline-flex; align-items: center; gap: 3px; }
+.cat.more.on { color: var(--ink); }
+.cat.more small { font-size: 9px; display: inline-block; transition: transform 0.12s ease; }
+.cat.more small.up { transform: rotate(180deg); }
 
-.count { font-size: 12px; color: var(--mid); }
+/* The folded categories open as a dropup that rises above the dock bar. */
+.more-wrap { position: relative; }
 
-.note { margin: 0; font-size: 12px; color: var(--mid); }
-.note.bad { color: var(--err); }
-
-.chip {
+.more-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  min-width: 200px;
+  padding: 6px;
   border: 1px solid var(--line);
-  background: transparent;
-  color: var(--mid);
-  font: inherit;
-  font-size: 12px;
-  padding: 3px 8px;
-  cursor: pointer;
-}
-
-.chip:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
-.chip.on { background: var(--mod); color: var(--ink); border-color: var(--ink); font-weight: 700; }
-.chip:disabled { opacity: 0.62; cursor: not-allowed; }
-.chip.small { font-size: 11px; }
-.chip.layer {
-  font-weight: 700;
-  color: var(--ink);
-  min-width: 46px;
-}
-.chip.layer.live { background: var(--soft); }
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 6px;
-}
-
-.big {
+  border-radius: 14px;
+  background: rgba(14, 11, 9, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 -18px 40px rgba(0, 0, 0, 0.5);
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+}
+
+.more-item {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  border: 1px solid var(--line);
-  background: var(--bg-inset);
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
   color: var(--ink);
   font: inherit;
   font-size: 13px;
   text-align: left;
-  padding: 8px 10px;
   cursor: pointer;
 }
 
-.big small { color: var(--mid); font-size: 11px; }
-.big:hover:not(:disabled) { background: var(--ink); color: var(--on-ink); }
-.big:hover:not(:disabled) small { color: var(--on-ink); opacity: 0.75; }
-.big:disabled { opacity: 0.62; cursor: not-allowed; }
+.more-item small { font-size: 10px; color: var(--mid); white-space: nowrap; }
+.more-item:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+.more-item.on { background: rgba(110, 231, 160, 0.18); color: #6ee7a0; }
+.more-item.on small { color: inherit; opacity: 0.8; }
 
-.choices {
+/* Write actions on the dock: Apply is the loud primary, the secondary menu
+ * (revert / save / discard) is a small disclosure next to it. */
+.d-actions {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
-  min-width: 0;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
+  margin-left: 4px;
 }
 
-.group {
+.go-apply {
+  padding: 10px 20px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #9deab8, var(--accent-deep));
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 0 24px var(--accent-dim);
+  transition: filter 0.12s ease;
+}
+
+.go-apply:hover:not(:disabled) { filter: brightness(1.06); }
+.go-apply:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+
+.d-menu {
+  position: relative;
+}
+
+.go-more {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--mid);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.go-more:hover { color: var(--ink); border-color: var(--ink); }
+.go-more.on { background: rgba(255, 255, 255, 0.12); color: var(--ink); border-color: rgba(110, 231, 160, 0.6); }
+
+.d-drop {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  min-width: 180px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(14, 11, 9, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-width: 0;
 }
 
-.group h3 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+.d-drop button {
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.d-drop button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); color: var(--accent); }
+.d-drop button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Panel head: sub-group tabs along the top edge. */
+.ptabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: -2px;
+}
+
+.ptab {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   color: var(--mid);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
 }
 
-.group h3 small { color: var(--soft); }
+.ptab:hover { color: var(--ink); }
+.ptab.on {
+  background: #1e2733;
+  border-color: rgba(110, 231, 160, 0.6);
+  color: var(--ink);
+  font-weight: 600;
+}
 
-.variants {
+.ptab-note {
+  font-size: 12px;
+  color: var(--mid);
+  margin-right: 4px;
+}
+
+.count { font-size: 11px; color: var(--mid); }
+
+.wraprow {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -806,97 +1095,95 @@ h2 {
   color: var(--mid);
 }
 
-.keys {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
-  gap: 4px;
-}
-
-.key {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
+.chip {
   border: 1px solid var(--line);
   background: transparent;
-  color: var(--ink);
+  border-radius: 999px;
+  color: var(--mid);
   font: inherit;
-  font-size: 13px;
-  padding: 5px 4px;
+  font-size: 12px;
+  padding: 4px 12px;
   cursor: pointer;
 }
 
-.key small { font-size: 9px; color: var(--mid); }
+.chip:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
+.chip.on { background: #1e2733; color: var(--ink); border-color: rgba(110, 231, 160, 0.6); font-weight: 700; }
+.chip.small { font-size: 11px; }
+.chip.back { font-weight: 600; color: var(--ink); }
 
-.key:hover:not(:disabled) {
-  background: var(--ink);
-  color: var(--on-ink);
-  border-color: var(--ink);
-}
-
-.key:hover:not(:disabled) small { color: var(--on-ink); opacity: 0.75; }
-.key:disabled { opacity: 0.62; cursor: not-allowed; }
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
+/* The key grid: keycap-shaped tiles, warm and lightly inviting. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
   gap: 6px;
 }
 
-.search {
-  width: 100%;
+.tile {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 4px;
   border: 1px solid var(--line);
-  background: var(--bg-inset);
+  border-radius: 12px;
+  background: linear-gradient(160deg, #2c333c, #171b21);
   color: var(--ink);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 3px 6px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease;
 }
 
-.search:focus { border-color: var(--ink); }
+.tile small {
+  font-size: 9px;
+  color: var(--mid);
+  text-align: center;
+  word-break: break-word;
+}
+
+.tile:hover:not(:disabled) {
+  border-color: rgba(110, 231, 160, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 0 16px rgba(46, 184, 114, 0.3), 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.tile:active:not(:disabled) { transform: translateY(1px); }
+.tile:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.tile.layer { font-weight: 600; }
+.tile.layer.live { border-color: var(--ok); }
+.tile.needs-param small { color: var(--accent); }
+.tile.on { background: linear-gradient(160deg, #9deab8, #2eb872); color: #07170e; border-color: transparent; box-shadow: 0 0 20px rgba(46, 184, 114, 0.5); }
+.tile.on small { color: #07170e; opacity: 0.75; }
 
 .param-head {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 13px;
 }
 
 .num {
-  width: 120px;
-  padding: 5px 8px;
+  width: 140px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
-  background: var(--bg-inset);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.4);
   color: var(--ink);
-  font-family: var(--mono);
-  font-size: 12px;
-}
-
-.tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.tab {
-  padding: 6px 14px;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--mid);
   font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-.tab:hover { color: var(--ink); }
+.note { margin: 0; font-size: 12px; color: var(--mid); }
+.note.bad { color: var(--err); }
 
-.tab.on {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-  font-weight: 700;
+@media (max-width: 700px) {
+  .dock { bottom: 76px; }
+  .bar { width: 100%; gap: 6px; padding: 8px; }
+  .grow { flex: 1 1 100%; }
+  .cat { padding: 6px 11px; font-size: 12px; }
 }
 </style>

@@ -641,6 +641,8 @@ section .chip {
   color: var(--kb-dim);
   font-size: 0.6em;
   padding: 0.28em 0.85em;
+  /* a chip is one label: wrap between chips, never inside one */
+  white-space: nowrap;
 }
 
 section .chip b {

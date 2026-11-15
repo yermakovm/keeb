@@ -199,7 +199,7 @@ async function resetSettings(): Promise<void> {
 .group { display: flex; gap: 6px; flex-wrap: wrap; }
 
 .btn {
-  padding: 6px 12px; border-radius: 0;
+  padding: 6px 12px; border-radius: var(--r);
   border: 1px solid var(--border); background: var(--bg-raised);
   font-size: 12px; color: var(--text-dim);
 }
@@ -216,7 +216,7 @@ async function resetSettings(): Promise<void> {
 
 .toggle {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: 0;
+  padding: 6px 10px; border-radius: var(--r);
   border: 1px solid var(--border); font-size: 12px; color: var(--text-faint);
   cursor: pointer;
 }

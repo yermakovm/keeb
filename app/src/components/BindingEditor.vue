@@ -70,7 +70,7 @@ function stage(binding: Binding): void {
         title="throw this cell's staged binding away; the keyboard was never asked to change"
         @click="emit('revert')"
       >
-        unstage
+        Unstage
       </button>
     </div>
   </section>

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 470" width="800" height="470" font-family="system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', 'PT Sans', 'Noto Sans', Arial, sans-serif">
+  <!--
+    Every protocol this keyboard actually speaks, taken from the repo, not from a
+    wish list:
+      USB HID + CDC-ACM console — config/keeb.conf (CONFIG_ZMK_USB_LOGGING),
+        Makefile `make monitor` (/dev/cu.keeb*, 115200); USB is off on the
+        right half (keeb-module/boards/shields/keeb/keeb_right.conf).
+      BLE GAP/SMP/ATT/GATT — Zephyr BLE stack; HID over GATT is ZMK's own.
+      Vendor GATT + KEEB TLV — keeb-module/transport/keeb_ble.c: service
+        4b454542-0000-0001-9c41-4b4542544c56, cmd = write without response
+        (BT_GATT_PERM_WRITE_ENCRYPT), evt = notify, CCCD; payload budget
+        CONFIG_BT_L2CAP_TX_MTU (65) - 3 (ATT) - 16 (KEEB packet header) = 46 B.
+      Split link — CONFIG_ZMK_SPLIT (ZMK split BLE central/peripheral).
+      On-board buses — keeb.dtsi: &spi0 nice!view, &pwm1 RGB + &pwm0 piezo,
+        kscan-gpio-matrix 6x12, zephyr,cdc-acm-uart.
+  -->
+
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#6ee7a0"/>
+    </marker>
+  </defs>
+
+  <!-- host ⇄ keyboard: three channels over the same two links -->
+  <text x="40" y="34" fill="#6ee7a0" font-size="12" letter-spacing="1">ХОСТ</text>
+
+  <rect x="90" y="22" width="670" height="44" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="110" y="40" fill="#e8ecf0" font-size="13">USB HID — дротовий вхід центральної половинки</text>
+  <text x="110" y="58" fill="#97a3af" font-size="11">HID report: клавіші · CDC-ACM console: логи та shell</text>
+  <text x="740" y="40" fill="#4c5a66" font-size="11" text-anchor="end">працює, коли клавіатура</text>
+  <text x="740" y="56" fill="#4c5a66" font-size="11" text-anchor="end">підключена дротом</text>
+
+  <rect x="90" y="76" width="670" height="44" rx="10" fill="#141a20" stroke="#2b343c" stroke-width="1.5"/>
+  <text x="110" y="94" fill="#e8ecf0" font-size="13">BLE · HID over GATT (HOG) — клавіші без дроту</text>
+  <text x="110" y="112" fill="#97a3af" font-size="11">GAP advertising → SMP pairing → ATT / GATT · сервіс 0x1812</text>
+  <text x="740" y="94" fill="#4c5a66" font-size="11" text-anchor="end">зв'язок із хостом</text>
+  <text x="740" y="110" fill="#4c5a66" font-size="11" text-anchor="end">і з іншою половинкою</text>
+
+  <rect x="90" y="130" width="670" height="44" rx="10" fill="#12251c" stroke="#6ee7a0" stroke-width="1.5" stroke-dasharray="7 6" opacity="0.9"/>
+  <text x="110" y="148" fill="#6ee7a0" font-size="13">KEEB TLV поверх vendor GATT — налаштування</text>
+  <text x="110" y="166" fill="#97a3af" font-size="11">cmd = write без відповіді · evt = notify · MTU 65 − 3 − 16 = 46 B payload</text>
+  <text x="740" y="148" fill="#4c5a66" font-size="11" text-anchor="end">наш протокол</text>
+  <text x="740" y="164" fill="#4c5a66" font-size="11" text-anchor="end">UUID 4b454542-…-4b4542544c56</text>
+
+  <!-- inside the keyboard -->
+  <text x="40" y="222" fill="#6ee7a0" font-size="12" letter-spacing="1">ЗАЛІЗО</text>
+  <text x="740" y="196" fill="#4c5a66" font-size="11" text-anchor="end">той самий BLE-стек, різні GATT-сервіси</text>
+
+  <rect x="90" y="210" width="280" height="170" rx="12" fill="#141a20" stroke="#2b343c" stroke-width="2"/>
+  <text x="110" y="232" fill="#6ee7a0" font-size="12" letter-spacing="1">ЦЕНТРАЛЬНА · ЛІВА</text>
+  <line x1="110" y1="240" x2="350" y2="240" stroke="#2b343c" stroke-width="1.5"/>
+  <g fill="#97a3af" font-size="11.5">
+    <text x="110" y="262">nRF52840 + KEEB engine</text>
+    <text x="110" y="286">USB HID + vendor GATT-сервіс</text>
+    <text x="110" y="310">SMP pairing: запис лише шифрований</text>
+    <text x="110" y="334">CDC-ACM консоль /dev/cu.keeb</text>
+  </g>
+
+  <rect x="450" y="210" width="280" height="170" rx="12" fill="#141a20" stroke="#2b343c" stroke-width="2"/>
+  <text x="470" y="232" fill="#6ee7a0" font-size="12" letter-spacing="1">ПЕРИФЕРІЙНА · ПРАВА</text>
+  <line x1="470" y1="240" x2="710" y2="240" stroke="#2b343c" stroke-width="1.5"/>
+  <g fill="#97a3af" font-size="11.5">
+    <text x="470" y="262">nRF52840 · без USB: тільки BLE</text>
+    <text x="470" y="286">матрицю сканує сама</text>
+    <text x="470" y="310">клавіші й шар — через central</text>
+    <text x="470" y="334">свою панель малює сама</text>
+  </g>
+
+  <!-- the split link between the halves -->
+  <path d="M374 296 L446 296" stroke="#6ee7a0" stroke-width="2.5" fill="none" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text x="410" y="282" fill="#6ee7a0" font-size="11" text-anchor="middle">ZMK split</text>
+  <text x="410" y="316" fill="#4c5a66" font-size="11" text-anchor="middle">GATT notify</text>
+
+  <!-- on-board buses -->
+  <text x="40" y="422" fill="#6ee7a0" font-size="12" letter-spacing="1">ШИНИ</text>
+  <g stroke="#2b343c" stroke-width="1.5" fill="#141a20">
+    <rect x="90" y="396" width="160" height="50" rx="10"/>
+    <rect x="260" y="396" width="160" height="50" rx="10"/>
+    <rect x="430" y="396" width="160" height="50" rx="10"/>
+    <rect x="600" y="396" width="160" height="50" rx="10"/>
+  </g>
+  <g font-size="12.5" fill="#e8ecf0" text-anchor="middle">
+    <text x="170" y="416">&amp;spi0</text>
+    <text x="340" y="416">&amp;pwm1 · &amp;pwm0</text>
+    <text x="510" y="416">GPIO matrix</text>
+    <text x="680" y="416">CDC-ACM</text>
+  </g>
+  <g font-size="10" fill="#4c5a66" text-anchor="middle">
+    <text x="170" y="432">nice!view 160×68</text>
+    <text x="340" y="432">RGB · п'єзо</text>
+    <text x="510" y="432">6×12 · 12 пінів</text>
+    <text x="680" y="432">логи · shell</text>
+  </g>
+
+  <text x="400" y="462" fill="#4c5a66" font-size="11" text-anchor="middle">дротом — USB HID і консоль; без дроту — BLE: HID для клавіш, vendor GATT + KEEB TLV для налаштувань</text>
+</svg>

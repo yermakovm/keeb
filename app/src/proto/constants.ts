@@ -120,7 +120,7 @@ export const KEEB_ERR_TEXT: Record<number, string> = {
 /** struct keeb_display_info.preset when the table is one the host built.
  * Not in the firmware headers: the firmware reports a built-in preset id and
  * the app uses this one for a table that is none of them. */
-export const KBEEB_PRESET_CUSTOM = 0xff
+export const KEEB_PRESET_CUSTOM = 0xff
 
 /* --------------------------------------------------------------------------
  * Not KEEB protocol: ZMK's own parameter typing, and the GATT identities.

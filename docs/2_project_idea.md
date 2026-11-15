@@ -1,0 +1,31 @@
+<!-- _class: visual -->
+
+# Ідея: дві половинки, жодного дроту
+
+<div class="stage">
+
+<figure>
+<img src="assets/anatomy.svg" alt="дві половинки на nRF52840, BLE між собою/хостом"/>
+<figcaption>Hand-wired прототип</figcaption>
+</figure>
+
+<div class="sidenotes">
+
+<div class="sidenote">
+<h3>Ніяких проводів</h3>
+<p>Між половинками і з комп'ютером — лише <strong>BLE</strong></p>
+</div>
+
+<div class="sidenote">
+<h3>Налаштування під себе</h3>
+<p>Розкладка, шари i поведінки змінюються <strong>без перепрошивки</strong> — через власний канал.</p>
+</div>
+
+<div class="sidenote">
+<h3>Час роботи</h3>
+<p>Глибокий сон контролера дозволяє не заряджатись тижнями</p>
+</div>
+
+</div>
+
+</div>

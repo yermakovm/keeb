@@ -70,6 +70,8 @@
 #define KEEB_INFO_F_REORDERING 0x00000002u      /* layer reorder/add/remove live */
 #define KEEB_INFO_F_PERSISTENT 0x00000004u      /* changes survive reboot */
 #define KEEB_INFO_F_DISPLAY 0x00000008u         /* DISPLAY namespace is compiled in */
+#define KEEB_INFO_F_SETTINGS 0x00000010u        /* SETTINGS namespace is compiled in */
+#define KEEB_INFO_F_SOUND 0x00000020u           /* buzzer tunes are editable at runtime */
 
 /* --------------------------------------------------------------------------
  * On-wire framing (packed, little-endian)

@@ -30,17 +30,48 @@ import {
   KEEB_ERR_TOO_BIG,
   KEEB_PKT_F_FIRST,
   KEEB_PKT_HDR_SIZE,
+  KEEB_SETTINGS_F_IDLE_TIMEOUT,
+  KEEB_SETTINGS_F_SLEEP_TIMEOUT,
+  KEEB_SETTINGS_F_BLANK_ON_IDLE,
+  KEEB_SETTINGS_F_SLEEP_ALLOWED,
+  KEEB_SETTINGS_B_BLANK_ON_IDLE,
+  KEEB_SETTINGS_B_SLEEP_ALLOWED,
+  KEEB_SETTINGS_F_DEBOUNCE_PRESS,
+  KEEB_SETTINGS_F_DEBOUNCE_RELEASE,
+  KEEB_SETTINGS_F_TAPPING_TERM,
+  KEEB_SETTINGS_F_QUICK_TAP,
+  KEEB_SETTINGS_F_PRIOR_IDLE,
+  KEEB_SETTINGS_F_LED_BRIGHTNESS,
+  KEEB_SETTINGS_F_LED_COLOR_RED,
+  KEEB_SETTINGS_F_LED_COLOR_GREEN,
+  KEEB_SETTINGS_F_LED_COLOR_BLUE,
+  KEEB_SETTINGS_F_LED_LAYERS,
+  KEEB_SETTINGS_F_HOLD_TAP_FLAVOR,
+  KEEB_SETTINGS_FLAVOR_AUTO,
+  KEEB_SETTINGS_LED_LAYER_MAX,
+  KEEB_SETTINGS_SIZE,
+  KEEB_SOUND_MAP_SIZE,
+  KEEB_SOUND_PLAY_SIZE,
+  KEEB_SOUND_STEPS_MAX,
+  KEEB_T_CELLS_SET,
+  KEEB_T_DISPLAY_SET,
+  KEEB_T_PEER_DISPLAY_SET,
+  KEEB_T_PEER_TEXT_SET,
+  KEEB_T_LAYER_NAME_SET,
+  KEEB_T_SETTINGS_SET,
+  KEEB_T_SOUND_MAP_SET,
+  KEEB_T_TEXT_SET,
+  KEEB_T_TUNE_PLAY,
+  KEEB_T_TUNE_SET,
+  KEEB_TUNE_HDR_SIZE,
+  KEEB_TUNE_STEP_SIZE,
+  KEEB_T_VALUE_SET,
   KEEB_TLV_FRAG_MAX,
   KEEB_TLV_FRAG_MIN,
   KEEB_ERR_BAD_CRC,
   KEEB_TLV_MAGIC,
   KEEB_TLV_MSG_MAX,
   KEEB_TLV_VERSION,
-  KEEB_T_CELLS_SET,
-  KEEB_T_DISPLAY_SET,
-  KEEB_T_LAYER_NAME_SET,
-  KEEB_T_TEXT_SET,
-  KEEB_T_VALUE_SET,
   KEEB_T_WIDGET_SET,
   KEEB_TOKEN_F_READY,
   KEEB_TX_BUSY,
@@ -61,7 +92,11 @@ import type {
   ParamValue,
   PktHdr,
   PresetName,
+  SettingsPayload,
+  SoundEventPayload,
   TlvRecord,
+  TunePayload,
+  TuneStep,
   TokenRecord,
   Widget,
 } from './types.ts'
@@ -464,8 +499,9 @@ export function readPresetName(value: Uint8Array): PresetName {
 /** Append a KEEB_T_DISPLAY_SET record: header + the whole table. The firmware
  * validates every entry before replacing any, so a table it cannot draw is
  * refused whole. */
-export function writeDisplayTable(msg: TlvMessage, widgets: Widget[]): boolean {
-  const dv = msg.add(KEEB_T_DISPLAY_SET, 4 + widgets.length * WIDGET_SIZE)
+export function writeDisplayTable(msg: TlvMessage, widgets: Widget[], target = 0): boolean {
+  const type = target === 1 ? KEEB_T_PEER_DISPLAY_SET : KEEB_T_DISPLAY_SET
+  const dv = msg.add(type, 4 + widgets.length * WIDGET_SIZE)
 
   if (!dv) {
     return false
@@ -474,7 +510,7 @@ export function writeDisplayTable(msg: TlvMessage, widgets: Widget[]): boolean {
   dv.setUint8(0, widgets.length & 0xff)
   dv.setUint8(1, 0)
   dv.setUint8(2, 0)
-  dv.setUint8(3, 0)
+  dv.setUint8(3, target & 0xff) /* rsvd carries the target, for the trace */
 
   for (let i = 0; i < widgets.length; i++) {
     const at = 4 + i * WIDGET_SIZE
@@ -514,9 +550,10 @@ export function writeWidgetSet(msg: TlvMessage, index: number, w: Widget): boole
 }
 
 /** KEEB_T_TEXT_SET: one host-owned string slot. */
-export function writeTextSlot(msg: TlvMessage, slot: number, text: string): boolean {
+export function writeTextSlot(msg: TlvMessage, slot: number, text: string, target = 0): boolean {
   const enc = new TextEncoder().encode(text)
-  const dv = msg.add(KEEB_T_TEXT_SET, 2 + enc.length)
+  const type = target === 1 ? KEEB_T_PEER_TEXT_SET : KEEB_T_TEXT_SET
+  const dv = msg.add(type, 2 + enc.length)
 
   if (!dv) {
     return false
@@ -838,3 +875,164 @@ export function tokenTableHash(tokens: Array<{ id: number; name: string }>): num
 }
 
 export const tokenReady = (t: TokenRecord): boolean => (t.flags & KEEB_TOKEN_F_READY) !== 0
+
+/* --------------------------------------------------------------------------
+ * Settings: runtime Kconfig overrides
+ * -------------------------------------------------------------------------- */
+
+/** KEEB_T_SETTINGS / KEEB_T_SETTINGS_SET payload. */
+export function readSettings(value: Uint8Array): SettingsPayload {
+  const dv = view(value)
+
+  return {
+    idleTimeoutMs: dv.getUint32(0, true),
+    sleepTimeoutMs: dv.getUint32(4, true),
+    debouncePressMs: dv.getUint32(8, true),
+    debounceReleaseMs: dv.getUint32(12, true),
+    tappingTermMs: dv.getInt32(16, true),
+    quickTapMs: dv.getInt32(20, true),
+    priorIdleMs: dv.getInt32(24, true),
+    ledBrightnessPercent: dv.getUint32(28, true),
+    ledColorRed: dv.getUint32(32, true),
+    ledColorGreen: dv.getUint32(36, true),
+    ledColorBlue: dv.getUint32(40, true),
+    /* One color per keyboard layer, pinned to the layer index. */
+    ledLayerColors: Array.from({ length: KEEB_SETTINGS_LED_LAYER_MAX }, (_, i) =>
+      dv.getUint32(44 + 4 * i, true) & 0xffffff
+    ),
+    flags: dv.getUint16(76, true),
+    booleans: dv.getUint8(78),
+    holdTapFlavor: dv.getUint8(79),
+  }
+}
+
+/** Append a KEEB_T_SETTINGS_SET record.  A field is written only when its flag
+ * is set in `settings.flags`, so the host can change one value at a time. */
+export function writeSettingsSet(
+  msg: TlvMessage,
+  settings: Partial<SettingsPayload> & { flags: number }
+): boolean {
+  const dv = msg.add(KEEB_T_SETTINGS_SET, KEEB_SETTINGS_SIZE)
+
+  if (!dv) {
+    return false
+  }
+
+  const flags = (settings.flags ?? 0) & 0xffff
+
+  if (flags & KEEB_SETTINGS_F_IDLE_TIMEOUT) dv.setUint32(0, settings.idleTimeoutMs! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_SLEEP_TIMEOUT) dv.setUint32(4, settings.sleepTimeoutMs! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_DEBOUNCE_PRESS) dv.setUint32(8, settings.debouncePressMs! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_DEBOUNCE_RELEASE) dv.setUint32(12, settings.debounceReleaseMs! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_TAPPING_TERM) dv.setInt32(16, settings.tappingTermMs! | 0, true)
+  if (flags & KEEB_SETTINGS_F_QUICK_TAP) dv.setInt32(20, settings.quickTapMs! | 0, true)
+  if (flags & KEEB_SETTINGS_F_PRIOR_IDLE) dv.setInt32(24, settings.priorIdleMs! | 0, true)
+  if (flags & KEEB_SETTINGS_F_LED_BRIGHTNESS) dv.setUint32(28, settings.ledBrightnessPercent! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_LED_COLOR_RED) dv.setUint32(32, settings.ledColorRed! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_LED_COLOR_GREEN) dv.setUint32(36, settings.ledColorGreen! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_LED_COLOR_BLUE) dv.setUint32(40, settings.ledColorBlue! & 0xffffffff, true)
+  if (flags & KEEB_SETTINGS_F_LED_LAYERS) {
+    /* The whole table, matching keeb_settings_set(): the firmware never writes
+     * part of it, because a partial write cannot say which entries it meant. */
+    for (let i = 0; i < KEEB_SETTINGS_LED_LAYER_MAX; i++) {
+      dv.setUint32(44 + 4 * i, (settings.ledLayerColors?.[i] ?? 0) & 0xffffff, true)
+    }
+  }
+  dv.setUint16(76, flags, true)
+  /* The boolean byte is read bit-by-bit by the firmware: each boolean's own
+   * flag says which bit to trust, so send only the bits a flag is carrying. */
+  let b = settings.booleans ?? 0
+  if (!(flags & KEEB_SETTINGS_F_SLEEP_ALLOWED)) b &= ~KEEB_SETTINGS_B_SLEEP_ALLOWED
+  if (!(flags & KEEB_SETTINGS_F_BLANK_ON_IDLE)) b &= ~KEEB_SETTINGS_B_BLANK_ON_IDLE
+  dv.setUint8(78, b & 0xff)
+  if (flags & KEEB_SETTINGS_F_HOLD_TAP_FLAVOR) {
+    dv.setUint8(79, settings.holdTapFlavor ?? KEEB_SETTINGS_FLAVOR_AUTO)
+  }
+
+  return true
+}
+
+/* --------------------------------------------------------------------------
+ * Buzzer sounds: the RAM tune shapes and the event -> tune map
+ * -------------------------------------------------------------------------- */
+
+/** KEEB_T_TUNE payload: header, then `count` steps. */
+export function readTune(value: Uint8Array): TunePayload {
+  const dv = view(value)
+  const tune = dv.getUint8(0)
+  const count = Math.min(dv.getUint8(1), KEEB_SOUND_STEPS_MAX)
+  const steps: TuneStep[] = []
+
+  for (let i = 0; i < count; i++) {
+    const at = KEEB_TUNE_HDR_SIZE + i * KEEB_TUNE_STEP_SIZE
+    steps.push({
+      pitchPct: dv.getUint16(at, true),
+      onMs: dv.getUint16(at + 2, true),
+      gapMs: dv.getUint16(at + 4, true),
+    })
+  }
+
+  return { tune, steps }
+}
+
+/** KEEB_T_SOUND_MAP payload. */
+export function readSoundMap(value: Uint8Array): SoundEventPayload {
+  return { event: value[0], tune: value[1] }
+}
+
+/** Append a KEEB_T_TUNE_SET record: one tune, replaced as a whole. */
+export function writeTuneSet(msg: TlvMessage, tune: number, steps: TuneStep[]): boolean {
+  const count = Math.min(steps.length, KEEB_SOUND_STEPS_MAX)
+
+  if (count < 1) {
+    return false
+  }
+
+  const dv = msg.add(KEEB_T_TUNE_SET, KEEB_TUNE_HDR_SIZE + count * KEEB_TUNE_STEP_SIZE)
+
+  if (!dv) {
+    return false
+  }
+
+  dv.setUint8(0, tune)
+  dv.setUint8(1, count)
+  dv.setUint16(2, 0, true)
+
+  for (let i = 0; i < count; i++) {
+    const s = steps[i]
+    const at = KEEB_TUNE_HDR_SIZE + i * KEEB_TUNE_STEP_SIZE
+    dv.setUint16(at, s.pitchPct, true)
+    dv.setUint16(at + 2, s.onMs, true)
+    dv.setUint16(at + 4, s.gapMs, true)
+  }
+
+  return true
+}
+
+/** Append a KEEB_T_SOUND_MAP_SET record: one event's tune. */
+export function writeSoundMapSet(msg: TlvMessage, event: number, tune: number): boolean {
+  const dv = msg.add(KEEB_T_SOUND_MAP_SET, KEEB_SOUND_MAP_SIZE)
+
+  if (!dv) {
+    return false
+  }
+
+  dv.setUint8(0, event)
+  dv.setUint8(1, tune)
+
+  return true
+}
+
+/** Append a KEEB_T_TUNE_PLAY record: preview, changes nothing. */
+export function writeTunePlay(msg: TlvMessage, tune: number): boolean {
+  const dv = msg.add(KEEB_T_TUNE_PLAY, KEEB_SOUND_PLAY_SIZE)
+
+  if (!dv) {
+    return false
+  }
+
+  dv.setUint8(0, tune)
+  dv.setUint8(1, 0)
+
+  return true
+}

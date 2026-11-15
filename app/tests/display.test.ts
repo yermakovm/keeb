@@ -24,6 +24,7 @@ import { createPinia, setActivePinia } from 'pinia'
 
 import {
   KEEB_DISPLAY_INFO_F_ART,
+  KEEB_DISPLAY_INFO_F_PEER,
   KEEB_DISPLAY_F_DIRTY,
   KEEB_ERR_OUT_OF_RANGE,
   KEEB_INFO_F_DISPLAY,
@@ -40,11 +41,14 @@ import {
   KEEB_TEXT_STYLE,
   KEEB_T_DISPLAY,
   KEEB_T_DISPLAY_SET,
+  KEEB_T_PEER_DISPLAY_SET,
+  KEEB_T_PEER_TEXT_SET,
   KEEB_T_TEXT_SET,
   KEEB_T_VALUE_SET,
   KEEB_T_WIDGET_SET,
   KEEB_WID_ART,
   KEEB_WID_BAR,
+  KEEB_WID_BONGO,
   KEEB_WID_BATTERY,
   KEEB_WID_BOLT,
   KEEB_WID_COUNT,
@@ -54,7 +58,7 @@ import {
   KEEB_WID_RECT,
   KEEB_WID_RULE,
   KEEB_WID_TEXT,
-  KBEEB_PRESET_CUSTOM,
+  KEEB_PRESET_CUSTOM,
 } from '../src/proto/constants.ts'
 import type { Widget } from '../src/proto/types.ts'
 import {
@@ -71,10 +75,11 @@ import {
   writeValueSlot,
   writeWidgetSet,
 } from '../src/proto/tlv.ts'
+import { KIND_ORDER } from '../src/data/widgets.ts'
 import { setTraceEnabled } from '../src/debug/trace.ts'
-import { PANEL_PRESETS, validateWidget } from '../src/transport/mockKeyboard.ts'
+import { PANEL_PRESETS, PEER_TYPING, validateWidget } from '../src/transport/mockKeyboard.ts'
 import { useDeviceStore } from '../src/stores/device.ts'
-import { useDisplayStore } from '../src/stores/display.ts'
+import { useDisplayStore, usePeerDisplayStore } from '../src/stores/display.ts'
 
 const C_MODEL = path.resolve(import.meta.dirname, '../../keeb-module/boards/shields/keeb/ui/widget_model.c')
 
@@ -205,7 +210,7 @@ test('INFO says this firmware can draw a panel', async () => {
   assert.equal(display.canEdit, true, 'a writable link to an editable panel')
 })
 
-test('DISPLAY_INFO carries the limits, and the presets are named', async () => {
+test('DISPLAY_INFO carries the limits', async () => {
   const { display } = await loaded()
   const info = display.info
 
@@ -227,15 +232,10 @@ test('DISPLAY_INFO carries the limits, and the presets are named', async () => {
   assert.equal(info.panelH, 68)
   assert.equal(info.rotation, 90)
   assert.equal(info.widgetSize, WIDGET_SIZE)
-  assert.equal(info.flags, KEEB_DISPLAY_INFO_F_ART)
+  assert.equal(info.flags, KEEB_DISPLAY_INFO_F_ART | KEEB_DISPLAY_INFO_F_PEER)
   assert.equal(info.layers, 6, 'six layers, so six pips')
   assert.equal(display.canDrawArt, true)
   assert.equal(display.layerCount, 6)
-
-  assert.deepEqual(
-    display.presets.map((p) => p.name),
-    ['STATUS', 'MINIMAL'],
-  )
 })
 
 test('the panel the keyboard reports is its preset, not a local guess', async () => {
@@ -307,6 +307,9 @@ test('a kind cannot be fed by a source that cannot feed it', async () => {
   assert.match(display.edit(1, { kind: KEEB_WID_ART }), /cannot be fed/)
   assert.equal(display.edit(1, { kind: KEEB_WID_ART, source: KEEB_SRC_LAYER_ART }), '')
   assert.equal(display.widgets[1].source, KEEB_SRC_LAYER_ART)
+
+  /* The cat lives on the peripheral half; screen 2 offers it, screen 1 does not. */
+  assert.match(display.edit(1, { kind: KEEB_WID_BONGO, source: KEEB_SRC_NONE }), /other half/)
 })
 
 test('a text slot reaches the widget that points at it', async () => {
@@ -326,6 +329,26 @@ test('a text slot reaches the widget that points at it', async () => {
   assert.match(tooLong.reason ?? '', /24 bytes/)
 })
 
+test('custom text gets a slot of its own, picked by the store', async () => {
+  const { display } = await loaded()
+
+  /* The STATUS preset uses slots 0-3, so the next one asked for is 4. */
+  assert.equal(display.useTextSlot(2), '')
+  assert.equal(display.widgets[2].source, KEEB_SRC_TEXT_BASE + 4)
+
+  /* A new widget is handed a slot too, so typing into it cannot rewrite the
+   * text a widget already on the panel is showing. */
+  for (const slot of [5, 6, 7]) {
+    assert.equal(display.addWidget(), '')
+    assert.equal(display.widgets[display.widgets.length - 1].source, KEEB_SRC_TEXT_BASE + slot)
+  }
+
+  /* Eight slots, more than eight text widgets: the least-used one is shared
+   * rather than the user being refused. */
+  assert.equal(display.addWidget(), '')
+  assert.equal(display.widgets[display.widgets.length - 1].source, KEEB_SRC_TEXT_BASE)
+})
+
 test('value slots are live: they redraw, and they are never saved', async () => {
   const { display } = await loaded()
 
@@ -333,27 +356,6 @@ test('value slots are live: they redraw, and they are never saved', async () => 
   assert.equal(display.values[1], -75)
   assert.equal(display.unsavedWrites, false, 'a live value is not a pending change')
   assert.equal(display.deviceDirty, false)
-})
-
-test('a preset replaces the table and the text slots with its own', async () => {
-  const { display } = await loaded()
-
-  await display.setTextSlot(0, 'KEEP ME')
-
-  assert.equal((await display.applyPreset(1)).ok, true)
-  assert.equal(display.widgets.length, PANEL_PRESETS[1].widgets.length)
-  assert.equal(display.preset, 1)
-  /* keeb_ui_apply_preset() re-fills every text slot from the preset, so a
-   * preset is a whole starting point and not only a layout. Discard is what
-   * brings the written text back, because it returns to the saved panel. */
-  assert.equal(display.texts[0], 'DEVICE', 'the preset carries its own text')
-
-  const deviceWidget = display.widgets.find((w) => w.source === KEEB_SRC_DEVICE_ID)
-
-  assert.ok(deviceWidget, 'MINIMAL shows the connected device')
-  assert.equal(deviceWidget.h, 40)
-
-  assert.equal((await display.applyPreset(9)).ok, false)
 })
 
 test('discard returns to the last saved panel; reset returns to the preset', async () => {
@@ -414,7 +416,127 @@ test('a single widget write lands where the index says', async () => {
 
   assert.equal(display.widgets[2].kind, KEEB_WID_BAR)
   assert.equal(display.widgets[2].source, KEEB_SRC_BATT_RIGHT)
-  assert.equal(display.preset, KBEEB_PRESET_CUSTOM)
+  assert.equal(display.preset, KEEB_PRESET_CUSTOM)
+})
+
+/* --------------------------------------------- the other half's panel */
+
+function freshPeer() {
+  setActivePinia(createPinia())
+
+  const device = useDeviceStore()
+  const peer = usePeerDisplayStore()
+
+  return { device, peer }
+}
+
+async function loadedPeer() {
+  const { device, peer } = freshPeer()
+
+  await device.connectMock()
+  await device.handshake()
+  await peer.load()
+  peer.bindEvents()
+
+  return { device, peer }
+}
+
+test('the peer info reports the geometry the other half draws in', async () => {
+  const { peer } = await loadedPeer()
+  const info = peer.info
+
+  assert.ok(info)
+  assert.equal(info.editable, true)
+  assert.equal(info.valueSlots, 0, 'live numbers are not relayed')
+  assert.equal(info.sourceMax, 18, 'the highest enum source: WPM/pips/signal, no value slots')
+  assert.equal(info.logicalW, 68)
+  assert.equal(info.logicalH, 160)
+  assert.equal(info.rotation, 90)
+  assert.equal(peer.canEdit, true)
+  assert.equal(peer.lastError, '')
+})
+
+test('the peer panel starts from the typing preset the peripheral boots with', async () => {
+  const { peer } = await loadedPeer()
+
+  assert.equal(peer.preset, 2)
+  assert.deepEqual(peer.widgets, PEER_TYPING)
+  assert.equal(peer.texts[0], 'WPM')
+})
+
+test('a peer edit is local until Apply, and Apply is not Save', async () => {
+  const { device, peer } = await loadedPeer()
+  const typing = peer.widgets.find((w) => w.kind === KEEB_WID_BONGO)
+
+  assert.ok(typing, 'the typing preset has the cat')
+
+  assert.equal(peer.edit(peer.widgets.indexOf(typing), { y: 12 }), '')
+  assert.equal(peer.hasLocalEdits, true)
+
+  await peer.reload()
+  assert.equal(peer.widgets.find((w) => w.kind === KEEB_WID_BONGO)?.y, 12, 'staged edits survive')
+
+  const applied = await peer.applyTable()
+
+  assert.equal(applied.ok, true, applied.reason ?? peer.lastError)
+  assert.equal(peer.unsavedWrites, true)
+  assert.equal(peer.deviceDirty, true)
+  assert.equal((await device.readDisplay(1)).widgets.find((w) => w.kind === KEEB_WID_BONGO)?.y, 12)
+
+  assert.equal((await peer.save()).ok, true)
+  assert.equal(peer.unsavedWrites, false)
+  assert.equal(peer.deviceDirty, false)
+})
+
+test('peer discard returns to the saved table; reset returns to typing', async () => {
+  const { peer } = await loadedPeer()
+  const catAt = () => peer.widgets.find((w) => w.kind === KEEB_WID_BONGO)?.y
+
+  const start = catAt()
+
+  peer.edit(peer.widgets.findIndex((w) => w.kind === KEEB_WID_BONGO), { y: 11 })
+  assert.equal((await peer.applyTable()).ok, true)
+  assert.equal((await peer.save()).ok, true)
+
+  peer.edit(peer.widgets.findIndex((w) => w.kind === KEEB_WID_BONGO), { y: 14 })
+  assert.equal((await peer.applyTable()).ok, true)
+
+  assert.equal((await peer.discard()).ok, true)
+  assert.equal(catAt(), 11, 'back to what was saved')
+
+  assert.equal((await peer.resetStorage()).ok, true)
+  assert.equal(catAt(), start, 'the typing preset again')
+  assert.equal(peer.preset, 2)
+})
+
+test('peer text reaches the table the central relays', async () => {
+  const { device, peer } = await loadedPeer()
+
+  assert.equal((await peer.setTextSlot(0, 'SPEED')).ok, true)
+  assert.equal(peer.texts[0], 'SPEED')
+  assert.equal((await device.readDisplay(1)).texts[0], 'SPEED')
+})
+
+test('the peer has no live value slots to write', async () => {
+  const { peer } = await loadedPeer()
+
+  const r = await peer.setValueSlot(0, 42)
+
+  assert.equal(r.ok, false)
+  assert.match(r.reason ?? '', /not relayed/)
+})
+
+test('a peer table write uses the PEER records', () => {
+  const msg = new TlvMessage(256)
+  const w: Widget = { kind: KEEB_WID_TEXT, source: KEEB_SRC_TEXT_BASE, x: 4, y: 4, w: 40, h: 0, style: 0 }
+
+  assert.ok(writeDisplayTable(msg, [w], 1))
+  assert.ok(writeTextSlot(msg, 0, 'x', 1))
+
+  const records = iterateMessage(msg.bytes()).records
+
+  assert.deepEqual(records.map((r) => r.type), [KEEB_T_PEER_DISPLAY_SET, KEEB_T_PEER_TEXT_SET])
+  assert.equal(readDisplayHeader(records[0].value).count, 1)
 })
 
 /* --------------------- 3. the mock's panel is the firmware's panel, in C */
@@ -429,6 +551,7 @@ const KIND_BY_MACRO: Record<string, number> = {
   W_PIPS: KEEB_WID_PIPS,
   W_BOLT: KEEB_WID_BOLT,
   W_ART: KEEB_WID_ART,
+  W_BONGO: KEEB_WID_BONGO,
 }
 
 const SOURCE_BY_NAME: Record<string, number> = {
@@ -448,6 +571,9 @@ const SOURCE_BY_NAME: Record<string, number> = {
   KEEB_SRC_CHARGING: 13,
   KEEB_SRC_DEVICE_ID: 14,
   KEEB_SRC_DEVICE_NAME: 15,
+  KEEB_SRC_WPM: 16,
+  KEEB_SRC_PROFILE_PIPS: 17,
+  KEEB_SRC_RSSI: 18,
 }
 
 /**
@@ -507,7 +633,8 @@ function parseCTable(name: string): Widget[] {
   }
 
   for (const raw of body.split('\n')) {
-    const line = raw.trim()
+    /* A preset row may carry a trailing comment (the cat's does). */
+    const line = raw.replace(/\/\*.*\*\/\s*$/, '').trim()
     /* Greedy on purpose: a preset row can nest a macro call, SLOT(0). */
     const m = /^(W_[A-Z]+)\((.*)\),?$/.exec(line)
 
@@ -565,6 +692,10 @@ function parseCTable(name: string): Widget[] {
         widgets.push({ kind: KEEB_WID_ART, source: KEEB_SRC_LAYER_ART, x: num(a[0], line), y: num(a[1], line), w: num(a[2], line), h: num(a[3], line), style: num(a[4], line) })
         break
 
+      case 'W_BONGO':
+        widgets.push({ kind: KEEB_WID_BONGO, source: KEEB_SRC_NONE, x: num(a[0], line), y: num(a[1], line), w: num(a[2], line), h: num(a[3], line), style: 0 })
+        break
+
       default:
         assert.fail(`no expansion rule for ${macro}`)
     }
@@ -579,7 +710,13 @@ test('the firmware presets are tables a host could write back', () => {
   /* The editor reads the panel and writes it back on every Apply, so a preset
    * the validator would refuse is a panel that cannot be edited at all — the
    * pip row is exactly where that happened once. */
-  for (const name of ['central_portrait', 'central_minimal_portrait']) {
+  for (const name of [
+    'central_portrait',
+    'central_minimal_portrait',
+    'peripheral_typing_portrait',
+    'peripheral_portrait',
+    'peripheral_device_only_portrait',
+  ]) {
     for (const [i, w] of parseCTable(name).entries()) {
       assert.equal(validateWidget(w), 0, `${name}[${i}] would be refused: ${JSON.stringify(w)}`)
     }
@@ -605,21 +742,28 @@ test('the mock panel and the firmware panel are the same table', () => {
   )
 })
 
+test('the mock peer panel is the firmware peripheral typing preset', () => {
+  assert.deepEqual(
+    PEER_TYPING,
+    parseCTable('peripheral_typing_portrait'),
+    'the central seeds its peer copy from this table, so the two must match',
+  )
+})
+
 test('the editor offers exactly the kinds the firmware can draw', () => {
   /* A kind in the picker that the panel cannot draw is a control that writes a
-   * widget the firmware would refuse. */
-  const offered = new Set([
-    KEEB_WID_FRAME,
-    KEEB_WID_RECT,
-    KEEB_WID_RULE,
-    KEEB_WID_TEXT,
-    KEEB_WID_BAR,
-    KEEB_WID_BATTERY,
-    KEEB_WID_PIPS,
-    KEEB_WID_BOLT,
-    KEEB_WID_ART,
-  ])
+   * widget the firmware would refuse - and a kind the firmware has but the
+   * picker hides is a widget nobody can place. */
+  const offered = new Set(KIND_ORDER)
 
-  assert.equal(offered.size, KEEB_WID_COUNT - 1, 'every kind but NONE is editable')
+  const known = new Set<number>()
+
+  for (let kind = 0; kind < KEEB_WID_COUNT; kind++) {
+    known.add(kind)
+  }
+
+  known.delete(KEEB_WID_NONE)
+
+  assert.deepEqual([...offered].sort((a, b) => a - b), [...known].sort((a, b) => a - b))
   assert.equal(offered.has(KEEB_WID_NONE), false)
 })

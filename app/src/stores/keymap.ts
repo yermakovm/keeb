@@ -298,6 +298,46 @@ export const useKeymapStore = defineStore('keymap', () => {
     return null
   }
 
+  /* ------------------------------------------------- diff against base */
+
+  /**
+   * How the edited slot's behaviour at `pos` compares with the base layer
+   * (slot 0), the way a layer selector reads a layer: what this layer *wrote*
+   * here, against what a press on this key actually produces on the base layer.
+   *
+   *   - `override` — this layer redefines the key to something other than base;
+   *   - `same`     — this layer writes a non-transparent binding that re-asserts
+   *                  what base already does (redundant, not a change);
+   *   - `neutral`  — transparent (inherits), or there is no editing layer, so
+   *                  nothing to compare. Base's own view is all `neutral`.
+   */
+  function layerDiff(slot: number, pos: number): 'override' | 'same' | 'neutral' {
+    if (slot <= 0) {
+      return 'neutral'
+    }
+
+    const id = order.value[slot]
+
+    if (id === LAYER_ID_INVALID) {
+      return 'neutral'
+    }
+
+    const mine = cellList(id)[pos]
+
+    if (!mine || mine.token === TRANSPARENT_TOKEN) {
+      return 'neutral'
+    }
+
+    const base = resolve(0, pos)?.binding ?? null
+
+    const sameAsBase =
+      mine.token === base?.token &&
+      mine.param1 === base?.param1 &&
+      mine.param2 === base?.param2
+
+    return sameAsBase ? 'same' : 'override'
+  }
+
   /* ---------------------------------------------------------------- edits */
 
   function setBinding(slot: number, pos: number, binding: Binding): { ok: boolean; reason?: string } {
@@ -705,7 +745,7 @@ export const useKeymapStore = defineStore('keymap', () => {
     autosave, unsavedWrites, hasUnsaved,
     editingSlot, editingId, editingName, slots, editableSlots, dirtyTotal, isDirty, loading,
     isReserved, layerName, tokenName, tokenLabel, tokenDef, isPending,
-    applyLayers, applyCells, cellList, loadAll, refreshLayer, ownCell, resolve,
+    applyLayers, applyCells, cellList, loadAll, refreshLayer, ownCell, resolve, layerDiff,
     setBinding, makeTransparent, makeDisabled, commitLayer, commitAll, dropDirty, revertEdits, revertCell,
     renameLayer, moveLayer, addLayer, removeLayer, restoreLayer,
     save, discard, resetSettings, setAutosave, persistAfterWrite, bindEvents,

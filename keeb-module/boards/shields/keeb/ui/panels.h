@@ -9,7 +9,7 @@
 #include "keeb_ui.h"
 
 /** Longest layer name the central panel prints (ZMK's own limit is 20). */
-#define KBEEB_LAYER_NAME_MAX 16
+#define KEEB_LAYER_NAME_MAX 16
 
 /**
  * Implemented by exactly one panel file, selected by the split role:

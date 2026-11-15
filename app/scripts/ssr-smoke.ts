@@ -14,9 +14,13 @@ import App from '../src/App.vue'
 import KeyPicker from '../src/components/KeyPicker.vue'
 import KeyReadout from '../src/components/KeyReadout.vue'
 import PanelEditor from '../src/components/PanelEditor.vue'
+import SettingsPanel from '../src/components/SettingsPanel.vue'
+import SoundPanel from '../src/components/SoundPanel.vue'
 import { useDeviceStore } from '../src/stores/device.ts'
 import { useDisplayStore } from '../src/stores/display.ts'
 import { useKeymapStore } from '../src/stores/keymap.ts'
+import { useSettingsStore } from '../src/stores/settings.ts'
+import { useSoundStore } from '../src/stores/sound.ts'
 import { KEYCODES, KEY_COUNT, TOKENS } from '../src/proto/zmk.gen.ts'
 
 const pinia = createPinia()
@@ -27,6 +31,7 @@ app.use(pinia)
 const device = useDeviceStore()
 const keymap = useKeymapStore()
 const display = useDisplayStore()
+const settings = useSettingsStore()
 
 const fail = (msg: string): never => {
   console.error(`FAIL: ${msg}`)
@@ -93,6 +98,12 @@ if (display.widgets.length !== 18) {
   fail(`the simulated panel has ${display.widgets.length} widgets, the firmware preset has 18`)
 }
 
+await settings.load()
+
+if (!settings.loaded) {
+  fail(`the simulated keyboard exposes the settings channel, but the store did not read it: ${settings.lastError}`)
+}
+
 const html = await renderToString(app)
 
 /* The sidebar alone: the grid legitimately spells out tokens like &to and
@@ -105,6 +116,13 @@ const aside = asideStart < 0 ? '' : html.slice(asideStart, html.indexOf('</main>
 /* The menu alone, for the same reason: the words it must not contain appear
  * elsewhere on the page legitimately. */
 const nav = html.slice(html.indexOf('<nav'), html.indexOf('</nav>'))
+
+/* The text labels the nav actually prints, so a check about copy reads the copy
+ * and not the markup around it. Symbols (the ▾ caret, the log badge number) are
+ * skipped: they have no first letter to capitalise. */
+function navLabels(): string[] {
+  return [...nav.matchAll(/>\s*([A-Za-z][\w .·-]*?)\s*</g)].map((m) => m[1])
+}
 
 /* The palette under the board, sliced for the same reason as the sidebar. */
 const palette = html.slice(
@@ -121,6 +139,13 @@ const picker = await renderToString(
 /* The tester's variant of the same properties: it reads the keyboard, so it
  * must not carry an input or a write. */
 const readout = await renderToString(createApp(KeyReadout, { pos: 12 }).use(pinia))
+
+const settingsView = await renderToString(createApp(SettingsPanel, { page: 'configuration' }).use(pinia))
+const ledView = await renderToString(createApp(SettingsPanel, { page: 'LED' }).use(pinia))
+
+await useSoundStore().load()
+
+const soundView = await renderToString(createApp(SoundPanel).use(pinia))
 
 const checks: Array<[string, boolean]> = [
   ['keyboard grid', html.includes('class="row"')],
@@ -148,7 +173,7 @@ const checks: Array<[string, boolean]> = [
    * not about styling. */
   [
     'everyday bindings are on the surface',
-    ['&amp;trans', '&amp;none', 'unstage'].every((s) => aside.includes(s)),
+    ['&amp;trans', '&amp;none', 'Unstage'].every((s) => aside.includes(s)),
   ],
   /* The multi-argument picker is a group in this column, the same kind of group
    * the state and the session are: no button opens it, and nothing is fixed over
@@ -169,9 +194,13 @@ const checks: Array<[string, boolean]> = [
    * are edited where they are drawn. */
   [
     'the menu holds the board, not a room per feature',
-    ['keymap', 'tester', 'settings'].every((s) => nav.includes(s))
+    ['Keymap', 'Tester', 'Settings'].every((s) => nav.includes(s))
       && ['displays', 'macros', 'layers'].every((s) => !nav.includes(`>${s}<`)),
   ],
+  /* Menu and page buttons read as labels, so they start with a capital: the one
+   * exception in the chrome is the log-level filter, which mirrors the tags its
+   * own lines print. */
+  ['page buttons are capitalised', navLabels().every((l) => /^[A-Z]/.test(l)) && navLabels().length >= 3],
   ['the status panels are drawn on the board as a display icon', (html.match(/class="panel (left|right)/g) ?? []).length === 2
     /* The name and the widget count are no longer printed inside a one-key-wide
      * strip: they are what the control says it is, and the glyph is what it
@@ -187,6 +216,36 @@ const checks: Array<[string, boolean]> = [
   ],
   ['layer names', ['HOME', 'NAV', 'FUN', 'MOUSE', 'MEDIA', 'GAME'].every((n) => html.includes(n))],
   ['the edited keycap', html.includes('A')],
+  /* The settings page shows what the keyboard reported, named by the Kconfig it
+   * came from: the flashed CONFIG_ZMK_IDLE_SLEEP_TIMEOUT is 900000 ms. */
+  [
+    'the settings page shows the firmware timeouts',
+    ['CONFIG_ZMK_IDLE_TIMEOUT', 'CONFIG_ZMK_IDLE_SLEEP_TIMEOUT', '900000', '15 min'].every((s) =>
+      settingsView.includes(s),
+    ),
+  ],
+  /* A row only exists if the firmware can write it, so the host-side habits that
+   * are not firmware settings are not on this page. */
+  [
+    'the settings page offers only what the firmware can write',
+    ['autosave', 'keyboard name', 'default output'].every((s) => !settingsView.includes(s)),
+  ],
+  /* The settings menu splits the table: the configuration page keeps the timeouts
+   * and never shows a color, the LED page shows the colors and none of the timing. */
+  [
+    'the settings menu splits configuration from LED',
+    !settingsView.includes('CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT') &&
+      ledView.includes('CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT') &&
+      !ledView.includes('CONFIG_ZMK_IDLE_TIMEOUT'),
+  ],
+  /* The sound page is one section, not two cards side by side: the event table
+   * first, the shapes of the sounds it can play under it. */
+  [
+    'the sound page is one section, events then sounds',
+    (soundView.match(/class="s-card"/g) ?? []).length === 1 &&
+      soundView.indexOf('>what plays for each event<') < soundView.indexOf('>the sounds<') &&
+      soundView.includes('>what plays for each event<'),
+  ],
   ['reserved position is marked', (html.match(/class="cap[^"]*reserved/g) ?? []).length === 2],
   ['token picker renders its token step', picker.includes('position 12') && picker.includes('choose a token')],
   ['picker groups tokens by category', (picker.match(/class="cat"/g) ?? []).length >= 5 && (picker.match(/class="token"/g) ?? []).length > 0],
@@ -197,6 +256,7 @@ const checks: Array<[string, boolean]> = [
   /* The panel editor draws the firmware's logical space, not a picture of a
    * screen: one row per widget, one group per shape, and a hit area over each. */
   ['panel editor draws the keyboard table', (panel.match(/class="widget[ "]/g) ?? []).length === display.widgets.length],
+  ['panel editor exposes widget properties and a close button', panel.includes('aria-label="Panel editor"') && panel.includes('+ Widget') && panel.includes('aria-label="close the panel editor"')],
   ['panel preview is the logical space', panel.includes('viewBox="0 0 68 160"')],
   ['panel preview shapes match the table', (panel.match(/<g class="w/g) ?? []).length === display.widgets.length],
   ['every widget has a hit area', (panel.match(/class="hit"/g) ?? []).length === display.widgets.length],

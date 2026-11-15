@@ -1,0 +1,114 @@
+diff --git a/app/include/zmk/activity.h b/app/include/zmk/activity.h
+index 2aad024a..4079c01e 100644
+--- a/app/include/zmk/activity.h
++++ b/app/include/zmk/activity.h
+@@ -6,6 +6,22 @@
+ 
+ #pragma once
+ 
++#include <stdbool.h>
++#include <stdint.h>
++
+ enum zmk_activity_state { ZMK_ACTIVITY_ACTIVE, ZMK_ACTIVITY_IDLE, ZMK_ACTIVITY_SLEEP };
+ 
+ enum zmk_activity_state zmk_activity_get_state(void);
++
++/* Runtime getters/setters for idle/sleep timeout (ms).  The compiled-in
++ * defaults come from CONFIG_ZMK_IDLE_TIMEOUT / CONFIG_ZMK_IDLE_SLEEP_TIMEOUT.
++ */
++int zmk_activity_set_idle_timeout(uint32_t ms);
++uint32_t zmk_activity_get_idle_timeout(void);
++int zmk_activity_set_sleep_timeout(uint32_t ms);
++uint32_t zmk_activity_get_sleep_timeout(void);
++
++/* Turn deep sleep (System OFF) off at runtime, per half.  A no-op when the build
++ * has CONFIG_ZMK_SLEEP=n. */
++int zmk_activity_set_sleep_enabled(bool enabled);
++bool zmk_activity_get_sleep_enabled(void);
+diff --git a/app/src/activity.c b/app/src/activity.c
+index f4dc3562..4c888dc1 100644
+--- a/app/src/activity.c
++++ b/app/src/activity.c
+@@ -42,10 +42,13 @@ static enum zmk_activity_state activity_state;
+ 
+ static uint32_t activity_last_uptime;
+ 
+-#define MAX_IDLE_MS CONFIG_ZMK_IDLE_TIMEOUT
++static uint32_t max_idle_ms = CONFIG_ZMK_IDLE_TIMEOUT;
+ 
+ #if IS_ENABLED(CONFIG_ZMK_SLEEP)
+-#define MAX_SLEEP_MS CONFIG_ZMK_IDLE_SLEEP_TIMEOUT
++static uint32_t max_sleep_ms = CONFIG_ZMK_IDLE_SLEEP_TIMEOUT;
++/* Runtime off-switch for deep sleep.  It can only turn sleep off: a build with
++ * CONFIG_ZMK_SLEEP=n has no sleep path at all. */
++static bool sleep_allowed = true;
+ #endif
+ 
+ int raise_event(void) {
+@@ -69,13 +72,56 @@ static int note_activity(void) {
+     return set_state(ZMK_ACTIVITY_ACTIVE);
+ }
+ 
++int zmk_activity_set_idle_timeout(uint32_t ms) {
++    max_idle_ms = ms;
++    return 0;
++}
++
++uint32_t zmk_activity_get_idle_timeout(void) {
++    return max_idle_ms;
++}
++
++int zmk_activity_set_sleep_timeout(uint32_t ms) {
++#if IS_ENABLED(CONFIG_ZMK_SLEEP)
++    max_sleep_ms = ms;
++    return 0;
++#else
++    return -ENOTSUP;
++#endif
++}
++
++uint32_t zmk_activity_get_sleep_timeout(void) {
++#if IS_ENABLED(CONFIG_ZMK_SLEEP)
++    return max_sleep_ms;
++#else
++    return 0;
++#endif
++}
++
++int zmk_activity_set_sleep_enabled(bool enabled) {
++#if IS_ENABLED(CONFIG_ZMK_SLEEP)
++    sleep_allowed = enabled;
++    return 0;
++#else
++    return -ENOTSUP;
++#endif
++}
++
++bool zmk_activity_get_sleep_enabled(void) {
++#if IS_ENABLED(CONFIG_ZMK_SLEEP)
++    return sleep_allowed;
++#else
++    return false;
++#endif
++}
++
+ static int activity_event_listener(const zmk_event_t *eh) { return note_activity(); }
+ 
+ void activity_work_handler(struct k_work *work) {
+     int32_t current = k_uptime_get();
+     int32_t inactive_time = current - activity_last_uptime;
+ #if IS_ENABLED(CONFIG_ZMK_SLEEP)
+-    if (inactive_time > MAX_SLEEP_MS && !is_usb_power_present()) {
++    if (sleep_allowed && inactive_time > max_sleep_ms && !is_usb_power_present()) {
+         // Put devices in suspend power mode before sleeping
+         set_state(ZMK_ACTIVITY_SLEEP);
+ 
+@@ -88,7 +134,7 @@ void activity_work_handler(struct k_work *work) {
+         sys_poweroff();
+     } else
+ #endif /* IS_ENABLED(CONFIG_ZMK_SLEEP) */
+-        if (inactive_time > MAX_IDLE_MS) {
++        if (inactive_time > max_idle_ms) {
+             set_state(ZMK_ACTIVITY_IDLE);
+         }
+ }

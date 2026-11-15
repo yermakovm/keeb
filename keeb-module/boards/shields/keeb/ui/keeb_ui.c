@@ -15,15 +15,15 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 #define CANVAS_COLOR_FORMAT LV_COLOR_FORMAT_L8
 #define CANVAS_BPP LV_COLOR_FORMAT_GET_BPP(CANVAS_COLOR_FORMAT)
-#define PANEL_BUF_SIZE LV_CANVAS_BUF_SIZE(KBEEB_PANEL_W, KBEEB_PANEL_H, CANVAS_BPP,            \
+#define PANEL_BUF_SIZE LV_CANVAS_BUF_SIZE(KEEB_PANEL_W, KEEB_PANEL_H, CANVAS_BPP,            \
 					  LV_DRAW_BUF_STRIDE_ALIGN)
-#define LOGICAL_BUF_SIZE LV_CANVAS_BUF_SIZE(KBEEB_UI_W, KBEEB_UI_H, CANVAS_BPP,                \
+#define LOGICAL_BUF_SIZE LV_CANVAS_BUF_SIZE(KEEB_UI_W, KEEB_UI_H, CANVAS_BPP,                \
 					    LV_DRAW_BUF_STRIDE_ALIGN)
 
-BUILD_ASSERT(KBEEB_PANEL_W == 160 && KBEEB_PANEL_H == 68, "nice!view is 160x68");
+BUILD_ASSERT(KEEB_PANEL_W == 160 && KEEB_PANEL_H == 68, "nice!view is 160x68");
 
 static uint8_t panel_buf[PANEL_BUF_SIZE] __aligned(LV_DRAW_BUF_ALIGN);
-#if KBEEB_UI_ROTATION_DEG != 0
+#if KEEB_UI_ROTATION_DEG != 0
 static uint8_t logical_buf[LOGICAL_BUF_SIZE] __aligned(LV_DRAW_BUF_ALIGN);
 #endif
 
@@ -35,16 +35,16 @@ static void draw_panel(void)
 {
 	struct keeb_ctx ctx = {0};
 	lv_obj_t *target = panel_canvas;
-#if KBEEB_UI_ROTATION_DEG != 0
+#if KEEB_UI_ROTATION_DEG != 0
 	target = logical_canvas;
 #endif
 
 	ctx.canvas = target;
-	ctx.w = KBEEB_UI_W;
-	ctx.h = KBEEB_UI_H;
+	ctx.w = KEEB_UI_W;
+	ctx.h = KEEB_UI_H;
 
 	keeb_ctx_begin(&ctx);
-	keeb_fill(&ctx, 0, 0, ctx.w, ctx.h, KBEEB_PAPER);
+	keeb_fill(&ctx, 0, 0, ctx.w, ctx.h, KEEB_PAPER);
 
 	if (content) {
 		content(&ctx);
@@ -52,12 +52,12 @@ static void draw_panel(void)
 
 	keeb_ctx_end(&ctx);
 
-#if KBEEB_UI_ROTATION_DEG != 0
+#if KEEB_UI_ROTATION_DEG != 0
 	/* Composed in the viewing orientation -> rotate into panel orientation. */
-	lv_draw_sw_rotate(logical_buf, panel_buf, KBEEB_UI_W, KBEEB_UI_H,
-			  lv_draw_buf_width_to_stride(KBEEB_UI_W, CANVAS_COLOR_FORMAT),
-			  lv_draw_buf_width_to_stride(KBEEB_PANEL_W, CANVAS_COLOR_FORMAT),
-			  KBEEB_UI_ROTATION, CANVAS_COLOR_FORMAT);
+	lv_draw_sw_rotate(logical_buf, panel_buf, KEEB_UI_W, KEEB_UI_H,
+			  lv_draw_buf_width_to_stride(KEEB_UI_W, CANVAS_COLOR_FORMAT),
+			  lv_draw_buf_width_to_stride(KEEB_PANEL_W, CANVAS_COLOR_FORMAT),
+			  KEEB_UI_ROTATION, CANVAS_COLOR_FORMAT);
 
 	lv_obj_invalidate(panel_canvas);
 #endif
@@ -86,11 +86,11 @@ lv_obj_t *keeb_ui_create(lv_obj_t *parent, keeb_ui_draw_fn content_cb)
 	content = content_cb;
 
 	panel_canvas = lv_canvas_create(parent);
-	lv_canvas_set_buffer(panel_canvas, panel_buf, KBEEB_PANEL_W, KBEEB_PANEL_H,
+	lv_canvas_set_buffer(panel_canvas, panel_buf, KEEB_PANEL_W, KEEB_PANEL_H,
 			     CANVAS_COLOR_FORMAT);
 	lv_obj_align(panel_canvas, LV_ALIGN_TOP_LEFT, 0, 0);
 
-#if KBEEB_UI_ROTATION_DEG != 0
+#if KEEB_UI_ROTATION_DEG != 0
 	/*
 	 * Offscreen scratch canvas: the UI is composed here in the viewing
 	 * orientation, then rotated into panel_canvas. It stays a child of the
@@ -98,7 +98,7 @@ lv_obj_t *keeb_ui_create(lv_obj_t *parent, keeb_ui_draw_fn content_cb)
 	 * hidden so it never paints onto the panel itself.
 	 */
 	logical_canvas = lv_canvas_create(parent);
-	lv_canvas_set_buffer(logical_canvas, logical_buf, KBEEB_UI_W, KBEEB_UI_H,
+	lv_canvas_set_buffer(logical_canvas, logical_buf, KEEB_UI_W, KEEB_UI_H,
 			     CANVAS_COLOR_FORMAT);
 	lv_obj_add_flag(logical_canvas, LV_OBJ_FLAG_HIDDEN);
 #endif
@@ -133,7 +133,7 @@ void keeb_frame(struct keeb_ctx *ctx, int16_t x, int16_t y, int16_t w, int16_t h
 
 	lv_draw_rect_dsc_init(&dsc);
 	dsc.bg_opa = LV_OPA_TRANSP;
-	dsc.border_color = KBEEB_INK;
+	dsc.border_color = KEEB_INK;
 	dsc.border_width = 1;
 	dsc.border_opa = LV_OPA_COVER;
 	dsc.radius = radius;
@@ -143,7 +143,7 @@ void keeb_frame(struct keeb_ctx *ctx, int16_t x, int16_t y, int16_t w, int16_t h
 
 void keeb_rule(struct keeb_ctx *ctx, int16_t x, int16_t y, int16_t w)
 {
-	keeb_fill(ctx, x, y, w, 1, KBEEB_INK);
+	keeb_fill(ctx, x, y, w, 1, KEEB_INK);
 }
 
 void keeb_polyline(struct keeb_ctx *ctx, const lv_point_t *points, uint32_t count)
@@ -151,7 +151,7 @@ void keeb_polyline(struct keeb_ctx *ctx, const lv_point_t *points, uint32_t coun
 	lv_draw_line_dsc_t dsc;
 
 	lv_draw_line_dsc_init(&dsc);
-	dsc.color = KBEEB_INK;
+	dsc.color = KEEB_INK;
 	dsc.width = 1;
 	dsc.opa = LV_OPA_COVER;
 
@@ -173,7 +173,7 @@ void keeb_text(struct keeb_ctx *ctx, const lv_font_t *font, int16_t x, int16_t y
 
 	lv_draw_label_dsc_init(&dsc);
 	dsc.font = font;
-	dsc.color = KBEEB_INK;
+	dsc.color = KEEB_INK;
 	dsc.opa = LV_OPA_COVER;
 	dsc.align = align;
 	dsc.text = text;
@@ -211,7 +211,7 @@ void keeb_bar(struct keeb_ctx *ctx, int16_t x, int16_t y, int16_t w, int16_t h, 
 	const int16_t fill_w = (int16_t)((inner_w * percent) / 100);
 
 	if (fill_w > 0) {
-		keeb_fill(ctx, x + 1, y + 1, fill_w, h - 2, KBEEB_INK);
+		keeb_fill(ctx, x + 1, y + 1, fill_w, h - 2, KEEB_INK);
 	}
 }
 
@@ -219,7 +219,7 @@ void keeb_battery(struct keeb_ctx *ctx, int16_t x, int16_t y, uint8_t percent, b
 {
 	/* 14x9 body with a 2x3 nub on the right, matching the mockup icon. */
 	keeb_frame(ctx, x, y, 14, 9, 2);
-	keeb_fill(ctx, x + 15, y + 3, 2, 3, KBEEB_INK);
+	keeb_fill(ctx, x + 15, y + 3, 2, 3, KEEB_INK);
 
 	keeb_bar(ctx, x + 2, y + 2, 10, 5, percent, valid);
 }
@@ -231,7 +231,7 @@ void keeb_pips(struct keeb_ctx *ctx, int16_t x, int16_t y, uint8_t count, int8_t
 		const int16_t px = x + (i * (pip_w + gap));
 
 		if ((int8_t)i == active) {
-			keeb_fill(ctx, px, y, pip_w, pip_h, KBEEB_INK);
+			keeb_fill(ctx, px, y, pip_w, pip_h, KEEB_INK);
 		} else {
 			keeb_frame(ctx, px, y, pip_w, pip_h, 0);
 		}
@@ -263,7 +263,7 @@ int16_t keeb_battery_row(struct keeb_ctx *ctx, int16_t x, int16_t y, const char 
 {
 	char buf[6];
 
-	keeb_text(ctx, KBEEB_FONT_SMALL, x, y + 1, 8, LV_TEXT_ALIGN_LEFT, label);
+	keeb_text(ctx, KEEB_FONT_SMALL, x, y + 1, 8, LV_TEXT_ALIGN_LEFT, label);
 	keeb_battery(ctx, x + 9, y, percent, valid);
 
 	if (valid) {
@@ -272,8 +272,8 @@ int16_t keeb_battery_row(struct keeb_ctx *ctx, int16_t x, int16_t y, const char 
 		snprintf(buf, sizeof(buf), "--%%");
 	}
 
-	keeb_text(ctx, KBEEB_FONT_SMALL, x + 28, y + 1, KBEEB_BATTERY_ROW_W - 28,
+	keeb_text(ctx, KEEB_FONT_SMALL, x + 28, y + 1, KEEB_BATTERY_ROW_W - 28,
 		  LV_TEXT_ALIGN_RIGHT, buf);
 
-	return x + KBEEB_BATTERY_ROW_W;
+	return x + KEEB_BATTERY_ROW_W;
 }

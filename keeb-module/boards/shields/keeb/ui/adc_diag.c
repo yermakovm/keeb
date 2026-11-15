@@ -11,7 +11,7 @@
  * out whether the clone board really wired it to P0.31 like the schematic
  * claims.
  *
- * Enable with CONFIG_KBEEB_ADC_DIAG=y.
+ * Enable with CONFIG_KEEB_ADC_DIAG=y.
  */
 
 #include <zephyr/kernel.h>

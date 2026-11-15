@@ -1,21 +1,23 @@
 <script setup lang="ts">
 /*
- * Selected widget inspector — lives in the aside when a panel is being edited.
+ * Selected widget inspector — the dock's properties pane.
  *
- * The form edits a single widget by index via the display store. It is separated
- * from the canvas so the spatial view stays clean and the properties panel is
- * always in the same place.
+ * The form edits a single widget by index via the display store. It shares the
+ * dock with the widget list as a tab, so the canvas keeps its width and the
+ * right column stays a short status readout.
  */
 import { computed, ref } from 'vue'
 
 import {
   ALIGN_LABELS,
+  CUSTOM_TEXT,
   FONT_LABELS,
   KIND_LABELS,
   KIND_ORDER,
   KIND_STYLE_HELP,
   PIPS_LABELS,
   SOURCE_LABELS,
+  isTextSlot,
   slotIndexOf,
   sourcesForKind,
 } from '../data/widgets.ts'
@@ -32,19 +34,40 @@ import {
   KEEB_STYLE_FONT,
   KEEB_STYLE_ALIGN,
 } from '../proto/constants.ts'
-import { useDisplayStore } from '../stores/display.ts'
+import { useDisplayStore, usePeerDisplayStore } from '../stores/display.ts'
 import type { Widget } from '../proto/types.ts'
 
-const panel = useDisplayStore()
+/* The inspector edits whichever panel the dock is showing; the App keys the
+ * dock by target, so this is fixed for the component's lifetime. */
+const props = defineProps<{ target: 0 | 1 }>()
+
+const panel = props.target === 1 ? usePeerDisplayStore() : useDisplayStore()
 const busy = ref(false)
 const message = ref('')
 
 const sel = computed<Widget | null>(() => panel.widgets[panel.selectedWidget] ?? null)
 const selReason = computed(() => (sel.value ? panel.validate(sel.value) : ''))
 
-const sources = computed(() =>
-  sel.value ? sourcesForKind(sel.value.kind, KEEB_SRC_TEXT_BASE, KEEB_SRC_VALUE_BASE) : [],
-)
+/** The peer panel does not relay live value slots, so its DISPLAY_INFO says
+ * value_slots = 0. Do not offer a source that half cannot read. */
+function sourcesForPanel(kind: number): number[] {
+  return sourcesForKind(kind, KEEB_SRC_VALUE_BASE).filter(
+    (s) => s !== KEEB_SRC_VALUE_BASE || panel.valueSlots > 0,
+  )
+}
+
+const sources = computed(() => (sel.value ? sourcesForPanel(sel.value.kind) : []))
+
+/** Which of the panel's text slots the selected widget reads its own string
+ * from, or -1 when it shows something the keyboard reports. */
+const selSlot = computed(() => {
+  const source = sel.value?.source ?? 0
+
+  return isTextSlot(source, KEEB_SRC_TEXT_BASE, panel.textSlots) ? slotIndexOf(source, KEEB_SRC_TEXT_BASE) : -1
+})
+
+/* A kind the firmware feeds from exactly one source has nothing to choose. */
+const showSource = computed(() => sources.value.length > 1)
 
 const hasStyle = computed(() => {
   const kind = sel.value?.kind ?? KEEB_WID_NONE
@@ -60,13 +83,14 @@ function patch(key: 'x' | 'y' | 'w' | 'h', value: number): void {
 }
 
 function patchKind(kind: number): void {
-  const sourcesFor = sourcesForKind(kind, KEEB_SRC_TEXT_BASE, KEEB_SRC_VALUE_BASE)
+  const sourcesFor = sourcesForPanel(kind)
   const why = panel.edit(panel.selectedWidget, { kind, source: sourcesFor[0] })
   if (why) message.value = why
 }
 
 function patchSource(source: number): void {
-  const why = panel.edit(panel.selectedWidget, { source })
+  const why = source === CUSTOM_TEXT ? panel.useTextSlot(panel.selectedWidget) : panel.edit(panel.selectedWidget, { source })
+
   if (why) message.value = why
 }
 
@@ -95,7 +119,7 @@ async function run(label: string, fn: () => Promise<{ ok: boolean; reason?: stri
 }
 
 async function writeText(slot: number, value: string): Promise<void> {
-  await run(`text ${slot}`, () => panel.setTextSlot(slot, value))
+  await run('text', () => panel.setTextSlot(slot, value))
 }
 
 async function writeValue(slot: number, value: number): Promise<void> {
@@ -103,12 +127,10 @@ async function writeValue(slot: number, value: number): Promise<void> {
 }
 
 function sourceLabel(source: number): string {
-  if (source >= KEEB_SRC_TEXT_BASE) {
-    return `text ${slotIndexOf(source, KEEB_SRC_TEXT_BASE)}`
+  if (source === CUSTOM_TEXT) {
+    return 'custom text'
   }
-  if (source >= KEEB_SRC_VALUE_BASE) {
-    return `value ${source - KEEB_SRC_VALUE_BASE}`
-  }
+
   return SOURCE_LABELS[source] ?? `source ${source}`
 }
 </script>
@@ -126,12 +148,23 @@ function sourceLabel(source: number): string {
           </select>
         </label>
 
-        <label>source
-          <select :value="sel.source" :disabled="!panel.canEdit" @change="patchSource(Number(($event.target as HTMLSelectElement).value))">
+        <label v-if="showSource">source
+          <select :value="selSlot >= 0 ? CUSTOM_TEXT : sel.source" :disabled="!panel.canEdit" @change="patchSource(Number(($event.target as HTMLSelectElement).value))">
             <option v-for="s in sources" :key="s" :value="s">{{ sourceLabel(s) }}</option>
           </select>
         </label>
       </div>
+
+      <label v-if="selSlot >= 0" class="text">
+        text
+        <input
+          type="text"
+          :maxlength="panel.textMax"
+          :value="panel.texts[selSlot] ?? ''"
+          :disabled="!panel.canEdit"
+          @change="writeText(selSlot, ($event.target as HTMLInputElement).value)"
+        />
+      </label>
 
       <div class="sel-row geo">
         <label>x<input type="number" min="0" :max="panel.logicalW - 1" :value="sel.x" :disabled="!panel.canEdit" @change="patch('x', Number(($event.target as HTMLInputElement).value))" /></label>
@@ -182,26 +215,14 @@ function sourceLabel(source: number): string {
       </div>
 
       <div class="sel-row">
-        <button class="btn link" :disabled="!panel.canEdit" @click="panel.moveWidget(panel.selectedWidget, panel.selectedWidget - 1)">move up</button>
-        <button class="btn link" :disabled="!panel.canEdit" @click="panel.moveWidget(panel.selectedWidget, panel.selectedWidget + 1)">move down</button>
-        <button class="btn link danger" :disabled="!panel.canEdit" @click="panel.removeWidget(panel.selectedWidget); panel.selectedWidget = Math.max(0, panel.selectedWidget - 1)">remove</button>
+        <button class="btn link" :disabled="!panel.canEdit || panel.selectedWidget === 0" title="draw this widget earlier, behind the others" @click="panel.moveWidget(panel.selectedWidget, panel.selectedWidget - 1)">Send back</button>
+        <button class="btn link" :disabled="!panel.canEdit || panel.selectedWidget >= panel.widgets.length - 1" title="draw this widget later, in front of the others" @click="panel.moveWidget(panel.selectedWidget, panel.selectedWidget + 1)">Bring front</button>
+        <button class="btn link danger" :disabled="!panel.canEdit" @click="panel.removeWidget(panel.selectedWidget); panel.selectedWidget = Math.max(0, panel.selectedWidget - 1)">Remove</button>
         <span v-if="selReason" class="bad">{{ selReason }}</span>
       </div>
     </div>
 
     <div class="slots">
-      <h3>text slots <small>host-written, persisted by Save</small></h3>
-      <div v-for="s in panel.textSlots" :key="s" class="slot">
-        <span class="idx">{{ s - 1 }}</span>
-        <input
-          type="text"
-          :maxlength="panel.textMax"
-          :value="panel.texts[s - 1] ?? ''"
-          :disabled="!panel.canEdit"
-          @change="writeText(s - 1, ($event.target as HTMLInputElement).value)"
-        />
-      </div>
-
       <h3>value slots <small>live only — never persisted</small></h3>
       <div v-for="s in panel.valueSlots" :key="s" class="slot">
         <span class="idx">{{ s - 1 }}</span>
@@ -216,10 +237,10 @@ function sourceLabel(source: number): string {
 .msg { font-size: 12px; color: var(--text-dim); }
 .msg.err { color: var(--err); }
 
-.sel { border: 1px solid var(--border); border-radius: 0; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+.sel { border: 1px solid var(--border); border-radius: var(--r); padding: 8px; display: flex; flex-direction: column; gap: 8px; }
 .sel-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 label { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--text-dim); }
-select, input { font: inherit; font-size: 12px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 0; padding: 3px 6px; }
+select, input { font: inherit; font-size: 12px; background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--r); padding: 3px 6px; }
 input[type='number'] { width: 62px; }
 input[type='text'] { flex: 1; min-width: 120px; }
 .style-help { font-size: 11px; color: var(--text-faint); }

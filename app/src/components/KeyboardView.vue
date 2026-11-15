@@ -21,8 +21,8 @@ import { computed, ref } from 'vue'
 
 import Keycap from './Keycap.vue'
 import { describeBinding } from '../model/cap.ts'
-import { DEFAULT_LAYOUT, findLayout, LAYOUTS, placeKeys } from '../model/layouts.ts'
-import { GRID_ROWS, HALF_COLS, useKeymapStore } from '../stores/keymap.ts'
+import { DEFAULT_LAYOUT, findLayout, placeKeys } from '../model/layouts.ts'
+import { useKeymapStore } from '../stores/keymap.ts'
 import { GRID, KEY_COUNT } from '../proto/zmk.gen.ts'
 
 const props = withDefaults(
@@ -45,16 +45,13 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'pick', pos: number, own: boolean): void
   (e: 'pick-panel', id: string): void
+  (e: 'drop', pos: number): void
 }>()
 
 const keymap = useKeymapStore()
 
 const layoutId = ref(DEFAULT_LAYOUT)
 const layout = computed(() => findLayout(layoutId.value))
-
-/** Print the stock position number in every cap, for when the number on the
- * keyboard and the number in a CELLS record have to be matched by eye. */
-const showPositions = ref(false)
 
 const positions = computed(() => GRID.map((g) => g.pos))
 
@@ -71,6 +68,14 @@ const unreportedSet = computed(() => new Set(props.unreported))
 const variant = computed(() => (props.mode === 'tester' ? 'test' : 'edit'))
 
 const layerLabel = computed(() => keymap.editingName)
+
+/* A layer selector reads a layer against the base one: keys this layer
+ * redefines stay lit, keys that just re-assert the base layer fade away. The
+ * base layer itself and the read-only tester have nothing to compare, so this
+ * is an edit-mode concern only. */
+const diffing = computed(
+  () => props.mode !== 'tester' && keymap.editingSlot > 0,
+)
 
 const mismatch = computed(() => {
   if (placed.value.fits) {
@@ -100,6 +105,10 @@ const cell = (pos: number | null) => {
      * Same visual, different fact, and the header says which one you are reading. */
     selected: props.mode === 'tester' ? heldSet.value.has(pos) : props.selectedPos === pos,
     pending: keymap.isPending(keymap.editingSlot, pos),
+    /* A layer selector compares against the base layer (slot 0): a key this
+     * layer redefines is lit, a key that re-asserts base behaviour is faded. */
+    override: diffing.value && keymap.layerDiff(keymap.editingSlot, pos) === 'override',
+    same: diffing.value && keymap.layerDiff(keymap.editingSlot, pos) === 'same',
     /* Only the tester knows whether a switch has ever closed, so only the
      * tester says so: in the editor an unreported position is not a finding. */
     unreported: props.mode === 'tester' && unreportedSet.value.has(pos),
@@ -129,30 +138,6 @@ const HALF_SIDES = ['left', 'right'] as const
 
 <template>
   <div class="keyboard" :style="{ '--cols': cols }">
-    <div class="head">
-      <div class="pick">
-        <label for="layout">layout</label>
-        <select id="layout" v-model="layoutId">
-          <option v-for="l in LAYOUTS" :key="l.id" :value="l.id">{{ l.label }}</option>
-        </select>
-      </div>
-
-      <div class="pick">
-        <span class="cols">
-          {{ KEY_COUNT }} positions · {{ GRID_ROWS }}×{{ HALF_COLS * 2 }} matrix · editing slot {{ keymap.editingSlot }}
-          <template v-if="keymap.editingId !== 0xff"> ({{ layerLabel }})</template>
-        </span>
-        <button
-          class="cmd pos-toggle"
-          :class="{ on: showPositions }"
-          :aria-pressed="showPositions"
-          :title="showPositions ? 'hide the stock position numbers' : 'print the stock position number on every cap - the number a CELLS record uses'"
-          @click="showPositions = !showPositions"
-        >
-          positions
-        </button>
-      </div>
-    </div>
 
     <p v-if="mismatch" class="mismatch">{{ mismatch }}</p>
 
@@ -177,12 +162,15 @@ const HALF_SIDES = ['left', 'right'] as const
                 :reserved="cell(pos)!.reserved"
                 :selected="cell(pos)!.selected"
                 :pending="cell(pos)!.pending"
+                :override="cell(pos)!.override"
+                :same="cell(pos)!.same"
                 :unreported="cell(pos)!.unreported"
                 :inspected="cell(pos)!.inspected"
                 :variant="variant"
-                :show-pos="showPositions"
+                :show-pos="false"
                 :layer-label="layerLabel"
                 @pick="(p) => emit('pick', p, cell(p)!.own)"
+                @drop="(p) => emit('drop', p)"
               />
               <div v-else class="slot" :title="`no switch at row ${line.index} slot ${slot} in this layout`" />
             </template>
@@ -198,12 +186,15 @@ const HALF_SIDES = ['left', 'right'] as const
                 :reserved="cell(pos)!.reserved"
                 :selected="cell(pos)!.selected"
                 :pending="cell(pos)!.pending"
+                :override="cell(pos)!.override"
+                :same="cell(pos)!.same"
                 :unreported="cell(pos)!.unreported"
                 :inspected="cell(pos)!.inspected"
                 :variant="variant"
-                :show-pos="showPositions"
+                :show-pos="false"
                 :layer-label="layerLabel"
                 @pick="(p) => emit('pick', p, cell(p)!.own)"
+                @drop="(p) => emit('drop', p)"
               />
               <div v-else class="slot" :title="`no switch at row ${line.index} slot ${slot} in this layout`" />
             </template>
@@ -255,6 +246,8 @@ const HALF_SIDES = ['left', 'right'] as const
           :reserved="c!.reserved"
           :selected="c!.selected"
           :pending="c!.pending"
+          :override="c!.override"
+          :same="c!.same"
           :unreported="c!.unreported"
           :inspected="c!.inspected"
           :variant="variant"
@@ -269,9 +262,9 @@ const HALF_SIDES = ['left', 'right'] as const
 
 <style scoped>
 .keyboard {
-  --cell: 46px;
+  --cell: 68px;
   --pad: 12px;
-  --case-pad: 18px;
+  --case-pad: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -295,8 +288,9 @@ const HALF_SIDES = ['left', 'right'] as const
 
 select {
   padding: 3px 8px;
-  background: transparent;
+  background: var(--bg-inset);
   border: 1px solid var(--line);
+  border-radius: var(--r);
   color: var(--ink);
   font: inherit;
   font-size: 12px;
@@ -306,34 +300,38 @@ select {
 
 .cmd {
   border: 1px solid var(--line);
+  border-radius: 999px;
   background: transparent;
   color: var(--mid);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
-  padding: 3px 10px;
+  font-weight: 500;
+  padding: 4px 12px;
 }
 
-.cmd::before { content: ':'; color: var(--mid); font-weight: 700; margin-right: 4px; }
 .cmd:hover { border-color: var(--ink); }
-.cmd[aria-pressed='true'] { background: var(--mod); color: var(--ink); box-shadow: inset 0 -3px 0 var(--ink); }
+.cmd[aria-pressed='true'] { background: #1e2733; color: var(--ink); border-color: rgba(110, 231, 160, 0.6); box-shadow: inset 0 -3px 0 var(--accent); }
 
 .mismatch {
   margin: 0;
-  padding: 4px 10px;
+  padding: 6px 12px;
   border: 1px solid var(--err);
+  border-radius: 10px;
   color: var(--err);
   font-size: 12px;
 }
 
-/* The case. One outline around two half-cases, each frame holding its own keys
- * and its own screen, with the cut between them left as empty ground. The
- * layout's name is punched into the top border the way every titled box here is
- * titled. */
+/* The case. One warm rounded board around two half-cases, each frame holding its
+ * own keys and its own screen, with the cut between them left as empty stage.
+ * The layout's name is punched into the top border the way every titled box
+ * here is titled. The board sits a touch taller than the paper it floats on,
+ * like the keyboard on the bench. */
 .case {
   position: relative;
-  border: 1px solid var(--border-strong);
-  background: var(--panel);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   padding: 26px var(--case-pad) 20px;
 
   /* No scroll here, and nothing clipped: a keyboard you have to drag sideways
@@ -346,7 +344,7 @@ select {
     (100cqw - 2 * var(--case-pad) - 2px - 4 * var(--pad)
       - (2 * var(--cols) + 2) * var(--gap)) / (2 * var(--cols) + 2)
   );
-  --cell: clamp(20px, var(--fit), 46px);
+  --cell: clamp(20px, var(--fit), 68px);
   /* The half and frame widths belong here, not on .keyboard: a custom property
    * is substituted where it is *declared*, so declaring them against the 46px
    * fallback above measured the halves at 46px cells while the grid drew them at
@@ -365,28 +363,6 @@ select {
    * the padding either side of it, so the cut only has to add what is left:
    * exactly enough for the two frames to meet, plus a gap of clear air. */
   --split: calc(2 * var(--panel-w) + 2 * var(--pad) + 4 * var(--gap));
-}
-
-.case::before {
-  content: '[' attr(data-layout) ']';
-  position: absolute;
-  top: -10px;
-  left: 14px;
-  padding: 0 6px;
-  background: var(--paper);
-  color: var(--mid);
-  font-size: 12px;
-}
-
-.case::after {
-  content: '[case]';
-  position: absolute;
-  bottom: -10px;
-  right: 14px;
-  padding: 0 6px;
-  background: var(--paper);
-  color: var(--mid);
-  font-size: 12px;
 }
 
 .board {
@@ -423,28 +399,23 @@ select {
   top: var(--pad);
   bottom: var(--pad);
   width: var(--frame-w);
-  border: 1px solid var(--line);
+  border: 0;
   pointer-events: none;
 }
 
 .frame.left { left: 0; }
 .frame.right { right: 0; }
 
-.frame > .half {
-  position: absolute;
-  top: -10px;
-  left: 12px;
-  padding: 0 6px;
-  background: var(--panel);
-  color: var(--mid);
-  font-size: 12px;
-}
+/* The half-caption is gone with the borders; the spans linger only so the DOM
+ * matches the drawing, and must not paint. */
+.frame > .half { display: none; }
 
 /* A drawn slot with no switch in it. */
 .slot {
   width: var(--cell);
   height: var(--cell);
   border: 1px dotted var(--soft);
+  border-radius: var(--r);
   background: transparent;
 }
 
@@ -462,7 +433,8 @@ select {
   justify-content: center;
   gap: 6px;
   border: 1px solid var(--border-strong);
-  background: var(--key);
+  border-radius: 12px;
+  background: linear-gradient(160deg, #2c333c, #171b21);
   color: var(--ink);
   font: inherit;
   padding: 2px;
@@ -489,9 +461,10 @@ select {
 /* Same inversion a selected cap uses: a panel you are editing is lit the way a
  * key you are editing is lit. */
 .panel.sel {
-  background: var(--ink);
-  color: var(--on-ink);
-  border-color: var(--ink);
+  background: linear-gradient(160deg, #9deab8, var(--accent-deep));
+  color: var(--on-accent);
+  border-color: transparent;
+  box-shadow: 0 0 22px var(--accent-dim);
 }
 
 .overflow { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--err); }

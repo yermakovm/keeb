@@ -234,9 +234,10 @@ export interface DisplayInfoPayload {
   panelH: number
   rotation: number
   widgetSize: number
-  /** KEEB_DISPLAY_INFO_F_ART: this half can draw KEEB_WID_ART */
+  /** KEEB_DISPLAY_INFO_F_ART: this half can draw KEEB_WID_ART.
+   * KEEB_DISPLAY_INFO_F_PEER: this build also answers for the other half. */
   flags: number
-  /** KBEEB_LAYER_COUNT: how many pips a KEEB_WID_PIPS row draws */
+  /** KEEB_LAYER_COUNT: how many pips a KEEB_WID_PIPS row draws */
   layers: number
 }
 
@@ -256,4 +257,62 @@ export interface DisplayTablePayload {
 export interface PresetName {
   preset: number
   name: string
+}
+
+/** struct keeb_settings — runtime Kconfig/build overrides. */
+export interface SettingsPayload {
+  idleTimeoutMs: number
+  sleepTimeoutMs: number
+  debouncePressMs: number
+  debounceReleaseMs: number
+  /** hold-tap tapping-term-ms; 0 = each binding's own devicetree value */
+  tappingTermMs: number
+  /** hold-tap quick-tap-ms; 0 = devicetree */
+  quickTapMs: number
+  /** hold-tap require-prior-idle-ms; 0 = devicetree */
+  priorIdleMs: number
+  /** status LED brightness, 0..100 */
+  ledBrightnessPercent: number
+  /** status LED color, 0xRRGGBB (battery error) */
+  ledColorRed: number
+  /** status LED color, 0xRRGGBB (profile connected) */
+  ledColorGreen: number
+  /** status LED color, 0xRRGGBB (advertising) */
+  ledColorBlue: number
+  /** status LED color per keyboard layer, 0xRRGGBB, 0 = off. Pinned to the
+   * layer index, and independent of the three colors above. */
+  ledLayerColors: number[]
+  flags: number
+  /** KEEB_SETTINGS_B_* bits: deep-sleep allowed, blank-on-idle */
+  booleans: number
+  /** 0..3, or KEEB_SETTINGS_FLAVOR_AUTO (255) for no override */
+  holdTapFlavor: number
+}
+
+/** struct keeb_tune_step — one step of a tune. `pitchPct` is a percentage of
+ * CONFIG_ZMK_BUZZER_TUNE_BASE_HZ; a gap on the last step is not played. */
+export interface TuneStep {
+  pitchPct: number
+  onMs: number
+  gapMs: number
+}
+
+/** struct keeb_tune_hdr plus the steps that follow it (one KEEB_T_TUNE record). */
+export interface TunePayload {
+  tune: number
+  steps: TuneStep[]
+}
+
+/** struct keeb_sound_map — one event's tune. */
+export interface SoundEventPayload {
+  event: number
+  tune: number
+}
+
+/** Everything a KEEB_T_TUNE_GET reply carries: event -> tune, and every tune. */
+export interface SoundPayload {
+  /** event id -> tune id */
+  events: Record<number, number>
+  /** tune id -> its steps, indexed in the reply */
+  tunes: Record<number, TuneStep[]>
 }

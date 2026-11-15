@@ -6,7 +6,7 @@
 
 <figure>
 <img src="assets/stack.svg" alt="Шари системи: конфігуратор, TLV-канал поверх BLE GATT, KEEB module, форк ZMK, Zephyr RTOS, nRF52840"/>
-<figcaption>у репозиторії тільки наш код — модулі, конфіг і застосунок</figcaption>
+<figcaption>у репозиторії тільки наш код — модулі, патчі, конфіг і застосунок</figcaption>
 </figure>
 
 <div class="sidenotes">
@@ -25,8 +25,8 @@
 
 </div>
 
----
 
+---
 <!-- _class: visual -->
 
 # Ліцензування: що можна й що треба зберегти

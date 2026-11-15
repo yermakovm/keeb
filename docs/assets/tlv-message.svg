@@ -110,7 +110,7 @@
       <text x="550" y="372">0x2008/0d PRESET(_NAME)</text>
       <text x="550" y="390">0x2009–0c SAVE · DISCARD</text>
     </g>
-    <text x="550" y="404" fill="#4c5a66" font-size="10.5">SETTINGS 0x3 · IMAGE 0x4 — резерв</text>
+    <text x="550" y="404" fill="#4c5a66" font-size="10">SETTINGS 0x3 задіяно · IMAGE 0x4 резерв</text>
   </g>
 
   <!-- ④ record payload sizes -->

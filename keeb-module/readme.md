@@ -183,11 +183,11 @@ build that board with `nice_nano@1.0.0//zmk`.
 
 `keeb.dtsi` forces both regulator stages to LDO — `&reg0` disabled,
 `&reg1` `regulator-initial-mode = <NRF5X_REG_MODE_LDO>` — and
-`keeb-module/Kconfig` defaults `KBEEB_POWER_FORCE_LDO=y` (applied at boot by
+`keeb-module/Kconfig` defaults `KEEB_POWER_FORCE_LDO=y` (applied at boot by
 `boards/shields/keeb/power.c`), because these boards are missing the buck
 inductors and DCDC mode does not regulate on them. The devicetree half is not
 redundant: `@2.0.0` re-enables `&reg0`, and soc.c would set DCDCEN0 from that
-before `power.c` runs. On a board you trust, set `CONFIG_KBEEB_POWER_DIAG=n`
+before `power.c` runs. On a board you trust, set `CONFIG_KEEB_POWER_DIAG=n`
 and delete the `&reg0` / `&reg1` overrides.
 
 ## Removed with the board change

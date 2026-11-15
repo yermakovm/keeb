@@ -13,7 +13,7 @@
  *      vs 3.3V) - this logs which.
  *
  * This logs the state inherited from the bootloader and (when
- * CONFIG_KBEEB_POWER_FORCE_LDO) deterministically switches both stages to
+ * CONFIG_KEEB_POWER_FORCE_LDO) deterministically switches both stages to
  * LDO, which on this hardware is the only mode that provably regulates.
  */
 #include <zephyr/init.h>
@@ -45,7 +45,7 @@ static int keeb_power_diag(void)
 		dcdc0 ? "DCDC(unregulated if no inductor!)" : "LDO", vout_str[vout],
 		dcdc1 ? "DCDC" : "LDO");
 
-	if (IS_ENABLED(CONFIG_KBEEB_POWER_FORCE_LDO)) {
+	if (IS_ENABLED(CONFIG_KEEB_POWER_FORCE_LDO)) {
 		nrf_power_dcdcen_vddh_set(NRF_POWER, false);
 		nrf_power_dcdcen_set(NRF_POWER, false);
 		LOG_WRN("keeb power: forced both stages to LDO "

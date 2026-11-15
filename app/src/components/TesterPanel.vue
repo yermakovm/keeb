@@ -68,7 +68,7 @@ const summary = computed(
       <span class="meta">{{ summary }}</span>
 
       <button class="chip" :disabled="!tester.events.length" title="clear the log; the counts start over" @click="tester.clear()">
-        clear
+        Clear
       </button>
     </header>
 
@@ -114,13 +114,27 @@ const summary = computed(
 </template>
 
 <style scoped>
+/* A sliding dock that rises from the bottom, the same floating glass tray the
+ * key palette and the screen editor use. */
 .tester {
+  position: fixed;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(920px, calc(100vw - 32px));
+  max-height: 40vh;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 14px 16px;
   border: 1px solid var(--line);
-  background: var(--panel);
-  padding: 14px;
+  border-radius: 20px;
+  background: rgba(14, 11, 9, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
   min-width: 0;
 }
 

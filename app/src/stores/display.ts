@@ -35,37 +35,49 @@ import {
   KEEB_SRC_BATT_RIGHT,
   KEEB_SRC_LAYER_ART,
   KEEB_SRC_LAYER_PIPS,
+  KEEB_SRC_PROFILE_PIPS,
+  KEEB_SRC_RSSI,
   KEEB_SRC_NONE,
   KEEB_DISPLAY_INFO_F_ART,
   KEEB_DISPLAY_F_DIRTY,
   KEEB_PIPS_GEOMETRY,
   KEEB_EV_DISPLAY_SAVED,
   KEEB_EV_DISPLAY_SET,
+  KEEB_EV_PEER_DISPLAY_SAVED,
+  KEEB_EV_PEER_DISPLAY_SET,
   KEEB_EV_TEXT_SET,
   KEEB_SRC_TEXT_BASE,
   KEEB_SRC_VALUE_BASE,
   KEEB_WID_ART,
   KEEB_WID_BAR,
+  KEEB_WID_BONGO,
   KEEB_WID_BATTERY,
   KEEB_WID_PIPS,
   KEEB_WID_TEXT,
-  KBEEB_PRESET_CUSTOM,
+  KEEB_PRESET_CUSTOM,
 } from '../proto/constants.ts'
-import type { DisplayInfoPayload, DisplayTablePayload, PresetName, Widget } from '../proto/types.ts'
+import type { DisplayInfoPayload, DisplayTablePayload, Widget } from '../proto/types.ts'
 import { useDeviceStore } from './device.ts'
+import type { PanelTarget } from './device.ts'
 
 /** A new widget, placed where the user can see it and edit it immediately. */
 const blankWidget = (): Widget => ({ kind: KEEB_WID_TEXT, source: KEEB_SRC_TEXT_BASE, x: 4, y: 4, w: 40, h: 0, style: 0 })
 
-export const useDisplayStore = defineStore('display', () => {
+/*
+ * Two panels, one editor. The store is a factory because the half holding the
+ * link and the other half are independent tables with independent apply/save
+ * state, and a component should be able to hold either without knowing which
+ * wire records it ends up using.
+ */
+function definePanelStore(id: string, target: PanelTarget) {
+  return defineStore(id, () => {
   const device = useDeviceStore()
 
   const info = ref<DisplayInfoPayload | null>(null)
-  const presets = ref<PresetName[]>([])
   const widgets = ref<Widget[]>([])
   const texts = ref<Record<number, string>>({})
   const values = ref<Record<number, number>>({})
-  const preset = ref(KBEEB_PRESET_CUSTOM)
+  const preset = ref(KEEB_PRESET_CUSTOM)
   /** what the keyboard last reported in keeb_display_hdr.flags */
   const deviceDirty = ref(false)
   const loaded = ref(false)
@@ -115,7 +127,9 @@ export const useDisplayStore = defineStore('display', () => {
    * source that cannot feed it, or geometry outside the panel. */
 
   function sourceKnown(source: number): boolean {
-    if (source >= 0 && source <= 15) {
+    /* 0..KEEB_SRC_RSSI is the firmware's enum (keeb_ui_validate_widget's
+     * source_known); the value slots start at 0x40 and the text slots at 0x20. */
+    if (source >= 0 && source <= KEEB_SRC_RSSI) {
       return true
     }
 
@@ -138,17 +152,20 @@ export const useDisplayStore = defineStore('display', () => {
           w.source !== KEEB_SRC_LAYER_PIPS &&
           w.source !== KEEB_SRC_LAYER_ART &&
           w.source !== KEEB_SRC_BATT_LEFT &&
-          w.source !== KEEB_SRC_BATT_RIGHT
+          w.source !== KEEB_SRC_BATT_RIGHT &&
+          w.source !== KEEB_SRC_PROFILE_PIPS &&
+          w.source !== KEEB_SRC_RSSI
         )
       case KEEB_WID_BAR:
       case KEEB_WID_BATTERY:
         return (
           w.source === KEEB_SRC_BATT_LEFT ||
           w.source === KEEB_SRC_BATT_RIGHT ||
+          w.source === KEEB_SRC_RSSI ||
           (w.source >= valueBase && w.source < valueBase + valueSlots.value)
         )
       case KEEB_WID_PIPS:
-        return w.source === KEEB_SRC_LAYER_PIPS
+        return w.source === KEEB_SRC_LAYER_PIPS || w.source === KEEB_SRC_PROFILE_PIPS
       case KEEB_WID_ART:
         return w.source === KEEB_SRC_LAYER_ART && canDrawArt.value
       default:
@@ -162,6 +179,12 @@ export const useDisplayStore = defineStore('display', () => {
       return 'this firmware does not know that widget kind'
     }
 
+    /* The cat's frames are linked on the peripheral only, which is the other
+     * half's panel - not the one this link is attached to. */
+    if (target === 0 && w.kind === KEEB_WID_BONGO) {
+      return 'the cat is drawn on the other half'
+    }
+
     if (!sourceKnown(w.source)) {
       return 'unknown source'
     }
@@ -171,7 +194,7 @@ export const useDisplayStore = defineStore('display', () => {
     }
 
     if (w.kind === KEEB_WID_ART && !canDrawArt.value) {
-      return 'this half does not link the artwork (CONFIG_KBEEB_UI_CENTRAL_ART)'
+      return 'this half does not link the artwork (CONFIG_KEEB_UI_CENTRAL_ART)'
     }
 
     if (w.x >= logicalW.value || w.y >= logicalH.value) {
@@ -216,12 +239,9 @@ export const useDisplayStore = defineStore('display', () => {
     lastError.value = ''
 
     try {
-      const got = await device.readDisplayInfo()
+      info.value = await device.readDisplayInfo(target)
 
-      info.value = got.info
-      presets.value = got.presets
-
-      adopt(await device.readDisplay())
+      adopt(await device.readDisplay(target))
     } catch (err) {
       lastError.value = err instanceof Error ? err.message : String(err)
       loaded.value = false
@@ -239,12 +259,18 @@ export const useDisplayStore = defineStore('display', () => {
    * arranging would throw their work away before they ever applied it.
    */
   async function reload(force = false): Promise<void> {
+    /* A peer event can arrive before this panel was ever opened; there are no
+     * limits to lay its table out against yet, so leave the read for load(). */
+    if (!info.value) {
+      return
+    }
+
     if (hasLocalEdits.value && !force) {
       return
     }
 
     try {
-      adopt(await device.readDisplay())
+      adopt(await device.readDisplay(target))
     } catch (err) {
       lastError.value = err instanceof Error ? err.message : String(err)
     }
@@ -277,7 +303,7 @@ export const useDisplayStore = defineStore('display', () => {
       return why
     }
 
-    const w = blankWidget()
+    const w = { ...blankWidget(), source: KEEB_SRC_TEXT_BASE + pickTextSlot(widgets.value.length) }
     const why = validate(w)
 
     if (why) {
@@ -295,6 +321,30 @@ export const useDisplayStore = defineStore('display', () => {
   function removeWidget(index: number): void {
     widgets.value = widgets.value.filter((_, i) => i !== index)
     hasLocalEdits.value = true
+  }
+
+  /** The text slot a widget should hold its own string in, picked here so the
+   * editor never asks the user for a slot number: the lowest one no other
+   * widget is using, or the least-used one when all of them are taken. */
+  function pickTextSlot(index: number): number {
+    const used = new Array(textSlots.value).fill(0)
+
+    widgets.value.forEach((w, i) => {
+      const slot = w.source - KEEB_SRC_TEXT_BASE
+
+      if (i !== index && slot >= 0 && slot < textSlots.value) {
+        used[slot]++
+      }
+    })
+
+    const free = used.findIndex((n) => n === 0)
+
+    return free >= 0 ? free : used.indexOf(Math.min(...used))
+  }
+
+  /** Point a text widget at a slot of its own. Returns '' or the reason it was refused. */
+  function useTextSlot(index: number): string {
+    return edit(index, { source: KEEB_SRC_TEXT_BASE + pickTextSlot(index) })
   }
 
   function moveWidget(index: number, to: number): void {
@@ -348,7 +398,7 @@ export const useDisplayStore = defineStore('display', () => {
       return { ok: false, reason: lastError.value }
     }
 
-    const wrote = await runWrite(() => device.writeDisplay(widgets.value))
+    const wrote = await runWrite(() => device.writeDisplay(widgets.value, target))
 
     if (!wrote.ok) {
       return wrote
@@ -367,12 +417,12 @@ export const useDisplayStore = defineStore('display', () => {
      * the ASCII range, so counting code units here would let a multi-byte name
      * through and have the keyboard refuse it. */
     if (new TextEncoder().encode(text).length > textMax.value) {
-      lastError.value = `a text slot holds ${textMax.value} bytes`
+      lastError.value = `text is limited to ${textMax.value} bytes`
 
       return { ok: false, reason: lastError.value }
     }
 
-    const wrote = await runWrite(() => device.writeText(slot, text))
+    const wrote = await runWrite(() => device.writeText(slot, text, target))
 
     if (wrote.ok) {
       unsavedWrites.value = true
@@ -382,8 +432,15 @@ export const useDisplayStore = defineStore('display', () => {
     return wrote
   }
 
-  /** Value slots are live only: the firmware never persists them. */
+  /** Value slots are live only: the firmware never persists them. The peer
+   * panel does not relay them, which is why its DISPLAY_INFO reports zero. */
   async function setValueSlot(slot: number, value: number): Promise<WriteResult> {
+    if (target === 1) {
+      lastError.value = 'live value slots are not relayed to the other half'
+
+      return { ok: false, reason: lastError.value }
+    }
+
     const wrote = await runWrite(() => device.writeValue(slot, value))
 
     if (wrote.ok) {
@@ -393,20 +450,8 @@ export const useDisplayStore = defineStore('display', () => {
     return wrote
   }
 
-  async function applyPreset(id: number): Promise<WriteResult> {
-    const wrote = await runWrite(() => device.applyPreset(id))
-
-    if (wrote.ok) {
-      unsavedWrites.value = true
-      hasLocalEdits.value = false
-      await reload(true)
-    }
-
-    return wrote
-  }
-
   async function save(): Promise<WriteResult> {
-    const wrote = await runWrite(() => device.displaySave())
+    const wrote = await runWrite(() => device.displaySave(target))
 
     if (wrote.ok) {
       unsavedWrites.value = false
@@ -418,7 +463,7 @@ export const useDisplayStore = defineStore('display', () => {
   }
 
   async function discard(): Promise<WriteResult> {
-    const wrote = await runWrite(() => device.displayDiscard())
+    const wrote = await runWrite(() => device.displayDiscard(target))
 
     if (wrote.ok) {
       unsavedWrites.value = false
@@ -430,7 +475,7 @@ export const useDisplayStore = defineStore('display', () => {
   }
 
   async function resetStorage(): Promise<WriteResult> {
-    const wrote = await runWrite(() => device.displayReset())
+    const wrote = await runWrite(() => device.displayReset(target))
 
     if (wrote.ok) {
       unsavedWrites.value = false
@@ -442,7 +487,7 @@ export const useDisplayStore = defineStore('display', () => {
   }
 
   async function blank(): Promise<WriteResult> {
-    return runWrite(() => device.displayBlank())
+    return runWrite(() => device.displayBlank(target))
   }
 
   /* ---------------------------------------------------------------- events */
@@ -452,9 +497,12 @@ export const useDisplayStore = defineStore('display', () => {
       /* The panel is small enough that a re-read is cheaper than merging a
        * payload, and it is what keeps the UI honest when the revert chord or a
        * second client changed it. */
-      if (evt.event === KEEB_EV_DISPLAY_SET || evt.event === KEEB_EV_TEXT_SET) {
+      const setEvents = target === 1 ? [KEEB_EV_PEER_DISPLAY_SET] : [KEEB_EV_DISPLAY_SET, KEEB_EV_TEXT_SET]
+      const savedEvent = target === 1 ? KEEB_EV_PEER_DISPLAY_SAVED : KEEB_EV_DISPLAY_SAVED
+
+      if (setEvents.includes(evt.event)) {
         void reload()
-      } else if (evt.event === KEEB_EV_DISPLAY_SAVED) {
+      } else if (evt.event === savedEvent) {
         unsavedWrites.value = false
         deviceDirty.value = false
         savedAt.value = new Date().toLocaleTimeString()
@@ -463,12 +511,19 @@ export const useDisplayStore = defineStore('display', () => {
   }
 
   return {
-    info, presets, widgets, texts, values, preset, deviceDirty, loaded, loading, lastError, savedAt,
+    info, widgets, texts, values, preset, deviceDirty, loaded, loading, lastError, savedAt,
     canEdit, canDrawArt, logicalW, logicalH, widgetMax, textSlots, valueSlots, textMax, layerCount,
     hasLocalEdits, unsavedWrites, problems, statusLine,
     selectedWidget,
-    load, reload, edit, addWidget, removeWidget, moveWidget, dropLocalEdits,
-    applyTable, setTextSlot, setValueSlot, applyPreset, save, discard, resetStorage, blank,
+    load, reload, edit, addWidget, removeWidget, moveWidget, useTextSlot, dropLocalEdits,
+    applyTable, setTextSlot, setValueSlot, save, discard, resetStorage, blank,
     validate, bindEvents,
   }
-})
+  })
+}
+
+/** The panel of the half holding this link. */
+export const useDisplayStore = definePanelStore('display', 0)
+
+/** The other half's panel: answered from the central's copy, relayed to it. */
+export const usePeerDisplayStore = definePanelStore('displayPeer', 1)

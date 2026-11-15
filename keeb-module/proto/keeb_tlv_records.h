@@ -99,6 +99,44 @@
  */
 #define KEEB_T_PRESET_NAME KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x0d)
 
+/*
+ * The other half's panel. A split peripheral has no host connection and no
+ * engine, so it cannot answer these itself: the central keeps the peer table,
+ * persists it under its own settings key, and relays it over the split link
+ * (ui/panel_relay.c + ui/behavior_keeb_panel.c). The payload layouts are the
+ * ones above, byte for byte - only the record ids differ, so an old host that
+ * sends DISPLAY_* still edits the panel of the half it is plugged into.
+ */
+#define KEEB_T_PEER_DISPLAY_INFO KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x0e)
+#define KEEB_T_PEER_DISPLAY_GET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x0f)
+#define KEEB_T_PEER_DISPLAY KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x10)
+#define KEEB_T_PEER_DISPLAY_SET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x11)
+#define KEEB_T_PEER_TEXT_SET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x12)
+#define KEEB_T_PEER_DISPLAY_SAVE KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x13)
+#define KEEB_T_PEER_DISPLAY_DISCARD KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x14)
+#define KEEB_T_PEER_DISPLAY_RESET KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x15)
+#define KEEB_T_PEER_DISPLAY_BLANK KEEB_TLV_TYPE(KEEB_NS_DISPLAY, 0x16)
+
+/* SETTINGS — runtime Kconfig overrides held in RAM. */
+#define KEEB_T_SETTINGS_GET KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x01)
+#define KEEB_T_SETTINGS KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x02)
+#define KEEB_T_SETTINGS_SET KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x03)
+#define KEEB_T_SETTINGS_SAVE KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x04)
+#define KEEB_T_SETTINGS_DISCARD KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x05)
+#define KEEB_T_SETTINGS_RESET KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x06)
+/* Buzzer sounds: the tune shapes and the event -> tune map, held in RAM by the
+ * buzzer driver and persisted under their own settings key. They ride the
+ * SETTINGS namespace (and its SAVE / DISCARD / RESET verbs) because they are
+ * the same kind of thing: build values a host may rewrite without a rebuild. */
+#define KEEB_T_TUNE_GET KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x07)
+#define KEEB_T_TUNE KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x08)
+#define KEEB_T_TUNE_SET KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x09)
+#define KEEB_T_SOUND_MAP_GET KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x0a)
+#define KEEB_T_SOUND_MAP_SET KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x0b)
+#define KEEB_T_TUNE_PLAY KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x0c)
+/* TUNE_GET / SOUND_MAP_GET answer with these, one record per tune / per event. */
+#define KEEB_T_SOUND_MAP KEEB_TLV_TYPE(KEEB_NS_SETTINGS, 0x0d)
+
 /* --------------------------------------------------------------------------
  * Status and error codes
  * -------------------------------------------------------------------------- */
@@ -192,6 +230,9 @@ struct KEEB_PACKED keeb_notify {
  * reporting something the host cannot compare against the layout it is editing.
  */
 #define KEEB_EV_KEY 0x0009u /* payload: uint8_t pos, uint8_t pressed, uint8_t layer */
+#define KEEB_EV_SETTINGS_CHANGED 0x000au /* payload: uint16_t flags — which fields changed */
+#define KEEB_EV_PEER_DISPLAY_SET 0x000bu /* payload: uint8_t count, uint8_t flags */
+#define KEEB_EV_PEER_DISPLAY_SAVED 0x000cu /* payload: none */
 
 /* --------------------------------------------------------------------------
  * Display model: widget kinds, data sources, geometry
@@ -214,11 +255,12 @@ enum keeb_widget_kind {
 	KEEB_WID_PIPS = 7,  /* layer pips, style = pip geometry preset */
 	KEEB_WID_BOLT = 8,  /* charge bolt, drawn only while charging */
 	KEEB_WID_ART = 9,   /* the active layer's artwork, centred in the box */
-	KEEB_WID_COUNT = 10
+	KEEB_WID_BONGO = 10, /* placeholder typing cat, animates while typing */
+	KEEB_WID_COUNT = 11
 };
 
 /* struct keeb_widget.source. A source is a value the firmware reads from ZMK at
- * draw time; KBEEB_SRC_TEXT_BASE+i and KBEEB_SRC_VALUE_BASE+i are the slots a
+ * draw time; KEEB_SRC_TEXT_BASE+i and KEEB_SRC_VALUE_BASE+i are the slots a
  * host may write. A widget may not name a value the firmware cannot produce.
  */
 enum keeb_widget_source {
@@ -238,6 +280,9 @@ enum keeb_widget_source {
 	KEEB_SRC_CHARGING = 13, /* "CHARGING" when powered, else the host text */
 	KEEB_SRC_DEVICE_ID = 14, /* connected host: "1".."N", "U" for USB, "--" */
 	KEEB_SRC_DEVICE_NAME = 15, /* peer name the firmware knows, else "--" */
+	KEEB_SRC_WPM = 16,        /* "0".."255": typing rate of the whole keyboard */
+	KEEB_SRC_PROFILE_PIPS = 17, /* BLE profile pips: active index, profile count */
+	KEEB_SRC_RSSI = 18,       /* host link signal as a percentage, for BAR */
 	KEEB_SRC_TEXT_BASE = 0x20, /* + slot: a string the host wrote */
 	KEEB_SRC_VALUE_BASE = 0x40 /* + slot: a number the host wrote */
 };
@@ -256,6 +301,14 @@ enum keeb_widget_source {
 /* struct keeb_widget.style for KEEB_WID_ART: how the artwork is fitted. */
 #define KEEB_ART_CENTRE 0 /* centre inside the box, clip what overflows */
 #define KEEB_ART_BOTTOM 1 /* align to the bottom edge of the box */
+
+/* KEEB_SRC_RSSI when the central has no BLE host link to measure: the bar
+ * draws empty rather than a signal that does not exist. */
+#define KEEB_RSSI_INVALID 0xffu
+
+/* KEEB_SRC_PROFILE_PIPS active index when the keyboard is not on a BLE host:
+ * no pip is filled. */
+#define KEEB_PROFILE_NONE 0xffu
 
 /* KEEB_SRC_DEVICE_ID values the firmware reports (also the split relay's
  * param2 on the keeb,layer-art push). */
@@ -302,14 +355,18 @@ struct KEEB_PACKED keeb_display_info {
 	uint8_t widget_size; /* sizeof(struct keeb_widget): layout guard */
 	uint8_t flags;     /* KEEB_DISPLAY_INFO_F_* */
 	uint8_t layers;    /* how many pips a KEEB_WID_PIPS row draws, i.e.
-	                    * KBEEB_LAYER_COUNT: the configurator needs it to
+	                    * KEEB_LAYER_COUNT: the configurator needs it to
 	                    * check a pip row fits the panel before it writes */
 };
 
 /* This half links the layer artwork, so KEEB_WID_ART is accepted here. On the
- * central it is a Kconfig (CONFIG_KBEEB_UI_CENTRAL_ART): the artwork is ~54 KB
+ * central it is a Kconfig (CONFIG_KEEB_UI_CENTRAL_ART): the artwork is ~54 KB
  * of A8 stencils, and a panel that only shows readouts should not pay for it. */
 #define KEEB_DISPLAY_INFO_F_ART 0x01u
+
+/* This build can also report and edit the *other* half's panel (KEEB_T_PEER_*).
+ * Set on the central, which is the only half a host can reach. */
+#define KEEB_DISPLAY_INFO_F_PEER 0x02u
 
 /** KEEB_T_DISPLAY header, then `count` keeb_widget entries, then the text
  * slots as KEEB_T_TEXT_SET records and the values as KEEB_T_VALUE_SET records.
@@ -323,7 +380,7 @@ struct KEEB_PACKED keeb_display_hdr {
 };
 
 #define KEEB_DISPLAY_F_DIRTY 0x01u /* not yet saved to settings */
-#define KEEB_DISPLAY_F_FIXED 0x02u /* read-only table (peripheral half) */
+#define KEEB_DISPLAY_F_FIXED 0x02u /* reserved: the peer panel used to be fixed */
 
 /** KEEB_T_WIDGET_SET: uint8_t index, then one keeb_widget. */
 struct KEEB_PACKED keeb_widget_set {
@@ -443,6 +500,133 @@ struct KEEB_PACKED keeb_param_value {
 };
 
 /* --------------------------------------------------------------------------
+ * Settings payloads
+ * --------------------------------------------------------------------------
+ *
+ * KEEB_T_SETTINGS / KEEB_T_SETTINGS_SET: runtime overrides of build values that
+ * affect behaviour.  A field is written when the corresponding flag is set, so a
+ * host can change one value without sending the others.
+ *
+ * The two timeouts and the two debounce timings act on the half that receives
+ * them (each half sleeps on its own clock, scans its own matrix and drives its
+ * own status LED), so the central relays them to the peripheral - see
+ * settings/keeb_settings.c.  The hold-tap fields are central-only: only the
+ * central resolves hold-taps.
+ */
+
+#define KEEB_SETTINGS_F_IDLE_TIMEOUT 0x0001u
+#define KEEB_SETTINGS_F_SLEEP_TIMEOUT 0x0002u
+#define KEEB_SETTINGS_F_DEBOUNCE_PRESS 0x0004u
+#define KEEB_SETTINGS_F_DEBOUNCE_RELEASE 0x0008u
+#define KEEB_SETTINGS_F_TAPPING_TERM 0x0010u
+#define KEEB_SETTINGS_F_QUICK_TAP 0x0020u
+#define KEEB_SETTINGS_F_PRIOR_IDLE 0x0040u
+#define KEEB_SETTINGS_F_HOLD_TAP_FLAVOR 0x0080u
+#define KEEB_SETTINGS_F_SLEEP_ALLOWED 0x0100u
+#define KEEB_SETTINGS_F_BLANK_ON_IDLE 0x0200u
+#define KEEB_SETTINGS_F_LED_BRIGHTNESS 0x0400u
+#define KEEB_SETTINGS_F_LED_COLOR_RED 0x0800u
+#define KEEB_SETTINGS_F_LED_COLOR_GREEN 0x1000u
+#define KEEB_SETTINGS_F_LED_COLOR_BLUE 0x2000u
+/* The whole per-layer color table below, written as one table. */
+#define KEEB_SETTINGS_F_LED_LAYERS 0x4000u
+#define KEEB_SETTINGS_F_ALL 0x7fffu
+
+/* Values of the boolean settings, read when the matching flag above is set. */
+#define KEEB_SETTINGS_B_SLEEP_ALLOWED 0x01u /* ZMK_SLEEP, off = never deep sleep */
+#define KEEB_SETTINGS_B_BLANK_ON_IDLE 0x02u /* ZMK_DISPLAY_BLANK_ON_IDLE */
+#define KEEB_SETTINGS_B_ALL 0x03u
+
+/* hold_tap_flavor value meaning "no override": every hold-tap keeps its own
+ * devicetree flavour.  For the three hold-tap timings, zero is the same idea. */
+#define KEEB_SETTINGS_FLAVOR_AUTO 0xffu
+
+/* How many layer colors the table carries.  A layer this build does not have
+ * simply keeps an unused entry. */
+#define KEEB_SETTINGS_LED_LAYER_MAX 8
+
+/* --------------------------------------------------------------------------
+ * Buzzer sound payloads
+ * --------------------------------------------------------------------------
+ *
+ * A tune is a shape, not a set of absolute frequencies: each step's pitch is a
+ * percentage of CONFIG_ZMK_BUZZER_TUNE_BASE_HZ, so re-tuning the vocabulary to
+ * a different piezo is one build value rather than seven rewritten tables.
+ *
+ * A boot starts from the compiled-in shapes; KEEB_T_TUNE_SET rewrites RAM, and
+ * only KEEB_T_SETTINGS_SAVE persists. KEEB_T_TUNE_PLAY is a preview: it makes
+ * a sound and changes nothing, so it never dirties the page.
+ */
+
+#define KEEB_SOUND_TUNE_COUNT 7  /* enum zmk_buzzer_tune, random first */
+#define KEEB_SOUND_STEPS_MAX 8   /* ZMK_BUZZER_STEPS_MAX */
+#define KEEB_SOUND_EVENT_COUNT 5 /* enum keeb_sound_event */
+
+/* Which events the firmware sounds on its own. The ids match
+ * enum zmk_buzzer_event: the driver resolves event -> tune through a RAM map
+ * this namespace edits, which is what lets a host change "what a layer change
+ * sounds like" without a rebuild. */
+enum keeb_sound_event {
+	KEEB_SND_LAYER_ON = 0,
+	KEEB_SND_LAYER_OFF = 1,
+	KEEB_SND_UPDATE_OK = 2,
+	KEEB_SND_UPDATE_FAIL = 3,
+	KEEB_SND_WAKE = 4
+};
+
+/** One tune step. Range is checked by the firmware, not assumed: pitch 50-400 %,
+ * on-time 10-1000 ms, gap 0-1000 ms (a gap on the last step is not played). */
+struct KEEB_PACKED keeb_tune_step {
+	uint16_t pitch_pct;
+	uint16_t on_ms;
+	uint16_t gap_ms;
+};
+
+/** KEEB_T_TUNE / KEEB_T_TUNE_SET header, then `count` keeb_tune_step entries. */
+struct KEEB_PACKED keeb_tune_hdr {
+	uint8_t tune;  /* enum zmk_buzzer_tune */
+	uint8_t count; /* 1..KEEB_SOUND_STEPS_MAX */
+	uint16_t rsvd;
+};
+
+/** KEEB_T_SOUND_MAP / KEEB_T_SOUND_MAP_SET: one event's tune. */
+struct KEEB_PACKED keeb_sound_map {
+	uint8_t event; /* enum keeb_sound_event */
+	uint8_t tune;  /* enum zmk_buzzer_tune */
+};
+
+/** KEEB_T_TUNE_PLAY: play one tune now (preview), change nothing. */
+struct KEEB_PACKED keeb_sound_play {
+	uint8_t tune;
+	uint8_t rsvd;
+};
+
+struct KEEB_PACKED keeb_settings {
+	uint32_t idle_timeout_ms;     /* CONFIG_ZMK_IDLE_TIMEOUT */
+	uint32_t sleep_timeout_ms;    /* CONFIG_ZMK_IDLE_SLEEP_TIMEOUT */
+	uint32_t debounce_press_ms;   /* kscan debounce-press-ms, this half's matrix */
+	uint32_t debounce_release_ms; /* kscan debounce-release-ms, this half's matrix */
+	int32_t tapping_term_ms;      /* hold-tap tapping-term-ms, 0 = devicetree */
+	int32_t quick_tap_ms;         /* hold-tap quick-tap-ms, 0 = devicetree, -1 = off */
+	int32_t prior_idle_ms;        /* hold-tap require-prior-idle-ms, 0 = devicetree */
+	uint32_t led_brightness_percent; /* status LED: every lit signal, 0..100 */
+	uint32_t led_color_red;     /* status LED color, 0x00RRGGBB (battery error) */
+	uint32_t led_color_green;   /* status LED color, 0x00RRGGBB (profile connected) */
+	uint32_t led_color_blue;    /* status LED color, 0x00RRGGBB (advertising) */
+	/*
+	 * Per-layer status LED colors, 0x00RRGGBB, 0 = LED off while that layer is
+	 * active.  Indexed by keymap layer index and PINNED to it: moving a layer
+	 * in the keymap does not move its color.  These are the layer colors only:
+	 * the three colors above stay the BLE/status signals and are not touched
+	 * by a layer change.
+	 */
+	uint32_t led_layer_colors[KEEB_SETTINGS_LED_LAYER_MAX];
+	uint16_t flags;               /* KEEB_SETTINGS_F_*: which fields this message carries */
+	uint8_t booleans;             /* KEEB_SETTINGS_B_* values */
+	uint8_t hold_tap_flavor;      /* 0..3, or KEEB_SETTINGS_FLAVOR_AUTO */
+};
+
+/* --------------------------------------------------------------------------
  * Payload size asserts - see keeb_tlv_wire.h for why.
  * -------------------------------------------------------------------------- */
 
@@ -471,5 +655,16 @@ _Static_assert(sizeof(struct keeb_text_slot) == 2, "struct keeb_text_slot is no 
 _Static_assert(sizeof(struct keeb_value_slot) == 4, "struct keeb_value_slot is no longer 4 bytes on the wire");
 _Static_assert(sizeof(struct keeb_preset_set) == 2, "struct keeb_preset_set is no longer 2 bytes on the wire");
 _Static_assert(sizeof(struct keeb_preset_name) == 2, "struct keeb_preset_name is no longer 2 bytes on the wire");
+
+/* Settings. */
+_Static_assert(sizeof(struct keeb_settings) == 80, "struct keeb_settings is no longer 80 bytes on the wire");
+
+/* Buzzer sounds. The tune ids are enum zmk_buzzer_tune and the event ids are
+ * enum zmk_buzzer_event / enum keeb_sound_event - the driver's order IS the
+ * wire order, and settings/keeb_sound.c asserts the two counts match. */
+_Static_assert(sizeof(struct keeb_tune_step) == 6, "struct keeb_tune_step is no longer 6 bytes on the wire");
+_Static_assert(sizeof(struct keeb_tune_hdr) == 4, "struct keeb_tune_hdr is no longer 4 bytes on the wire");
+_Static_assert(sizeof(struct keeb_sound_map) == 2, "struct keeb_sound_map is no longer 2 bytes on the wire");
+_Static_assert(sizeof(struct keeb_sound_play) == 2, "struct keeb_sound_play is no longer 2 bytes on the wire");
 
 #endif /* KEEB_MODULE_PROTO_TLV_RECORDS_H */

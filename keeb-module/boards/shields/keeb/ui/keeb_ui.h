@@ -24,11 +24,11 @@
 #include <lvgl.h>
 
 /** Number of keymap layers, i.e. how many pips/artworks the UI has to cover. */
-#define KBEEB_LAYER_COUNT ZMK_KEYMAP_LAYERS_LEN
+#define KEEB_LAYER_COUNT ZMK_KEYMAP_LAYERS_LEN
 
 /* Physical panel geometry (never rotates - it is the panel). */
-#define KBEEB_PANEL_W 160
-#define KBEEB_PANEL_H 68
+#define KEEB_PANEL_W 160
+#define KEEB_PANEL_H 68
 
 /*
  * Rotation of the composed UI, selected in Kconfig. 90/270 also flips the
@@ -37,50 +37,85 @@
  */
 /* Integer degrees: enums cannot be used in #if, and the whole compositor is
  * compiled either way based on this value. */
-#if IS_ENABLED(CONFIG_KBEEB_UI_ROTATION_90)
-#define KBEEB_UI_ROTATION_DEG 90
-#elif IS_ENABLED(CONFIG_KBEEB_UI_ROTATION_180)
-#define KBEEB_UI_ROTATION_DEG 180
-#elif IS_ENABLED(CONFIG_KBEEB_UI_ROTATION_270)
-#define KBEEB_UI_ROTATION_DEG 270
+#if IS_ENABLED(CONFIG_KEEB_UI_ROTATION_90)
+#define KEEB_UI_ROTATION_DEG 90
+#elif IS_ENABLED(CONFIG_KEEB_UI_ROTATION_180)
+#define KEEB_UI_ROTATION_DEG 180
+#elif IS_ENABLED(CONFIG_KEEB_UI_ROTATION_270)
+#define KEEB_UI_ROTATION_DEG 270
 #else
-#define KBEEB_UI_ROTATION_DEG 0
+#define KEEB_UI_ROTATION_DEG 0
 #endif
 
-#define KBEEB_UI_ROTATION_CONCAT_(d) LV_DISPLAY_ROTATION_##d
-#define KBEEB_UI_ROTATION_CONCAT(d) KBEEB_UI_ROTATION_CONCAT_(d)
-#define KBEEB_UI_ROTATION KBEEB_UI_ROTATION_CONCAT(KBEEB_UI_ROTATION_DEG)
+#define KEEB_UI_ROTATION_CONCAT_(d) LV_DISPLAY_ROTATION_##d
+#define KEEB_UI_ROTATION_CONCAT(d) KEEB_UI_ROTATION_CONCAT_(d)
+#define KEEB_UI_ROTATION KEEB_UI_ROTATION_CONCAT(KEEB_UI_ROTATION_DEG)
 
-#if KBEEB_UI_ROTATION_DEG == 90 || KBEEB_UI_ROTATION_DEG == 270
-#define KBEEB_UI_PORTRAIT 1
+#if KEEB_UI_ROTATION_DEG == 90 || KEEB_UI_ROTATION_DEG == 270
+#define KEEB_UI_PORTRAIT 1
 #else
-#define KBEEB_UI_PORTRAIT 0
+#define KEEB_UI_PORTRAIT 0
 #endif
 
-#if KBEEB_UI_PORTRAIT
-#define KBEEB_UI_W KBEEB_PANEL_H
-#define KBEEB_UI_H KBEEB_PANEL_W
+#if KEEB_UI_PORTRAIT
+#define KEEB_UI_W KEEB_PANEL_H
+#define KEEB_UI_H KEEB_PANEL_W
 #else
-#define KBEEB_UI_W KBEEB_PANEL_W
-#define KBEEB_UI_H KBEEB_PANEL_H
+#define KEEB_UI_W KEEB_PANEL_W
+#define KEEB_UI_H KEEB_PANEL_H
 #endif
+
+/*
+ * The same numbers for the *other* half's panel. A host attached to the central
+ * edits the peripheral's table too (see CONFIG_KEEB_UI_PEER_PANEL), so the
+ * central has to validate geometry in the space the other half draws in. The
+ * value is a Kconfig choice on both halves; the peripheral asserts its own
+ * rotation matches, so a build cannot describe the peer wrongly.
+ */
+#if IS_ENABLED(CONFIG_KEEB_UI_PEER_ROTATION_90)
+#define KEEB_UI_PEER_ROTATION_DEG 90
+#elif IS_ENABLED(CONFIG_KEEB_UI_PEER_ROTATION_180)
+#define KEEB_UI_PEER_ROTATION_DEG 180
+#elif IS_ENABLED(CONFIG_KEEB_UI_PEER_ROTATION_270)
+#define KEEB_UI_PEER_ROTATION_DEG 270
+#else
+#define KEEB_UI_PEER_ROTATION_DEG 0
+#endif
+
+#if KEEB_UI_PEER_ROTATION_DEG == 90 || KEEB_UI_PEER_ROTATION_DEG == 270
+#define KEEB_UI_PEER_PORTRAIT 1
+#else
+#define KEEB_UI_PEER_PORTRAIT 0
+#endif
+
+#if KEEB_UI_PEER_PORTRAIT
+#define KEEB_UI_PEER_W KEEB_PANEL_H
+#define KEEB_UI_PEER_H KEEB_PANEL_W
+#else
+#define KEEB_UI_PEER_W KEEB_PANEL_W
+#define KEEB_UI_PEER_H KEEB_PANEL_H
+#endif
+
+/* The peripheral's artwork switch, readable on the central too: the peer panel
+ * accepts KEEB_WID_ART exactly when the half that draws it links the stencils. */
+#define KEEB_UI_PEER_ART_LINKED IS_ENABLED(CONFIG_KEEB_UI_ART)
 
 /*
  * Panel ink/paper colours. A nice!view is white paper with black ink unless
  * CONFIG_ZMK_DISPLAY_INVERT is set (the same knob ZMK's mono theme uses).
  */
 #if IS_ENABLED(CONFIG_ZMK_DISPLAY_INVERT)
-#define KBEEB_PAPER lv_color_black()
-#define KBEEB_INK lv_color_white()
+#define KEEB_PAPER lv_color_black()
+#define KEEB_INK lv_color_white()
 #else
-#define KBEEB_PAPER lv_color_white()
-#define KBEEB_INK lv_color_black()
+#define KEEB_PAPER lv_color_white()
+#define KEEB_INK lv_color_black()
 #endif
 
 /** Fonts used by the status screen (all selected in the shield's Kconfig). */
-#define KBEEB_FONT_SMALL (&lv_font_montserrat_8)  /* labels, percentages */
-#define KBEEB_FONT_BODY (&lv_font_montserrat_16)  /* layer names */
-#define KBEEB_FONT_DIGIT (&lv_font_montserrat_26) /* layer number */
+#define KEEB_FONT_SMALL (&lv_font_montserrat_8)  /* labels, percentages */
+#define KEEB_FONT_BODY (&lv_font_montserrat_16)  /* layer names */
+#define KEEB_FONT_DIGIT (&lv_font_montserrat_26) /* layer number */
 
 /** A drawing session: one canvas plus the LVGL layer used for every draw call. */
 struct keeb_ctx {
@@ -110,7 +145,7 @@ lv_obj_t *keeb_ui_create(lv_obj_t *parent, keeb_ui_draw_fn content);
 void keeb_ui_request_draw(void);
 
 /* -------------------------------------------------------------------------
- * Draw primitives. All coordinates are in the logical UI space (KBEEB_UI_*),
+ * Draw primitives. All coordinates are in the logical UI space (KEEB_UI_*),
  * sizes are width/height in pixels, (x, y) is the top-left corner.
  * ------------------------------------------------------------------------- */
 
@@ -166,4 +201,4 @@ int16_t keeb_battery_row(struct keeb_ctx *ctx, int16_t x, int16_t y, const char 
 			 uint8_t percent, bool valid);
 
 /** Width of keeb_battery_row(). */
-#define KBEEB_BATTERY_ROW_W 54
+#define KEEB_BATTERY_ROW_W 54

@@ -38,7 +38,7 @@
 
 #include "../engine/keeb_engine.h"
 #include "../proto/keeb_tlv.h"
-#if IS_ENABLED(CONFIG_KBEEB_UI)
+#if IS_ENABLED(CONFIG_KEEB_UI)
 #include "../display/keeb_display.h"
 #endif
 #include "keeb_keymap.h"
@@ -87,7 +87,7 @@ void keeb_keymap_info(struct keeb_info *info)
 	memset(info, 0, sizeof(*info));
 
 	info->proto = KEEB_TLV_VERSION;
-	info->fw_version = CONFIG_KBEEB_ENGINE_FW_VERSION;
+	info->fw_version = CONFIG_KEEB_ENGINE_FW_VERSION;
 	info->layer_count = ZMK_KEYMAP_LAYERS_LEN;
 	info->key_count = ZMK_KEYMAP_LEN;
 	info->name_max = CONFIG_ZMK_KEYMAP_LAYER_NAME_MAX_LEN;
@@ -614,7 +614,7 @@ static void revert_fire(struct k_work *work)
 		LOG_ERR("revert failed (%d)", -err);
 	}
 
-#if IS_ENABLED(CONFIG_KBEEB_UI)
+#if IS_ENABLED(CONFIG_KEEB_UI)
 	/* The panel is the other thing a config channel can wreck, and the chord
 	 * is the only recovery path that does not need that channel. */
 	err = keeb_display_discard();

@@ -1,20 +1,23 @@
 <script setup lang="ts">
 /*
- * Panel editor: direct manipulation canvas + layer stack.
+ * Panel editor: direct manipulation canvas + widget manager.
  *
  * The preview is the firmware's logical space, rotated into the physical panel
  * by the compositor. Widgets are drawn in z-order and can be selected by click
- * or from the layer stack. Once selected they can be dragged to move or pulled
- * by handles to resize.
+ * or from the list. Once selected they can be dragged to move or pulled by
+ * handles to resize.
  *
- * Properties (kind, source, style, text/value slots) live in the aside inspector
- * so the canvas stays clean and the properties panel is always in the same place.
+ * The dock carries both panes: a widget list and the selected widget's
+ * properties (kind, source, geometry, style, and its own text when it has one).
+ * Selecting a widget opens its properties; the widgets tab goes back to the
+ * list. The page's right column stays a short status readout, never a form.
  */
 import { computed, ref } from 'vue'
 
 import {
   describeWidget,
 } from '../data/widgets.ts'
+import WidgetInspector from './WidgetInspector.vue'
 import {
   KEEB_SRC_LAYER_INDEX,
   KEEB_SRC_LAYER_NAME,
@@ -43,10 +46,16 @@ import {
   KEEB_SRC_TEXT_BASE,
   KEEB_SRC_VALUE_BASE,
 } from '../proto/constants.ts'
-import { useDisplayStore } from '../stores/display.ts'
+import { useDisplayStore, usePeerDisplayStore } from '../stores/display.ts'
 import type { Widget } from '../proto/types.ts'
 
-const panel = useDisplayStore()
+/* Two panels share this editor; the target decides which store answers. The
+ * App keys the component by target, so the store is fixed for its lifetime. */
+const props = defineProps<{ target: 0 | 1 }>()
+
+const panel = props.target === 1 ? usePeerDisplayStore() : useDisplayStore()
+
+const emit = defineEmits<{ (e: 'close'): void }>()
 
 const busy = ref(false)
 const message = ref('')
@@ -65,6 +74,11 @@ const viewW = computed(() => panel.logicalW * scale.value)
 const viewH = computed(() => panel.logicalH * scale.value)
 
 const sel = computed<Widget | null>(() => panel.widgets[panel.selectedWidget] ?? null)
+
+/* Which pane the dock shows. Selecting a widget opens its properties; the
+ * widgets tab is the way back, so the list does not have to share width with
+ * the form. */
+const tab = ref<'widgets' | 'properties'>('widgets')
 
 const hidden = ref<Set<number>>(new Set())
 
@@ -144,9 +158,20 @@ type DragKind = 'move' | 'nw' | 'ne' | 'sw' | 'se'
 const dragging = ref<DragKind | null>(null)
 const dragOrigin = ref({ x: 0, y: 0, w: 0, h: 0, px: 0, py: 0 })
 
+function selectWidget(i: number): void {
+  panel.selectedWidget = i
+  tab.value = 'properties'
+}
+
+function addWidget(): void {
+  if (panel.addWidget()) return
+  panel.selectedWidget = panel.widgets.length - 1
+  tab.value = 'properties'
+}
+
 function startDrag(kind: DragKind, i: number, ev: PointerEvent): void {
   if (!panel.canEdit) return
-  panel.selectedWidget = i
+  selectWidget(i)
   const w = panel.widgets[i]
   dragging.value = kind
   dragOrigin.value = { x: w.x, y: w.y, w: w.w, h: w.h, px: ev.clientX, py: ev.clientY }
@@ -214,15 +239,26 @@ function isHidden(i: number): boolean {
 function widgetStyleWhy(w: Widget): string {
   return panel.validate(w)
 }
+
+/* The list has to say what a widget shows, not just which slot feeds it: with
+ * four text slots the bare "text 0" does not tell two rows apart. */
+function widgetLabel(w: Widget): string {
+  const label = describeWidget(w.kind, w.source, KEEB_SRC_TEXT_BASE, KEEB_SRC_VALUE_BASE, panel.textSlots)
+  const text = w.source >= KEEB_SRC_TEXT_BASE && w.source < KEEB_SRC_VALUE_BASE
+    ? panel.texts[w.source - KEEB_SRC_TEXT_BASE]
+    : ''
+
+  return text ? `${label} “${text}”` : label
+}
 </script>
 
 <template>
   <section class="panel-editor">
     <div v-if="message" class="msg">{{ message }}</div>
-    <div v-if="panel.lastError" class="msg err">{{ panel.lastError }}</div>
+    <div v-if="panel.lastError && tab !== 'properties'" class="msg err">{{ panel.lastError }}</div>
 
     <div v-if="!panel.loaded" class="empty">
-      <button class="btn" :disabled="busy || !panel.canEdit" @click="panel.load()">Read the panel from the keyboard</button>
+      <button class="btn" :disabled="busy || panel.loading" @click="panel.load()">Read the panel from the keyboard</button>
     </div>
 
     <div v-else class="grid">
@@ -284,7 +320,6 @@ function widgetStyleWhy(w: Widget): string {
       <!-- Stack ----------------------------------------------------------- -->
       <div class="stack">
         <div class="row">
-          <button class="btn" :disabled="busy" :title="panel.hasLocalEdits ? 'throw away your staged edits' : 'read the panel from the keyboard again'" @click="panel.reload(true)">re-read</button>
           <button class="btn push" :disabled="busy || !panel.canEdit || !panel.hasLocalEdits" title="one DISPLAY_SET with the whole table" @click="run('apply', panel.applyTable)">
             Apply{{ panel.hasLocalEdits ? ' *' : '' }}
           </button>
@@ -293,24 +328,45 @@ function widgetStyleWhy(w: Widget): string {
           <button class="btn danger" :disabled="busy || !panel.canEdit" title="DISPLAY_RESET" @click="run('reset', panel.resetStorage)">Reset</button>
           <button class="btn" :disabled="busy || !panel.canEdit" title="DISPLAY_BLANK" @click="run('blank', panel.blank)">Blank once</button>
 
-          <select
-            class="preset-select"
-            :disabled="busy || !panel.canEdit"
-            @change="(e: Event) => {
-              const val = Number((e.target as HTMLSelectElement).value)
-              const name = panel.presets.find((p) => p.preset === val)?.name ?? String(val)
-              run(`preset ${name}`, () => panel.applyPreset(val))
-              ;(e.target as HTMLSelectElement).selectedIndex = 0
-            }"
-          >
-            <option value="" disabled selected>presets</option>
-            <option v-for="p in panel.presets" :key="p.preset" :value="p.preset">
-              {{ p.name }}
-            </option>
-          </select>
+          <button class="btn close" title="close the panel editor (Esc)" aria-label="close the panel editor" @click="emit('close')">×</button>
         </div>
 
-        <div class="layers">
+        <div class="tabs" role="tablist" aria-label="Panel editor">
+          <button
+            class="tab"
+            :class="{ on: tab === 'widgets' }"
+            role="tab"
+            :aria-selected="tab === 'widgets'"
+            @click="tab = 'widgets'"
+          >
+            Widgets <span class="count">{{ panel.widgets.length }}</span>
+          </button>
+          <button
+            class="tab"
+            :class="{ on: tab === 'properties' }"
+            role="tab"
+            :aria-selected="tab === 'properties'"
+            :disabled="!sel"
+            @click="tab = 'properties'"
+          >
+            Properties <span v-if="sel" class="count">{{ panel.selectedWidget }}</span>
+          </button>
+        </div>
+
+        <div v-if="tab === 'widgets'" class="layers">
+          <div class="list-head">
+            <span class="list-title">widgets <b>{{ panel.widgets.length }} / {{ panel.widgetMax }}</b></span>
+            <span class="list-hint">{{ panel.selectedWidget >= 0 ? `#${panel.selectedWidget} selected` : 'nothing selected' }}</span>
+            <button
+              class="btn add"
+              :disabled="busy || !panel.canEdit || panel.widgets.length >= panel.widgetMax"
+              :title="panel.canEdit ? `this panel holds ${panel.widgetMax} widgets` : 'this half is read-only'"
+              @click="addWidget"
+            >
+              + Widget
+            </button>
+          </div>
+
           <div class="head-row">
             <span class="h-idx">#</span>
             <span class="h-desc">widget</span>
@@ -318,25 +374,37 @@ function widgetStyleWhy(w: Widget): string {
             <span class="h-bad" />
             <span class="h-vis" title="visible in preview">vis</span>
           </div>
-          <div v-for="(w, i) in panel.widgets" :key="i" :class="['widget', { sel: i === panel.selectedWidget, invalid: widgetStyleWhy(w) }]">
+
+          <div
+            v-for="(w, i) in panel.widgets"
+            :key="i"
+            :class="['widget', { sel: i === panel.selectedWidget, invalid: widgetStyleWhy(w) }]"
+            tabindex="0"
+            :title="widgetStyleWhy(w) || 'edit this widget'"
+            @click="selectWidget(i)"
+            @keydown.enter.prevent="selectWidget(i)"
+            @keydown.space.prevent="selectWidget(i)"
+          >
             <span class="idx">{{ i }}</span>
-            <span class="desc" @click="panel.selectedWidget = i">{{ describeWidget(w.kind, w.source, KEEB_SRC_TEXT_BASE, KEEB_SRC_VALUE_BASE, panel.textSlots) }}</span>
+            <span class="desc">{{ widgetLabel(w) }}</span>
             <span class="geo">{{ w.x }},{{ w.y }} · {{ w.w }}×{{ w.h }}</span>
             <span v-if="widgetStyleWhy(w)" class="bad" title="invalid">✗</span>
             <span v-else class="bad ok" />
             <button
               class="toggle"
               :class="{ on: !isHidden(i) }"
+              :aria-pressed="!isHidden(i)"
               :title="isHidden(i) ? 'show in preview' : 'hide in preview'"
-              @click="toggleVis(i)"
+              @click.stop="toggleVis(i)"
             >
               <span class="knob" />
             </button>
           </div>
+        </div>
 
-          <button class="btn add" :disabled="busy || !panel.canEdit || panel.widgets.length >= panel.widgetMax" :title="`this panel holds ${panel.widgetMax} widgets`" @click="panel.addWidget(); panel.selectedWidget = panel.widgets.length - 1">
-            + widget
-          </button>
+        <div v-else class="props">
+          <WidgetInspector v-if="sel" :target="target" />
+          <p v-else class="empty">select a widget on the preview or in the list</p>
         </div>
       </div>
     </div>
@@ -344,34 +412,33 @@ function widgetStyleWhy(w: Widget): string {
 </template>
 
 <style scoped>
+/* A sliding dock that rises from the bottom, the same floating glass tray the
+ * key palette uses, so the board stays visible above while you edit the screen. */
 .panel-editor {
-  position: relative;
-  border: 1px solid var(--border);
-  border-radius: 0;
-  padding: 16px 14px 12px;
-  background: var(--bg-raised);
+  position: fixed;
+  left: 50%;
+  bottom: 86px;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: min(1120px, calc(100vw - 32px));
+  max-height: min(70vh, 720px);
+  overflow: auto;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: rgba(14, 11, 9, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
 }
 
-.panel-editor::before {
-  content: 'status panel';
-  position: absolute;
-  top: -10px;
-  left: 14px;
-  padding: 0 6px;
-  background: var(--paper);
-  color: var(--mid);
-  font-size: 12px;
-  letter-spacing: 0.05em;
-}
-
-.msg { margin-top: 0; font-size: 12px; color: var(--text-dim); }
 .msg { margin-top: 8px; font-size: 12px; color: var(--text-dim); }
 .msg.err { color: var(--err); }
-.empty { padding: 12px 0; }
+.empty { padding: 12px 0; font-size: 12px; color: var(--text-dim); }
 
-.grid { display: grid; grid-template-columns: minmax(260px, 400px) 1fr; gap: 16px; margin-top: 10px; }
+.grid { display: grid; grid-template-columns: minmax(220px, 380px) 1fr; gap: 16px; margin-top: 10px; align-items: start; }
 .preview { display: flex; flex-direction: column; gap: 8px; align-items: center; justify-content: center; min-height: 0; }
-.screen { border: 1px solid var(--border); border-radius: 0; background: var(--bg-inset); user-select: none; }
+.screen { border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-inset); user-select: none; }
 .paper { fill: var(--bg-inset); }
 .ink { fill: var(--text); }
 .paper-fill { fill: var(--bg-inset); stroke: var(--border); }
@@ -387,30 +454,66 @@ function widgetStyleWhy(w: Widget): string {
 .handle.nw, .handle.se { cursor: nwse-resize; }
 .handle.ne, .handle.sw { cursor: nesw-resize; }
 
-.stack { display: flex; flex-direction: column; gap: 10px; }
+.stack { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.btn { border: 1px solid var(--border); border-radius: 0; background: var(--bg); color: var(--text); cursor: pointer; font: inherit; font-size: 12px; padding: 5px 10px; }
+.btn { border: 1px solid var(--border); border-radius: var(--r); background: var(--bg); color: var(--text); cursor: pointer; font: inherit; font-size: 12px; padding: 5px 10px; }
 .btn:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
 .btn:disabled { opacity: 0.62; cursor: default; }
 .btn.push { border-color: var(--accent-dim); color: var(--accent); }
-.btn.danger { border-color: var(--accent-dim); color: var(--accent); }
-.preset-select {
+.btn.danger { border-color: var(--err); color: var(--err); }
+.btn.close {
   margin-left: auto;
-  padding: 4px 8px;
-  font-size: 12px;
-  border: 1px solid var(--border);
-  border-radius: 0;
-  background: var(--bg);
-  color: var(--text);
-  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 8px;
+  color: var(--mid);
+  font-size: 17px;
+  line-height: 1;
 }
-.preset-select:disabled {
-  opacity: 0.62;
-  cursor: default;
-}
-.preset-select option { background: var(--bg); color: var(--text); }
+.btn.close:hover { border-color: var(--ink); color: var(--ink); }
 
-.layers { display: flex; flex-direction: column; gap: 0; max-height: 360px; overflow: auto; border: 1px solid var(--border); border-radius: 0; padding: 0; background: var(--bg-inset); }
+/* Widgets / properties switch: the dock has one column of width to spend, so
+ * the form replaces the list instead of squeezing beside it. */
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--border); }
+.tab {
+  padding: 7px 12px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--mid);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.tab:hover:not(:disabled) { color: var(--ink); }
+.tab.on { border-bottom-color: var(--accent); color: var(--ink); font-weight: 600; }
+.tab:disabled { opacity: 0.45; cursor: default; }
+.count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 9px;
+  background: var(--bg-raised);
+  color: var(--text-faint);
+  font-size: 10px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.layers { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: var(--r); padding: 0; background: var(--bg-inset); }
+.list-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+}
+.list-title { font-size: 12px; color: var(--text); }
+.list-title b { margin-left: 4px; color: var(--text-faint); font-weight: 500; font-variant-numeric: tabular-nums; }
+.list-hint { margin-left: auto; font-size: 11px; color: var(--text-faint); }
 .widget {
   display: grid;
   grid-template-columns: 28px 1fr 110px 22px 32px;
@@ -419,9 +522,10 @@ function widgetStyleWhy(w: Widget): string {
   font-size: 12px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--border);
-  cursor: default;
+  cursor: pointer;
   min-height: 32px;
 }
+.widget:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .head-row {
   display: grid;
   grid-template-columns: 28px 1fr 110px 22px 32px;
@@ -434,10 +538,7 @@ function widgetStyleWhy(w: Widget): string {
   color: var(--mid);
   padding: 6px 8px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-raised);
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  background: var(--bg-inset);
 }
 .widget:last-child { border-bottom: 0; }
 .widget:hover { background: var(--bg-panel); }
@@ -476,7 +577,6 @@ function widgetStyleWhy(w: Widget): string {
   text-align: center;
 }
 .desc {
-  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -493,17 +593,27 @@ function widgetStyleWhy(w: Widget): string {
   text-align: center;
 }
 .add {
-  align-self: stretch;
   margin: 0;
-  padding: 8px;
+  padding: 5px 10px;
   border: 1px dashed var(--border);
-  border-radius: 0;
+  border-radius: var(--r);
   background: transparent;
   color: var(--mid);
   cursor: pointer;
   font: inherit;
   font-size: 12px;
+  white-space: nowrap;
 }
 .add:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
 .add:disabled { opacity: 0.62; cursor: default; }
+
+.props { min-width: 0; }
+
+/* On a phone the canvas and the manager stack instead of sharing a row. */
+@media (max-width: 760px) {
+  .panel-editor { max-height: 78vh; }
+  .grid { grid-template-columns: 1fr; }
+  .preview { order: -1; }
+  .widget { grid-template-columns: 24px 1fr 86px 18px 32px; }
+}
 </style>

@@ -4,7 +4,7 @@
 # Options for the keeb module. Everything here is scoped to the keeb shields so
 # the module can stay in the workspace without affecting other keyboards.
 
-config KBEEB_UI
+config KEEB_UI
 	bool "Custom keeb status screen"
 	depends on SHIELD_KEEB_LEFT || SHIELD_KEEB_RIGHT
 	select ZMK_DISPLAY
@@ -20,32 +20,32 @@ config KBEEB_UI
 	  central half shows the active layer plus both halves' batteries, the
 	  peripheral half shows the layer artwork inside a fixed frame.
 
-if KBEEB_UI
+if KEEB_UI
 
-choice KBEEB_UI_ROTATION
+choice KEEB_UI_ROTATION
 	prompt "Status screen rotation"
-	default KBEEB_UI_ROTATION_0
+	default KEEB_UI_ROTATION_0
 	help
 	  How the UI is rotated relative to the panel's native orientation.
 	  The nice!view panel is 160x68 and is mounted horizontally, so 0 is the
 	  normal choice; 90/270 lay the UI out in a 68x160 portrait space and
 	  rotate it into the panel for a vertically mounted display.
 
-config KBEEB_UI_ROTATION_0
+config KEEB_UI_ROTATION_0
 	bool "0 (landscape)"
 
-config KBEEB_UI_ROTATION_90
+config KEEB_UI_ROTATION_90
 	bool "90 (portrait)"
 
-config KBEEB_UI_ROTATION_180
+config KEEB_UI_ROTATION_180
 	bool "180 (landscape, upside down)"
 
-config KBEEB_UI_ROTATION_270
+config KEEB_UI_ROTATION_270
 	bool "270 (portrait, other way)"
 
 endchoice
 
-config KBEEB_UI_ART
+config KEEB_UI_ART
 	bool "Layer artwork on the peripheral display"
 	depends on ZMK_SPLIT
 	default y
@@ -54,7 +54,7 @@ config KBEEB_UI_ART
 	  is pushed from the central half, which is what keeps the two displays
 	  in sync without duplicating ZMK's keymap state.
 
-config KBEEB_UI_CENTRAL_ART
+config KEEB_UI_CENTRAL_ART
 	bool "Layer artwork on the central display"
 	default n
 	help
@@ -65,19 +65,71 @@ config KBEEB_UI_CENTRAL_ART
 	  (KEEB_ERR_BAD_WIDGET) instead of drawing a blank, and keeb_display_info
 	  reports the limit up front.
 
-config KBEEB_UI_PERIPHERAL_PRESET
+config KEEB_UI_PEER_PRESET
+	int "Peer panel preset the central starts from"
+	depends on KEEB_UI
+	range 0 2
+	default 2
+	help
+	  Which built-in widget table the peripheral half shows: 2 is the typing
+	  panel (bongo cat, WPM, BLE profile pips, host signal); 0 is the layer
+	  artwork with a connected-device strip beneath it; 1 is the connected
+	  device alone.
+
+	  On the peripheral this is the table the image boots with. On the central
+	  it is the table the *peer* panel starts from before a host has saved its
+	  own. Both halves read the same value so they cannot disagree about what
+	  the right half's default looks like; the peripheral asserts that its own
+	  KEEB_UI_PERIPHERAL_PRESET agrees.
+
+config KEEB_UI_PERIPHERAL_PRESET
 	int "Peripheral panel preset at boot"
 	depends on ZMK_SPLIT && ZMK_SPLIT_ROLE_CENTRAL=n
-	default 0
+	default KEEB_UI_PEER_PRESET
 	help
-	  Which built-in widget table the peripheral half starts with. 0 is the
-	  layer artwork with a connected-device strip beneath it; 1 is the
-	  connected device alone. The central half can edit its own panel over
-	  the TLV channel; the peripheral's table is fixed in the image because
-	  the peripheral holds no host connection (see README: the relay of
-	  *edits* to the right half is not implemented).
+	  Which built-in widget table the peripheral half boots with. It does not
+	  follow the layer. Same value as KEEB_UI_PEER_PRESET, which is what the
+	  central uses to seed the table it edits and relays; a host can replace
+	  the table afterwards, and the saved peer panel wins over this default.
 
-config KBEEB_LAYER_LED_INDICATE
+config KEEB_UI_PEER_PANEL
+	bool "Edit the other half's panel from the central"
+	depends on KEEB_UI && ZMK_SPLIT && ZMK_SPLIT_ROLE_CENTRAL
+	default y
+	help
+	  The physical peripheral half has no host connection and no config engine,
+	  so a configurator attached to the central cannot read or write its panel
+	  directly. With this on, the central keeps a copy of the peer's table and
+	  text (persisted under its own "keebpeer" settings key), answers the
+	  KEEB_T_PEER_DISPLAY_* records from it, and relays the table over the
+	  split link with the keeb,panel behaviour. The peripheral applies it in RAM
+	  and redraws, and the central re-pushes on the connect edge.
+
+choice KEEB_UI_PEER_ROTATION
+	prompt "Other half's panel rotation"
+	depends on KEEB_UI
+	default KEEB_UI_PEER_ROTATION_90
+	help
+	  Logical orientation the peer panel lays out in. The central needs it to
+	  validate a table against the geometry it will actually be drawn in. The
+	  peripheral asserts that its own KEEB_UI_ROTATION agrees, so the two
+	  cannot drift silently.
+
+config KEEB_UI_PEER_ROTATION_0
+	bool "0 (landscape)"
+
+config KEEB_UI_PEER_ROTATION_90
+	bool "90 (portrait)"
+
+config KEEB_UI_PEER_ROTATION_180
+	bool "180 (landscape, upside down)"
+
+config KEEB_UI_PEER_ROTATION_270
+	bool "270 (portrait, other way)"
+
+endchoice
+
+config KEEB_LAYER_LED_INDICATE
 	bool "Layer colour indication on the RGB status LED"
 	depends on ZMK_STATUS_LED
 	default y
@@ -86,9 +138,9 @@ config KBEEB_LAYER_LED_INDICATE
 	  layer is active: left half NAV=green FUN=blue, right half
 	  MEDIA=green GAME=blue, HOME and anything else off (normal status
 	  palette). The peripheral half learns the active layer from the
-	  layer_art push, so this rides on KBEEB_UI being enabled.
+	  layer_art push, so this rides on KEEB_UI being enabled.
 
-config KBEEB_ADC_DIAG
+config KEEB_ADC_DIAG
 	bool "ADC channel scan diagnostic (battery divider hunt)"
 	default n
 	help
@@ -96,7 +148,7 @@ config KBEEB_ADC_DIAG
 	  and logs millivolts, to find which pin the battery divider really
 	  feeds on clone boards. Remove once battery reporting works.
 
-config KBEEB_POWER_DIAG
+config KEEB_POWER_DIAG
 	bool "Log the inherited nRF52840 power state at boot"
 	depends on SOC_SERIES_NRF52X
 	default y
@@ -106,9 +158,9 @@ config KBEEB_POWER_DIAG
 	  undocumented clone hardware can be attributed. See
 	  boards/shields/keeb/power.c.
 
-config KBEEB_POWER_FORCE_LDO
+config KEEB_POWER_FORCE_LDO
 	bool "Force both nRF52840 regulator stages to LDO at boot"
-	depends on KBEEB_POWER_DIAG
+	depends on KEEB_POWER_DIAG
 	default y
 	help
 	  Zephyr never clears DCDCEN0/DCDCEN (soc.c only sets them when the
@@ -118,7 +170,7 @@ config KBEEB_POWER_FORCE_LDO
 	  This clears both enable bits at boot, making the app's supply mode
 	  deterministic: LDO, the only mode that regulates on this hardware.
 
-config KBEEB_UI_LAYER_SYNC_POLL_MS
+config KEEB_UI_LAYER_SYNC_POLL_MS
 	int "Peripheral link poll interval (ms)"
 	depends on ZMK_SPLIT && ZMK_SPLIT_ROLE_CENTRAL
 	default 1000
@@ -131,9 +183,45 @@ config KBEEB_UI_LAYER_SYNC_POLL_MS
 # defconfig fragments are sourced after the app's own Kconfig, so a plain
 # default here would lose to ZMK's.
 
-endif # KBEEB_UI
+endif # KEEB_UI
 
-menuconfig KBEEB_ENGINE
+config KEEB_SETTINGS
+	bool "Runtime settings overrides (idle/sleep timeout)"
+	depends on ZMK_SLEEP
+	default y
+	select SETTINGS
+	help
+	  Holds CONFIG_ZMK_IDLE_TIMEOUT and CONFIG_ZMK_IDLE_SLEEP_TIMEOUT in RAM
+	  so they can be changed at runtime from the configurator, and persists
+	  them in the half's own flash.
+
+	  Built on BOTH halves, not only the one with the config channel: the
+	  central applies what the host wrote and relays the resulting values to
+	  every peripheral over ZMK's split transport (the keeb,timeouts
+	  behaviour), where each half applies and persists its own copy.  Deep
+	  sleep is decided per half - ZMK's activity timer runs on each half - so
+	  a half that never received the change keeps sleeping on its own
+	  numbers.  Requires a small ZMK patch (activity.c) that exposes the
+	  setters; see zmk-patches/activity-runtime-timeout.patch.
+
+config KEEB_SOUND
+	bool "Configurable buzzer tunes (RAM shapes, editable event map)"
+	# The shapes live in the buzzer driver, and the only way a host reaches
+	# them is the config engine's SETTINGS namespace - so all three parts
+	# are required. The buzzer is on the central half, which is the half
+	# that has the engine, so a peripheral simply does not build this.
+	depends on ZMK_BUZZER && KEEB_SETTINGS && KEEB_ENGINE
+	default y
+	help
+	  Moves the buzzer's tune shapes and its event -> tune map into RAM, so a
+	  configurator can change what a layer change, an accepted or refused
+	  update and a wake sound like, plus the shape of every tune, without a
+	  rebuild. KEEB_T_SETTINGS_SAVE is what makes it survive a reboot.
+
+	  The compiled-in shapes (buzzer/src/buzzer.c) stay the defaults a boot
+	  starts from and DISCARD restores.
+
+menuconfig KEEB_ENGINE
 	bool "Live keymap mutation engine (TLV config channel)"
 	depends on !ZMK_SPLIT || ZMK_SPLIT_ROLE_CENTRAL
 	# The same prerequisites ZMK Studio's own RPC menu selects
@@ -163,9 +251,9 @@ menuconfig KBEEB_ENGINE
 	  what a token's parameters mean rather than duplicating ZMK's keycode
 	  tables in JavaScript.
 
-if KBEEB_ENGINE
+if KEEB_ENGINE
 
-config KBEEB_ENGINE_BLE
+config KEEB_ENGINE_BLE
 	bool "BLE GATT transport"
 	depends on ZMK_BLE
 	default y
@@ -181,7 +269,7 @@ config KBEEB_ENGINE_BLE
 	  that a config channel needs. It also means the revert chord sees both
 	  halves' key positions, which is the only place it is detectable.
 
-config KBEEB_ENGINE_FW_VERSION
+config KEEB_ENGINE_FW_VERSION
 	int "Firmware version reported to the configurator"
 	default 1
 	help
@@ -189,4 +277,4 @@ config KBEEB_ENGINE_FW_VERSION
 	  write when the token-table hash disagrees, which is what keeps a host
 	  from binding a behavior it believes sits at a different token id.
 
-endif # KBEEB_ENGINE
+endif # KEEB_ENGINE

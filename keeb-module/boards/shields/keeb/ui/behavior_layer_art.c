@@ -43,7 +43,7 @@
 #include "panel_peripheral.h"
 #endif
 
-#if IS_ENABLED(CONFIG_KBEEB_LAYER_LED_INDICATE)
+#if IS_ENABLED(CONFIG_KEEB_LAYER_LED_INDICATE)
 #include "layer_indicate.h"
 #endif
 
@@ -62,7 +62,7 @@ static int layer_art_binding_pressed(struct zmk_behavior_binding *binding,
 	keeb_device_select(binding->param2);
 #endif
 
-#if IS_ENABLED(CONFIG_KBEEB_LAYER_LED_INDICATE)
+#if IS_ENABLED(CONFIG_KEEB_LAYER_LED_INDICATE)
 	/* The same push that carries artwork to the peripheral also drives
 	 * each half's RGB layer indication (see layer_indicate.c). */
 	keeb_layer_indicate(binding->param1);

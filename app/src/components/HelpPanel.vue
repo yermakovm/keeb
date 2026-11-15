@@ -65,7 +65,9 @@ const emit = defineEmits<{ (e: 'close'): void }>()
           <li>
             <b>screen 1 / screen 2</b> in the split are the status panels, drawn where the glass
             is. Clicking one puts its widget table under the board and its properties in the
-            sidebar — the same two surfaces a key uses.
+            sidebar — the same two surfaces a key uses. <b>screen 2 is the other half's
+            panel</b>: the central keeps that table, relays it to the right half, and answers the
+            editor for it, so both screens are edited from the half you are connected to.
           </li>
           <li>
             The <b>tester</b> draws the same board and inverts the switches the keyboard reports
@@ -176,7 +178,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 .help {
   width: min(760px, 92vw); max-height: 84vh; overflow: auto;
-  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 0;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: var(--r);
   padding: 16px 18px; display: flex; flex-direction: column; gap: 14px;
 }
 
@@ -192,7 +194,7 @@ code { font-family: var(--mono); font-size: 11.5px; color: var(--text-dim); }
 
 .chip {
   padding: 5px 10px; font-size: 12px;
-  border: 1px solid var(--border); border-radius: 0;
+  border: 1px solid var(--border); border-radius: var(--r);
   background: var(--bg-raised); color: var(--text-dim); cursor: pointer;
 }
 .chip:hover { border-color: var(--ink); color: var(--ink); }

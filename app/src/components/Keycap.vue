@@ -12,7 +12,7 @@
  * shadow, no radius. The accent is reserved for state — the layer that owns the
  * cell, the selection, a staged edit.
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import type { CapDisplay } from '../model/cap.ts'
 
@@ -22,6 +22,10 @@ const props = withDefaults(
     display: CapDisplay
     own: boolean
     reserved: boolean
+    /** layer-diff view: this layer redefines this key against the base layer */
+    override?: boolean
+    /** layer-diff view: this key re-asserts the base layer's behaviour */
+    same?: boolean
     selected: boolean
     /** this cell has a staged edit that has not been written to the keyboard */
     pending: boolean
@@ -39,10 +43,15 @@ const props = withDefaults(
      * A separate mark from `selected`, which in the tester means closed. */
     inspected?: boolean
   }>(),
-  { unreported: false, variant: 'edit', inspected: false },
+  { unreported: false, variant: 'edit', inspected: false, override: false, same: false },
 )
 
-const emit = defineEmits<{ (e: 'pick', pos: number): void }>()
+const emit = defineEmits<{
+  (e: 'pick', pos: number): void
+  (e: 'drop', pos: number): void
+}>()
+
+const over = ref(false)
 
 const test = computed(() => props.variant === 'test')
 
@@ -85,17 +94,23 @@ const title = computed(() => {
         own,
         inherit: !own && !reserved,
         selected,
+        override,
+        dim: same && !selected,
         reserved: !test && reserved,
         pending: !test && pending,
         unreported,
         inspected,
         mod: display.category === 'mod',
         mo: isLayerMove,
+        'drag-over': over,
       },
       display.hold ? 'holdtap' : '',
     ]"
     :title="title"
     @click="emit('pick', pos)"
+    @dragover.prevent.stop="over = true"
+    @dragleave="over = false"
+    @drop.prevent.stop="over = false; emit('drop', pos)"
   >
     <span v-if="showPos || (reserved && !test)" class="corner">
       <span v-if="showPos" class="pos-num">{{ pos }}</span>
@@ -110,23 +125,38 @@ const title = computed(() => {
 </template>
 
 <style scoped>
+/* A keycap, not a cell: warm keycap gradient, soft rounded corner, a hint of
+ * height from the drop shadow and the inner top highlight. The amber accent is
+ * reserved for selection — the thing you are pointing at. */
 .cap {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border: 1px solid var(--line);
-  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--r);
+  background: linear-gradient(160deg, #2c333c, #171b21);
   color: var(--ink);
-  font-family: var(--mono);
-  font-size: 12px;
-  font-weight: 400;
+  font-family: var(--sans);
+  font-size: clamp(11px, calc(var(--cell) * 0.3), 20px);
+  font-weight: 500;
   display: grid;
   place-items: center;
   padding: 0;
   cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
 }
 
-.cap:not(:disabled):hover { border-color: var(--ink); }
+.cap:not(:disabled):hover {
+  border-color: rgba(110, 231, 160, 0.55);
+  transform: translateY(-1px);
+}
+
+/* A tile dragged over this cap lights it up as the drop target. */
+.cap.drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 22px var(--accent-dim);
+}
 
 .main {
   line-height: 1.05;
@@ -136,22 +166,23 @@ const title = computed(() => {
 
 .hold {
   position: absolute;
-  top: 2px;
-  right: 4px;
+  top: 3px;
+  right: 5px;
   font-size: 9px;
-  color: var(--mid);
+  font-weight: 600;
+  color: var(--cap-text-hold);
 }
 
-/* Modifiers read as dimmer cells, not as coloured ones. */
+/* Modifiers read as dimmer, flatter cells than plain keys. */
 .cap.mod {
-  background: var(--mod);
-  color: var(--mid);
+  background: var(--cap-mod-top);
+  color: var(--cap-text-hold);
 }
 
 /* A layer move is emphasised the way the rest of the page emphasises things:
- * weight and a filled ground, not the accent. */
+ * weight and a warm filled ground. */
 .cap.mo {
-  background: var(--soft);
+  background: var(--cap-layer-top);
   color: var(--ink);
   font-weight: 700;
 }
@@ -168,53 +199,77 @@ const title = computed(() => {
 
 .cap.holdtap .main { align-self: flex-end; margin-left: -8%; margin-bottom: 4%; }
 
-/* This layer defines the cell: the border is the stronger grey. The accent is
- * not on the grid at all, so a cap that is defined here cannot be confused with
- * a button that sends something. */
-.cap.own { border-color: var(--mid); }
+/* This layer defines the cell: the border is the stronger warm grey. */
+.cap.own { border-color: var(--border-strong); }
 
-/* Recessive, but still readable: 0.55 put the glyph at 3.9:1 in the light
- * theme. The dimming is the signal, the label still has to be legible. */
+/* Recessive, but still readable. */
 .cap.inherit { opacity: 0.62; }
+
+/* Layer-diff view: a key this layer redefines against the base layer is lit
+ * with an accent outline plus a ground-line under the label. The base layer and
+ * the tester never hold these classes, so nothing changes there. */
+.cap.override {
+  border-color: rgba(110, 231, 160, 0.6);
+  box-shadow: 0 0 0 1px rgba(110, 231, 160, 0.15), 0 0 16px rgba(110, 231, 160, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cap.override::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+/* Layer-diff view: a key that just re-asserts the base layer is faded into the
+ * background, so the eye lands on this layer's actual redefinitions. */
+.cap.dim {
+  opacity: 0.45;
+  filter: saturate(0.55);
+}
 
 /* A reserved position carries a double hairline and the # in its corner. */
 .cap.reserved { border-style: double; border-width: 3px; }
 
-/* Selection inverts the cell: ground and ink swap, which is how a vim visual
- * selection reads. Filling it with the accent made the selected cap look like a
- * different binding rather than the one you are looking at. */
+/* Selection is the light: a selected cap is lit warm amber instead of inverted.
+ * Filling it with the accent made the selected cap look like a different
+ * binding rather than the one you are looking at — the amber glow reads as the
+ * spotlight falling on the key you are about to change. */
 .cap.selected {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--on-ink);
+  background: linear-gradient(160deg, #9deab8, var(--accent-deep));
+  border-color: transparent;
+  color: var(--on-accent);
   font-weight: 700;
+  box-shadow: 0 0 26px rgba(46, 184, 114, 0.5), 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
 .cap.selected.mod,
 .cap.selected.mo {
-  background: var(--ink);
-  color: var(--on-ink);
+  background: linear-gradient(160deg, #9deab8, var(--accent-deep));
+  color: var(--on-accent);
 }
 
-/* Every mark inside the cap inverts with it, including the ones that normally
- * carry their own colour. */
+/* Every mark inside the cap reads against the lit ground. */
 .cap.selected .hold,
 .cap.selected .corner,
 .cap.selected .lock,
 .cap.selected .pos-num {
-  color: var(--on-ink);
+  color: var(--on-accent);
 }
 
 .cap.selected .src-dot {
-  background: var(--on-ink);
+  background: var(--on-accent);
   opacity: 0.6;
 }
 
 /* Top-left corner: the stock position number and the reserved marker share it. */
 .corner {
   position: absolute;
-  top: 2px;
-  left: 4px;
+  top: 3px;
+  left: 5px;
   display: flex;
   align-items: center;
   gap: 3px;
@@ -228,31 +283,20 @@ const title = computed(() => {
 
 /* Tester mode: the position whose settings the aside is reading out.
  *
- * It cannot reuse the inversion, because in the tester the inversion already
- * means "this switch is closed right now", and the two facts are independent —
- * you routinely read the settings of a switch you are not holding. An outline
- * sits outside the box instead of filling it, so a cap can be inspected and
- * closed at the same time and still say both. */
+ * An amber outline sits outside the box instead of filling it, so a cap can be
+ * inspected and closed at the same time and still say both. */
 .cap.inspected {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
 
-/* Tester mode: a switch that has never closed once.
- *
- * The mark is the *border style*, not the opacity — .inherit already dims a cap
- * to 0.62 because another layer defines it, and a dead switch must not look
- * like that. Dashed against solid, on the same hairline colour, is a difference
- * that survives both themes and both reasons for being dim. It is also the one
- * state on the grid that is drawn rather than listed: a tester with a table of
- * unreported positions next to it is a tester you have to read. */
+/* Tester mode: a switch that has never closed once. Dashed against solid on the
+ * same hairline colour is a difference that survives both themes. */
 .cap.unreported {
   border-style: dashed;
   background: var(--bg-inset);
 }
 
-/* Same 0.62 the theme sets for a dimmed control: below it the label stops being
- * legible, and an unreported cap still has to say what it would have been. */
 .cap.unreported .main {
   opacity: 0.62;
 }
@@ -263,17 +307,14 @@ const title = computed(() => {
   opacity: 0.5;
 }
 
-/* A reported cap is a solid hairline again, and a closed one is inverted, so
- * the two things you are actually checking stay louder than this. */
 .cap.unreported.selected {
   border-style: solid;
-  background: var(--ink);
+  background: linear-gradient(160deg, #9deab8, var(--accent-deep));
 }
 
-/* Staged edit: the local model already shows the new binding, so what has to
- * be visible is that it is not the keyboard's state yet. A thick inner ring is
- * a different mark from the 1px border a defined cell gets. */
-.cap.pending { box-shadow: inset 0 0 0 2px var(--ink); }
+/* Staged edit: a thick warm inner ring says "this is not the keyboard's state
+ * yet" — distinct from the 1px border a defined cell gets. */
+.cap.pending { box-shadow: inset 0 0 0 2px var(--accent); }
 
 .pending-dot {
   position: absolute;
@@ -281,15 +322,16 @@ const title = computed(() => {
   bottom: 3px;
   width: 5px;
   height: 5px;
-  background: var(--ink);
+  border-radius: 50%;
+  background: var(--accent);
 }
-
 .src-dot {
   position: absolute;
   left: 4px;
   bottom: 3px;
   width: 5px;
   height: 5px;
+  border-radius: 50%;
   background: var(--mid);
   opacity: 0.6;
 }
@@ -300,16 +342,17 @@ const title = computed(() => {
   color: var(--warn);
 }
 
-/* Categories stay within one hue: transparent ground, tinted ink. */
-.cat-key { background: transparent; }
-.cat-mod { background: var(--mod); }
-.cat-media { background: transparent; color: var(--mid); }
-.cat-nav { background: transparent; color: var(--mid); }
-.cat-mouse { background: transparent; color: var(--mid); }
-.cat-layer { background: var(--soft); color: var(--ink); font-weight: 700; }
-.cat-holdtap { background: var(--mod); }
-.cat-system { background: var(--soft); }
-.cat-inherit { background: transparent; color: var(--mid); }
-.cat-off { background: transparent; color: var(--mid); }
-.cat-unknown { background: var(--soft); color: var(--err); }
+/* Categories stay within one warm hue: plain keys get the keycap fill, the
+ * specialised categories sit quieter in the same family. */
+.cat-key { background: linear-gradient(160deg, #2c333c, #171b21); }
+.cat-mod { background: var(--cap-mod-top); }
+.cat-media { background: var(--cap-mod-top); color: var(--cap-text-hold); }
+.cat-nav { background: var(--cap-mod-top); color: var(--cap-text-hold); }
+.cat-mouse { background: var(--cap-mod-top); color: var(--cap-text-hold); }
+.cat-layer { background: var(--cap-layer-top); color: var(--ink); font-weight: 700; }
+.cat-holdtap { background: var(--cap-holdtap-top); }
+.cat-system { background: var(--cap-system); }
+.cat-inherit { background: transparent; color: var(--cap-text-hold); }
+.cat-off { background: transparent; color: var(--cap-text-hold); }
+.cat-unknown { background: var(--cap-unknown); color: var(--err); }
 </style>

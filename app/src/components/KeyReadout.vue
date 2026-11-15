@@ -107,7 +107,7 @@ const lastLine = computed(() => {
           title="go to the keymap view with this position still selected"
           @click="emit('edit')"
         >
-          edit
+          Edit
         </button>
       </div>
 
@@ -146,7 +146,7 @@ const lastLine = computed(() => {
         title="simulated keyboard: close this switch for a moment"
         @click="emit('press', pos)"
       >
-        press
+        Press
       </button>
     </template>
   </div>

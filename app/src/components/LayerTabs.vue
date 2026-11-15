@@ -106,19 +106,21 @@ async function remove(index: number): Promise<void> {
   flex-wrap: wrap;
 }
 
-/* A segmented control: one box, hairline dividers, the active segment lifted by
- * an accent underline rather than a fill. The live dot stays ink on purpose -
- * the underline says "this is the layer you are editing", the dot says "this is
- * the layer the keyboard is actually running", and those are different facts. */
+/* A segmented control: one rounded pill strip with hairline dividers, the active
+ * segment lifted by an amber underline rather than a fill. The live dot stays
+ * warm grey on purpose - the underline says "this is the layer you are editing",
+ * the dot says "this is the layer the keyboard is actually running". */
 .tabs {
   display: flex;
   border: 1px solid var(--line);
+  border-radius: 12px;
   overflow: hidden;
+  background: var(--bg-inset);
 }
 
 .tab {
   width: 40px;
-  padding: 3px 0;
+  padding: 4px 0;
   background: transparent;
   border: 0;
   border-right: 1px solid var(--line);
@@ -135,8 +137,9 @@ async function remove(index: number): Promise<void> {
 }
 
 .tab[aria-pressed="true"] {
-  background: var(--mod);
+  background: #1e2733;
   box-shadow: inset 0 -3px 0 var(--accent);
+  color: var(--ink);
   font-weight: 700;
 }
 
@@ -157,7 +160,7 @@ async function remove(index: number): Promise<void> {
   transform: translateX(-50%);
   width: 5px;
   height: 2px;
-  background: var(--ink);
+  background: var(--ok);
 }
 
 .layer-info {
@@ -170,7 +173,6 @@ async function remove(index: number): Promise<void> {
   width: 80px;
   padding: 3px 6px;
   border: none;
-  border-bottom: 1px dashed var(--mid);
   background: transparent;
   color: var(--ink);
   font: inherit;
@@ -193,10 +195,11 @@ async function remove(index: number): Promise<void> {
 }
 
 .ctrl {
-  padding: 2px 8px;
+  padding: 3px 10px;
   font-size: 12px;
   line-height: 1.4;
   border: 1px solid var(--line);
+  border-radius: 10px;
   background: transparent;
   color: var(--mid);
   font: inherit;

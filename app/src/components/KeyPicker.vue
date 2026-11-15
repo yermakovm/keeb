@@ -231,7 +231,7 @@ function reset(): void {
       <div class="param-head">
         <b>{{ chosenDef?.label }}</b>
         <span class="cells">{{ chosenDef?.bindingCells ?? 0 }} binding cells</span>
-        <button class="chip small" @click="reset">change token</button>
+        <button class="chip small" @click="reset">Change token</button>
       </div>
 
       <div v-for="(kind, index) in kinds" :key="index" class="param">
@@ -369,13 +369,13 @@ function reset(): void {
 .reserved { color: var(--warn); }
 
 .cats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
-.cat { padding: 5px 10px; border: 1px solid var(--border); border-radius: 0; font-size: 12px; color: var(--text-dim); background: transparent; }
+.cat { padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--r); font-size: 12px; color: var(--text-dim); background: transparent; }
 .cat.on { border-color: var(--ink); background: var(--bg-raised); color: var(--text); font-weight: 700; }
 
 .tokens { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
 .token {
   display: flex; align-items: baseline; gap: 6px; text-align: left;
-  padding: 7px 9px; border: 1px solid var(--border); border-radius: 0;
+  padding: 7px 9px; border: 1px solid var(--border); border-radius: var(--r);
   background: var(--bg-raised); color: var(--text); font-size: 12px;
 }
 .token:disabled { opacity: 0.62; }
@@ -390,13 +390,13 @@ function reset(): void {
 .param-title { font-size: 11px; color: var(--text-dim); display: flex; gap: 8px; }
 .cur { font-family: var(--mono); color: var(--text-faint); }
 
-.search { padding: 5px 8px; border: 1px solid var(--border); border-radius: 0; background: var(--bg-inset); color: var(--text); font-size: 12px; }
+.search { padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-inset); color: var(--text); font-size: 12px; }
 
 .keys { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow: auto; }
 .keygroup { display: flex; gap: 4px; flex-wrap: wrap; }
 .key {
   min-width: 40px; padding: 5px 7px; font-size: 11px;
-  border: 1px solid var(--border); border-radius: 0;
+  border: 1px solid var(--border); border-radius: var(--r);
   background: var(--bg-raised); color: var(--text);
 }
 .key.on { background: var(--text); border-color: var(--text); color: var(--bg-raised); font-weight: 700; }
@@ -405,7 +405,7 @@ function reset(): void {
 .chips { display: flex; gap: 5px; flex-wrap: wrap; }
 .chip {
   padding: 5px 10px; font-size: 12px;
-  border: 1px solid var(--border); border-radius: 0;
+  border: 1px solid var(--border); border-radius: var(--r);
   background: var(--bg-raised); color: var(--text-dim);
 }
 .chip.on { border-color: var(--ink); background: var(--bg-raised); color: var(--text); }
@@ -413,7 +413,7 @@ function reset(): void {
 .chip.small { font-size: 11px; }
 .chip.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-weight: 700; }
 
-.num { width: 120px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 0; background: var(--bg-inset); color: var(--text); }
+.num { width: 120px; padding: 5px 8px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg-inset); color: var(--text); }
 
 .apply { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
 .pv { font-size: 11px; color: var(--text-faint); font-family: var(--mono); }

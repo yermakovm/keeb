@@ -40,9 +40,12 @@
 #endif
 
 #include "../display/keeb_display.h"
+#include "../display/keeb_peer_panel.h"
 #include "../keymap/keeb_keymap.h"
 #include "../keymap/keeb_tokens.h"
 #include "../proto/keeb_tlv.h"
+#include "../settings/keeb_settings.h"
+#include "../settings/keeb_sound.h"
 #include "keeb_engine.h"
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
@@ -216,6 +219,8 @@ static void handle_sys(uint16_t type, const uint8_t *data, uint16_t len, struct 
 
 		keeb_keymap_info(&info);
 		info.flags |= keeb_display_capabilities();
+		info.flags |= keeb_settings_capabilities();
+		info.flags |= keeb_sound_capabilities();
 
 		if (keeb_tlv_rec_add_struct(msg, KEEB_T_INFO, &info, sizeof(info))) {
 			ack_err(ack, KEEB_ERR_TOO_BIG);
@@ -640,6 +645,226 @@ static void handle_display(uint16_t type, const uint8_t *data, uint16_t len,
 		return;
 	}
 
+	/*
+	 * The other half's panel. The records mirror the ones above byte for byte;
+	 * only the ids differ, because the central answers them from its own copy
+	 * and relays the table over the split link (display/keeb_peer_panel.c).
+	 */
+	case KEEB_T_PEER_DISPLAY_INFO: {
+		struct keeb_display_info info;
+
+		keeb_peer_panel_info(&info);
+
+		if (keeb_tlv_rec_add_struct(msg, KEEB_T_PEER_DISPLAY_INFO, &info, sizeof(info))) {
+			ack_err(ack, KEEB_ERR_TOO_BIG);
+		}
+
+		return;
+	}
+
+	case KEEB_T_PEER_DISPLAY_GET: {
+		int err = keeb_peer_panel_dump(msg);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_PEER_DISPLAY_SET: {
+		uint16_t applied = 0;
+		int err = keeb_peer_panel_set_table(data, len, &applied);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		struct keeb_peer_display_notify {
+			uint8_t count;
+			uint8_t flags;
+		} __packed payload = { .count = (uint8_t)applied,
+				       .flags = keeb_peer_panel_dirty() ? KEEB_DISPLAY_F_DIRTY : 0 };
+
+		keeb_engine_notify(KEEB_EV_PEER_DISPLAY_SET, &payload, sizeof(payload));
+
+		ack_ok(ack, applied, 0);
+		return;
+	}
+
+	case KEEB_T_PEER_TEXT_SET: {
+		int err = keeb_peer_panel_set_text(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		keeb_engine_notify(KEEB_EV_PEER_DISPLAY_SET, NULL, 0);
+
+		ack_ok(ack, 0, 0);
+		return;
+	}
+
+	case KEEB_T_PEER_DISPLAY_SAVE: {
+		int err = keeb_peer_panel_save();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		keeb_engine_notify(KEEB_EV_PEER_DISPLAY_SAVED, NULL, 0);
+		return;
+	}
+
+	case KEEB_T_PEER_DISPLAY_DISCARD: {
+		int err = keeb_peer_panel_discard();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_PEER_DISPLAY_RESET: {
+		int err = keeb_peer_panel_reset();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_PEER_DISPLAY_BLANK: {
+		int err = keeb_peer_panel_blank();
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	default:
+		ack_err(ack, KEEB_ERR_UNKNOWN_TYPE);
+		return;
+	}
+}
+
+static void handle_settings(uint16_t type, const uint8_t *data, uint16_t len,
+			    struct keeb_tlv_msg *msg, struct keeb_ack *ack)
+{
+	switch (type) {
+	case KEEB_T_SETTINGS_GET: {
+		int err = keeb_settings_dump(msg);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_SETTINGS_SET: {
+		int err = keeb_settings_set(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+			return;
+		}
+
+		struct keeb_settings changed;
+		uint16_t flags = 0;
+
+		if (len >= sizeof(struct keeb_settings)) {
+			memcpy(&changed, data, sizeof(changed));
+			flags = changed.flags;
+		}
+
+		keeb_engine_notify(KEEB_EV_SETTINGS_CHANGED, &flags, sizeof(flags));
+		return;
+	}
+
+	case KEEB_T_SETTINGS_SAVE: {
+		int err = keeb_settings_save();
+
+		/* Tunes persist with the same verb: one save from the page the host
+		 * is on, not one per thing it edited. A build without a buzzer keeps
+		 * its settings save working. */
+		if (!err) {
+			err = keeb_sound_save();
+		}
+
+		if (err && err != -KEEB_ERR_NOT_SUPPORTED) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_SETTINGS_DISCARD:
+	case KEEB_T_SETTINGS_RESET: {
+		int err = keeb_settings_discard();
+		int sound_err = keeb_sound_discard();
+
+		if (!err && sound_err != -KEEB_ERR_NOT_SUPPORTED) {
+			err = sound_err;
+		}
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_TUNE_GET:
+	case KEEB_T_SOUND_MAP_GET: {
+		/* One reply carries the map and every tune, so the page needs one
+		 * round trip, not eight. */
+		int err = keeb_sound_dump(msg);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_TUNE_SET: {
+		int err = keeb_sound_tune_set(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_SOUND_MAP_SET: {
+		int err = keeb_sound_map_set(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
+	case KEEB_T_TUNE_PLAY: {
+		int err = keeb_sound_play(data, len);
+
+		if (err) {
+			ack_err(ack, (uint8_t)(-err));
+		}
+
+		return;
+	}
+
 	default:
 		ack_err(ack, KEEB_ERR_UNKNOWN_TYPE);
 		return;
@@ -675,6 +900,12 @@ static bool keeb_type_is_update(uint16_t type) {
 	case KEEB_T_DISPLAY_SAVE:
 	case KEEB_T_DISPLAY_DISCARD:
 	case KEEB_T_DISPLAY_RESET:
+	case KEEB_T_PEER_DISPLAY_SAVE:
+	case KEEB_T_PEER_DISPLAY_DISCARD:
+	case KEEB_T_PEER_DISPLAY_RESET:
+	case KEEB_T_SETTINGS_SAVE:
+	case KEEB_T_SETTINGS_DISCARD:
+	case KEEB_T_SETTINGS_RESET:
 		return true;
 	default:
 		return false;
@@ -747,6 +978,9 @@ static void dispatch(uint16_t msg_id)
 		case KEEB_NS_DISPLAY:
 			handle_display(type, data, data_len, &msg, ack);
 			break;
+		case KEEB_NS_SETTINGS:
+			handle_settings(type, data, data_len, &msg, ack);
+			break;
 		default:
 			ack_err(ack, KEEB_ERR_UNKNOWN_TYPE);
 			break;
@@ -772,9 +1006,10 @@ static void dispatch(uint16_t msg_id)
 	 * machine-gun: each play restarts the pattern, so a rapid series collapses
 	 * into the last tune. */
 	if (saw_update) {
-		(void)zmk_buzzer_play_tune(ack->status == KEEB_STATUS_OK ? ZMK_BUZZER_TUNE_UPDATE_OK
-								: ZMK_BUZZER_TUNE_UPDATE_FAIL,
-							     NULL);
+		(void)zmk_buzzer_play_event(ack->status == KEEB_STATUS_OK
+						    ? ZMK_BUZZER_EVENT_UPDATE_OK
+						    : ZMK_BUZZER_EVENT_UPDATE_FAIL,
+						    NULL);
 	}
 #endif
 

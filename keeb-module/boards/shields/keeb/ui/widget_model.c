@@ -9,7 +9,7 @@
  * The presets are this file's other half: they are written in the same widget
  * language the host can send, so "the shipped look" and "a host-written look"
  * are the same kind of data and one draw pass serves both. Coordinates are in
- * the logical UI space (KBEEB_UI_W x KBEEB_UI_H), i.e. the orientation the user
+ * the logical UI space (KEEB_UI_W x KEEB_UI_H), i.e. the orientation the user
  * looks at, because keeb_ui.c composes there and rotates into the panel.
  */
 
@@ -26,17 +26,29 @@
 #include "panels.h"
 #include "widget_model.h"
 
+#if !KEEB_UI_CENTRAL
+#include "bongo.h"
+#endif
+
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
 /* Whether *this* build links the layer artwork. The peripheral has always had
- * it (CONFIG_KBEEB_UI_ART); on the central it is a Kconfig, because the
+ * it (CONFIG_KEEB_UI_ART); on the central it is a Kconfig, because the
  * generated stencils are tens of kilobytes and the central's panel is readouts,
  * not pictures. Whatever the answer, keeb_display_info reports it and
  * keeb_ui_validate_widget refuses a KEEB_WID_ART this image cannot draw. */
-#if KBEEB_UI_CENTRAL
-#define KBEEB_UI_ART_LINKED IS_ENABLED(CONFIG_KBEEB_UI_CENTRAL_ART)
+#if KEEB_UI_CENTRAL
+#define KEEB_UI_ART_LINKED IS_ENABLED(CONFIG_KEEB_UI_CENTRAL_ART)
 #else
-#define KBEEB_UI_ART_LINKED IS_ENABLED(CONFIG_KBEEB_UI_ART)
+#define KEEB_UI_ART_LINKED IS_ENABLED(CONFIG_KEEB_UI_ART)
+
+/* The central validates a host-written peer table against KEEB_UI_PEER_ROTATION
+ * and seeds it from KEEB_UI_PEER_PRESET. If this build disagrees, the app would
+ * be editing a panel that is not the one on the glass - refuse to build. */
+_Static_assert(KEEB_UI_PEER_ROTATION_DEG == KEEB_UI_ROTATION_DEG,
+	       "KEEB_UI_PEER_ROTATION must match this peripheral's KEEB_UI_ROTATION");
+_Static_assert(CONFIG_KEEB_UI_PERIPHERAL_PRESET == CONFIG_KEEB_UI_PEER_PRESET,
+	       "KEEB_UI_PERIPHERAL_PRESET must match KEEB_UI_PEER_PRESET");
 #endif
 
 /* --------------------------------------------------------------------------
@@ -96,12 +108,17 @@ LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 		.kind = KEEB_WID_ART, .source = KEEB_SRC_LAYER_ART, .x = (kx), .y = (ky),          \
 		.w = (kw), .h = (kh), .style = (kfit)                                              \
 	}
+#define W_BONGO(kx, ky, kw, kh)                                                                    \
+	{                                                                                          \
+		.kind = KEEB_WID_BONGO, .source = KEEB_SRC_NONE, .x = (kx), .y = (ky), .w = (kw),   \
+		.h = (kh), .style = 0                                                              \
+	}
 
 #define SLOT(n) (KEEB_SRC_TEXT_BASE + (n))
 
-#if KBEEB_UI_CENTRAL
+#if KEEB_UI_CENTRAL
 
-#if !KBEEB_UI_PORTRAIT
+#if !KEEB_UI_PORTRAIT
 
 /* Preset 0, central, landscape: the original "KEYBOARD SYSTEM" panel. */
 static const struct keeb_widget central_landscape[] = {
@@ -126,9 +143,9 @@ static const struct keeb_widget central_landscape[] = {
 	W_BOLT(145, 57),
 };
 
-#endif /* !KBEEB_UI_PORTRAIT */
+#endif /* !KEEB_UI_PORTRAIT */
 
-#if KBEEB_UI_PORTRAIT
+#if KEEB_UI_PORTRAIT
 
 /* Preset 0, central, portrait: the original vertical panel. */
 static const struct keeb_widget central_portrait[] = {
@@ -155,9 +172,9 @@ static const struct keeb_widget central_portrait[] = {
 	W_TEXT(4, 151, 60, 0, SLOT(3), 0, 1),
 };
 
-#endif /* KBEEB_UI_PORTRAIT */
+#endif /* KEEB_UI_PORTRAIT */
 
-#if !KBEEB_UI_PORTRAIT
+#if !KEEB_UI_PORTRAIT
 
 /* Preset 1, central: layer + connected device only. */
 static const struct keeb_widget central_minimal_landscape[] = {
@@ -170,9 +187,9 @@ static const struct keeb_widget central_minimal_landscape[] = {
 	W_TEXT(110, 50, 44, 0, KEEB_SRC_DEVICE_ID, 2, 2),
 };
 
-#endif /* !KBEEB_UI_PORTRAIT */
+#endif /* !KEEB_UI_PORTRAIT */
 
-#if KBEEB_UI_PORTRAIT
+#if KEEB_UI_PORTRAIT
 
 static const struct keeb_widget central_minimal_portrait[] = {
 	W_FRAME(0, 0, 68, 160, 4),
@@ -183,15 +200,25 @@ static const struct keeb_widget central_minimal_portrait[] = {
 	W_TEXT(4, 116, 60, 40, KEEB_SRC_DEVICE_ID, 2, 1),
 };
 
-#endif /* KBEEB_UI_PORTRAIT */
+#endif /* KEEB_UI_PORTRAIT */
 
-#else /* peripheral half */
+#endif /* KEEB_UI_CENTRAL */
 
-#if !KBEEB_UI_PORTRAIT
+/*
+ * The peer's tables are compiled on the central as well, not only on the half
+ * that draws them: CONFIG_KEEB_UI_PEER_PANEL makes the central validate a
+ * host-written table against the geometry the other half draws in, and seed its
+ * saved peer panel from the same preset.
+ */
+#if !KEEB_UI_CENTRAL || IS_ENABLED(CONFIG_KEEB_UI_PEER_PANEL)
+
+
+
+#if !KEEB_UI_PEER_PORTRAIT
 
 /* Preset 0, peripheral: the layer's artwork with a device strip beneath it. */
 static const struct keeb_widget peripheral_landscape[] = {
-#if KBEEB_UI_ART_LINKED
+#if KEEB_UI_PEER_ART_LINKED
 	W_ART(0, 0, 160, 68, KEEB_ART_CENTRE),
 #endif
 	W_FRAME(0, 0, 160, 68, 4),
@@ -201,12 +228,12 @@ static const struct keeb_widget peripheral_landscape[] = {
 	W_TEXT(100, 53, 54, 0, KEEB_SRC_DEVICE_ID, 0, 2),
 };
 
-#endif /* !KBEEB_UI_PORTRAIT */
+#endif /* landscape */
 
-#if KBEEB_UI_PORTRAIT
+#if KEEB_UI_PEER_PORTRAIT
 
 static const struct keeb_widget peripheral_portrait[] = {
-#if KBEEB_UI_ART_LINKED
+#if KEEB_UI_PEER_ART_LINKED
 	W_ART(0, 0, 68, 160, KEEB_ART_CENTRE),
 #endif
 	W_FRAME(0, 0, 68, 160, 4),
@@ -216,9 +243,46 @@ static const struct keeb_widget peripheral_portrait[] = {
 	W_TEXT(33, 145, 30, 0, KEEB_SRC_DEVICE_ID, 0, 2),
 };
 
-#endif /* KBEEB_UI_PORTRAIT */
+#endif /* portrait */
 
-#if !KBEEB_UI_PORTRAIT
+#if !KEEB_UI_PEER_PORTRAIT
+
+/* Preset 2, peripheral, landscape: the cat and the readouts it is paid by.
+ * This is what CONFIG_KEEB_UI_PERIPHERAL_PRESET picks by default, and it stays on
+ * the glass whatever layer the keymap is on. */
+static const struct keeb_widget peripheral_typing_landscape[] = {
+	W_FRAME(0, 0, 160, 68, 4),
+	W_BONGO(4, 4, 68, 40), /* the frames are 68x40 after the crop */
+	W_TEXT(78, 8, 78, 0, SLOT(0), 0, 0), /* "WPM" */
+	W_TEXT(78, 18, 78, 30, KEEB_SRC_WPM, 2, 0),
+	W_PIPS(78, 50, 6, 4, KEEB_PIPS_SMALL),
+	W_BAR(78, 58, 40, 5, KEEB_SRC_RSSI),
+	W_TEXT(124, 52, 32, 0, KEEB_SRC_DEVICE_ID, 0, 2),
+};
+
+#endif /* landscape */
+
+#if KEEB_UI_PEER_PORTRAIT
+
+/* Preset 2, peripheral, portrait: cat on top, WPM and the link readouts below. */
+static const struct keeb_widget peripheral_typing_portrait[] = {
+	W_FRAME(0, 0, 68, 160, 4),
+	W_BONGO(0, 8, 68, 40), /* the frames are 68x40 after the crop */
+	W_RULE(4, 54, 60),
+	W_TEXT(4, 58, 60, 0, SLOT(0), 0, 1), /* "WPM" */
+	W_TEXT(4, 70, 60, 30, KEEB_SRC_WPM, 2, 1),
+	W_RULE(4, 106, 60),
+	/* 6 pips of 7 px with a 3 px gap is 60 px wide: x must be <= 8 for
+	 * keeb_ui_validate_widget() to accept it, which is what makes this preset
+	 * a table the configurator can write back. */
+	W_PIPS(4, 112, 7, 5, KEEB_PIPS_LARGE),
+	W_BAR(10, 122, 48, 6, KEEB_SRC_RSSI),
+	W_TEXT(4, 136, 60, 0, KEEB_SRC_DEVICE_ID, 0, 1),
+};
+
+#endif /* portrait */
+
+#if !KEEB_UI_PEER_PORTRAIT
 
 /* Preset 1, peripheral: the connected device, nothing else. */
 static const struct keeb_widget peripheral_device_only_landscape[] = {
@@ -227,9 +291,9 @@ static const struct keeb_widget peripheral_device_only_landscape[] = {
 	W_TEXT(4, 24, 152, 36, KEEB_SRC_DEVICE_ID, 2, 1),
 };
 
-#endif /* !KBEEB_UI_PORTRAIT */
+#endif /* landscape */
 
-#if KBEEB_UI_PORTRAIT
+#if KEEB_UI_PEER_PORTRAIT
 
 static const struct keeb_widget peripheral_device_only_portrait[] = {
 	W_FRAME(0, 0, 68, 160, 4),
@@ -237,16 +301,22 @@ static const struct keeb_widget peripheral_device_only_portrait[] = {
 	W_TEXT(4, 60, 60, 44, KEEB_SRC_DEVICE_ID, 2, 1),
 };
 
-#endif /* KBEEB_UI_PORTRAIT */
+#endif /* portrait */
 
-#endif /* role */
+#endif /* peer tables */
 
 /* Only the tables for the orientation this build composes in are compiled:
  * an unused static table is a -Wunused-variable error under -Werror. */
-#if KBEEB_UI_PORTRAIT
+#if KEEB_UI_PORTRAIT
 #define PRESET(name) name##_portrait
 #else
 #define PRESET(name) name##_landscape
+#endif
+
+#if KEEB_UI_PEER_PORTRAIT
+#define PEER_PRESET(name) name##_portrait
+#else
+#define PEER_PRESET(name) name##_landscape
 #endif
 
 #define PRESET_INIT(pname, pid, plabel, t0, t1, t2, t3)                                           \
@@ -257,24 +327,45 @@ static const struct keeb_widget peripheral_device_only_portrait[] = {
 		.texts = {t0, t1, t2, t3},                                                           \
 	}
 
+/* Same, but in the orientation the other half composes in. */
+#define PEER_PRESET_INIT(pname, pid, plabel, t0, t1, t2, t3)                                      \
+	[pid] = {                                                                                    \
+		.name = plabel,                                                                      \
+		.widgets = PEER_PRESET(pname),                                                       \
+		.count = ARRAY_SIZE(PEER_PRESET(pname)),                                             \
+		.texts = {t0, t1, t2, t3},                                                           \
+	}
+
 static const struct keeb_ui_preset presets[] = {
-#if KBEEB_UI_CENTRAL
+#if KEEB_UI_CENTRAL
 	PRESET_INIT(central, 0, "STATUS", "KEYBOARD SYSTEM", "LEFT", "RIGHT", "SYS. READY_"),
 	PRESET_INIT(central_minimal, 1, "MINIMAL", "DEVICE", "", "", ""),
 #else
 	PRESET_INIT(peripheral, 0, "ART + DEVICE", "DEVICE", "", "", ""),
 	PRESET_INIT(peripheral_device_only, 1, "DEVICE", "", "", "", ""),
+	PRESET_INIT(peripheral_typing, 2, "TYPING", "WPM", "", "", ""),
 #endif
 };
+
+/* The other half's presets, in its own orientation. Only the central keeps a
+ * list; on the peripheral they are `presets` above. The ids match the
+ * peripheral's, which is what CONFIG_KEEB_UI_PEER_PRESET names. */
+#if KEEB_UI_CENTRAL && IS_ENABLED(CONFIG_KEEB_UI_PEER_PANEL)
+static const struct keeb_ui_preset peer_presets[] = {
+	PEER_PRESET_INIT(peripheral, 0, "ART + DEVICE", "DEVICE", "", "", ""),
+	PEER_PRESET_INIT(peripheral_device_only, 1, "DEVICE", "", "", "", ""),
+	PEER_PRESET_INIT(peripheral_typing, 2, "TYPING", "WPM", "", "", ""),
+};
+#endif
 
 /* --------------------------------------------------------------------------
  * Model state
  * -------------------------------------------------------------------------- */
 
-static struct keeb_widget widgets[KBEEB_UI_WIDGET_MAX];
+static struct keeb_widget widgets[KEEB_UI_WIDGET_MAX];
 static uint8_t widget_count;
-static char text_slots[KBEEB_UI_TEXT_SLOTS][KBEEB_UI_TEXT_MAX + 1];
-static int16_t value_slots[KBEEB_UI_VALUE_SLOTS];
+static char text_slots[KEEB_UI_TEXT_SLOTS][KEEB_UI_TEXT_MAX + 1];
+static int16_t value_slots[KEEB_UI_VALUE_SLOTS];
 static uint8_t preset_id;
 static bool blank_next;
 
@@ -293,7 +384,7 @@ const struct keeb_widget *keeb_ui_widgets(void) { return widgets; }
 uint8_t keeb_ui_preset_id(void) { return preset_id; }
 
 int keeb_ui_set_widgets(const struct keeb_widget *next, uint8_t count) {
-	if (count > KBEEB_UI_WIDGET_MAX) {
+	if (count > KEEB_UI_WIDGET_MAX) {
 		return -KEEB_ERR_NO_SPACE;
 	}
 
@@ -309,11 +400,11 @@ int keeb_ui_set_widgets(const struct keeb_widget *next, uint8_t count) {
 
 	k_mutex_lock(&model_lock, K_FOREVER);
 	memcpy(widgets, next, count * sizeof(*next));
-	for (uint8_t i = count; i < KBEEB_UI_WIDGET_MAX; i++) {
+	for (uint8_t i = count; i < KEEB_UI_WIDGET_MAX; i++) {
 		widgets[i].kind = KEEB_WID_NONE;
 	}
 	widget_count = count;
-	preset_id = KBEEB_PRESET_CUSTOM;
+	preset_id = KEEB_PRESET_CUSTOM;
 	k_mutex_unlock(&model_lock);
 
 	keeb_ui_request_draw();
@@ -328,7 +419,7 @@ int keeb_ui_apply_preset(uint8_t id) {
 		return -KEEB_ERR_OUT_OF_RANGE;
 	}
 
-	if (preset->count > KBEEB_UI_WIDGET_MAX) {
+	if (preset->count > KEEB_UI_WIDGET_MAX) {
 		return -KEEB_ERR_NO_SPACE;
 	}
 
@@ -338,8 +429,8 @@ int keeb_ui_apply_preset(uint8_t id) {
 	widget_count = preset->count;
 	preset_id = id;
 
-	for (uint8_t s = 0; s < KBEEB_UI_TEXT_SLOTS; s++) {
-		snprintf(text_slots[s], KBEEB_UI_TEXT_MAX + 1, "%s",
+	for (uint8_t s = 0; s < KEEB_UI_TEXT_SLOTS; s++) {
+		snprintf(text_slots[s], KEEB_UI_TEXT_MAX + 1, "%s",
 			 preset->texts[s] ? preset->texts[s] : "");
 	}
 
@@ -351,11 +442,11 @@ int keeb_ui_apply_preset(uint8_t id) {
 }
 
 int keeb_ui_set_text(uint8_t slot, const char *text, uint8_t len) {
-	if (slot >= KBEEB_UI_TEXT_SLOTS) {
+	if (slot >= KEEB_UI_TEXT_SLOTS) {
 		return -KEEB_ERR_OUT_OF_RANGE;
 	}
 
-	if (len > KBEEB_UI_TEXT_MAX) {
+	if (len > KEEB_UI_TEXT_MAX) {
 		return -KEEB_ERR_TOO_BIG;
 	}
 
@@ -370,7 +461,7 @@ int keeb_ui_set_text(uint8_t slot, const char *text, uint8_t len) {
 }
 
 int keeb_ui_get_text(uint8_t slot, char *out, uint8_t out_len) {
-	if (slot >= KBEEB_UI_TEXT_SLOTS) {
+	if (slot >= KEEB_UI_TEXT_SLOTS) {
 		return -KEEB_ERR_OUT_OF_RANGE;
 	}
 
@@ -382,7 +473,7 @@ int keeb_ui_get_text(uint8_t slot, char *out, uint8_t out_len) {
 }
 
 int keeb_ui_set_value(uint8_t slot, int16_t value) {
-	if (slot >= KBEEB_UI_VALUE_SLOTS) {
+	if (slot >= KEEB_UI_VALUE_SLOTS) {
 		return -KEEB_ERR_OUT_OF_RANGE;
 	}
 
@@ -396,7 +487,7 @@ int keeb_ui_set_value(uint8_t slot, int16_t value) {
 }
 
 int16_t keeb_ui_get_value(uint8_t slot) {
-	if (slot >= KBEEB_UI_VALUE_SLOTS) {
+	if (slot >= KEEB_UI_VALUE_SLOTS) {
 		return 0;
 	}
 
@@ -412,7 +503,7 @@ void keeb_ui_blank_once(void) {
 	keeb_ui_request_draw();
 }
 
-bool keeb_ui_art_available(void) { return KBEEB_UI_ART_LINKED; }
+bool keeb_ui_art_available(void) { return KEEB_UI_ART_LINKED; }
 
 /* --------------------------------------------------------------------------
  * Validation
@@ -436,14 +527,17 @@ static bool source_known(uint8_t source) {
 	case KEEB_SRC_CHARGING:
 	case KEEB_SRC_DEVICE_ID:
 	case KEEB_SRC_DEVICE_NAME:
+	case KEEB_SRC_WPM:
+	case KEEB_SRC_PROFILE_PIPS:
+	case KEEB_SRC_RSSI:
 		return true;
 	default:
-		if (source >= KEEB_SRC_TEXT_BASE && source < KEEB_SRC_TEXT_BASE + KBEEB_UI_TEXT_SLOTS) {
+		if (source >= KEEB_SRC_TEXT_BASE && source < KEEB_SRC_TEXT_BASE + KEEB_UI_TEXT_SLOTS) {
 			return true;
 		}
 
 		if (source >= KEEB_SRC_VALUE_BASE &&
-		    source < KEEB_SRC_VALUE_BASE + KBEEB_UI_VALUE_SLOTS) {
+		    source < KEEB_SRC_VALUE_BASE + KEEB_UI_VALUE_SLOTS) {
 			return true;
 		}
 
@@ -458,14 +552,16 @@ static bool kind_source_ok(const struct keeb_widget *w) {
 	case KEEB_WID_TEXT:
 		return w->source != KEEB_SRC_NONE && w->source != KEEB_SRC_LAYER_PIPS &&
 		       w->source != KEEB_SRC_LAYER_ART && w->source != KEEB_SRC_BATT_LEFT &&
-		       w->source != KEEB_SRC_BATT_RIGHT;
+		       w->source != KEEB_SRC_BATT_RIGHT && w->source != KEEB_SRC_PROFILE_PIPS &&
+		       w->source != KEEB_SRC_RSSI;
 	case KEEB_WID_BAR:
 	case KEEB_WID_BATTERY:
 		return w->source == KEEB_SRC_BATT_LEFT || w->source == KEEB_SRC_BATT_RIGHT ||
+		       w->source == KEEB_SRC_RSSI ||
 		       (w->source >= KEEB_SRC_VALUE_BASE &&
-			w->source < KEEB_SRC_VALUE_BASE + KBEEB_UI_VALUE_SLOTS);
+			w->source < KEEB_SRC_VALUE_BASE + KEEB_UI_VALUE_SLOTS);
 	case KEEB_WID_PIPS:
-		return w->source == KEEB_SRC_LAYER_PIPS;
+		return w->source == KEEB_SRC_LAYER_PIPS || w->source == KEEB_SRC_PROFILE_PIPS;
 	case KEEB_WID_ART:
 		return w->source == KEEB_SRC_LAYER_ART;
 	default:
@@ -473,14 +569,23 @@ static bool kind_source_ok(const struct keeb_widget *w) {
 	}
 }
 
-int keeb_ui_validate_widget(const struct keeb_widget *w) {
+/** The panel's own rules, with the geometry and the role passed in so the same
+ * function can check a table for the other half (see keeb_ui_peer_validate_widget):
+ * a KEEB_WID_BONGO is drawable on a peripheral and refused on a central, and the
+ * logical space the table is measured against is the one it will be drawn in. */
+static int validate_widget_for(const struct keeb_widget *w, uint16_t w_px, uint16_t h_px,
+			       bool central, bool art_linked) {
 	if (w->kind >= KEEB_WID_COUNT) {
 		return -KEEB_ERR_BAD_WIDGET;
 	}
 
-	/* Not a mistake in the payload - this image has no artwork to draw. */
-	if (!KBEEB_UI_ART_LINKED &&
-	    (w->kind == KEEB_WID_ART || w->source == KEEB_SRC_LAYER_ART)) {
+	/* Not a mistake in the payload - that image has no artwork to draw. */
+	if (!art_linked && (w->kind == KEEB_WID_ART || w->source == KEEB_SRC_LAYER_ART)) {
+		return -KEEB_ERR_BAD_WIDGET;
+	}
+
+	/* The cat's frames are linked on the peripheral only. */
+	if (central && w->kind == KEEB_WID_BONGO) {
 		return -KEEB_ERR_BAD_WIDGET;
 	}
 
@@ -490,25 +595,42 @@ int keeb_ui_validate_widget(const struct keeb_widget *w) {
 
 	/* Coordinates live in the logical space; w == 0 on a text widget means
 	 * "natural width", which the primitives already handle. */
-	if (w->x >= KBEEB_UI_W || w->y >= KBEEB_UI_H) {
+	if (w->x >= w_px || w->y >= h_px) {
 		return -KEEB_ERR_OUT_OF_RANGE;
 	}
 
-	if ((uint16_t)w->x + w->w > KBEEB_UI_W || (uint16_t)w->y + w->h > KBEEB_UI_H) {
+	if ((uint16_t)w->x + w->w > w_px || (uint16_t)w->y + w->h > h_px) {
 		return -KEEB_ERR_OUT_OF_RANGE;
 	}
 
 	if (w->kind == KEEB_WID_PIPS) {
 		uint16_t gap = (w->style == KEEB_PIPS_LARGE) ? 3 : 2;
-		uint16_t row_w = KBEEB_LAYER_COUNT * (w->w + gap);
+		uint16_t row_w = KEEB_LAYER_COUNT * (w->w + gap);
 
-		if ((uint16_t)w->x + row_w > KBEEB_UI_W) {
+		if ((uint16_t)w->x + row_w > w_px) {
 			return -KEEB_ERR_OUT_OF_RANGE;
 		}
 	}
 
 	return 0;
 }
+
+int keeb_ui_validate_widget(const struct keeb_widget *w) {
+	return validate_widget_for(w, KEEB_UI_W, KEEB_UI_H, KEEB_UI_CENTRAL, KEEB_UI_ART_LINKED);
+}
+
+#if KEEB_UI_CENTRAL && IS_ENABLED(CONFIG_KEEB_UI_PEER_PANEL)
+uint8_t keeb_ui_peer_preset_count(void) { return ARRAY_SIZE(peer_presets); }
+
+const struct keeb_ui_preset *keeb_ui_peer_preset(uint8_t id) {
+	return (id < ARRAY_SIZE(peer_presets)) ? &peer_presets[id] : NULL;
+}
+
+int keeb_ui_peer_validate_widget(const struct keeb_widget *w) {
+	return validate_widget_for(w, KEEB_UI_PEER_W, KEEB_UI_PEER_H, false,
+				   KEEB_UI_PEER_ART_LINKED);
+}
+#endif
 
 /* --------------------------------------------------------------------------
  * Value resolution
@@ -517,11 +639,11 @@ int keeb_ui_validate_widget(const struct keeb_widget *w) {
 static const lv_font_t *font_for(uint8_t style) {
 	switch (KEEB_STYLE_FONT(style)) {
 	case 1:
-		return KBEEB_FONT_BODY;
+		return KEEB_FONT_BODY;
 	case 2:
-		return KBEEB_FONT_DIGIT;
+		return KEEB_FONT_DIGIT;
 	default:
-		return KBEEB_FONT_SMALL;
+		return KEEB_FONT_SMALL;
 	}
 }
 
@@ -560,15 +682,17 @@ static const char *text_for(const struct keeb_ui_state *st, uint8_t source) {
 		return st->device_str;
 	case KEEB_SRC_DEVICE_NAME:
 		return st->device_name[0] ? st->device_name : "--";
+	case KEEB_SRC_WPM:
+		return st->wpm_str;
 	default:
 		break;
 	}
 
-	if (source >= KEEB_SRC_TEXT_BASE && source < KEEB_SRC_TEXT_BASE + KBEEB_UI_TEXT_SLOTS) {
+	if (source >= KEEB_SRC_TEXT_BASE && source < KEEB_SRC_TEXT_BASE + KEEB_UI_TEXT_SLOTS) {
 		return st->text[source - KEEB_SRC_TEXT_BASE];
 	}
 
-	if (source >= KEEB_SRC_VALUE_BASE && source < KEEB_SRC_VALUE_BASE + KBEEB_UI_VALUE_SLOTS) {
+	if (source >= KEEB_SRC_VALUE_BASE && source < KEEB_SRC_VALUE_BASE + KEEB_UI_VALUE_SLOTS) {
 		return st->value_str[source - KEEB_SRC_VALUE_BASE];
 	}
 
@@ -583,11 +707,14 @@ static bool percent_for(const struct keeb_ui_state *st, uint8_t source, uint8_t 
 	case KEEB_SRC_BATT_RIGHT:
 		*percent = st->right_level;
 		return st->right_valid;
+	case KEEB_SRC_RSSI:
+		*percent = st->rssi_pct;
+		return st->rssi_pct != KEEB_RSSI_INVALID;
 	default:
 		break;
 	}
 
-	if (source >= KEEB_SRC_VALUE_BASE && source < KEEB_SRC_VALUE_BASE + KBEEB_UI_VALUE_SLOTS) {
+	if (source >= KEEB_SRC_VALUE_BASE && source < KEEB_SRC_VALUE_BASE + KEEB_UI_VALUE_SLOTS) {
 		int16_t v = st->value[source - KEEB_SRC_VALUE_BASE];
 
 		/* A bar is a percentage: clamp instead of drawing a bar that
@@ -616,7 +743,7 @@ static void draw_widget(struct keeb_ctx *ctx, const struct keeb_widget *w,
 
 	case KEEB_WID_RECT:
 		keeb_fill(ctx, w->x, w->y, w->w, w->h,
-			  (w->style & KEEB_RECT_PAPER) ? KBEEB_PAPER : KBEEB_INK);
+			  (w->style & KEEB_RECT_PAPER) ? KEEB_PAPER : KEEB_INK);
 		break;
 
 	case KEEB_WID_RULE:
@@ -642,7 +769,7 @@ static void draw_widget(struct keeb_ctx *ctx, const struct keeb_widget *w,
 		 * body font cannot show at any width. */
 		if (w->source == KEEB_SRC_LAYER_NAME &&
 		    lv_text_get_width(text, strlen(text), font, 0) > w->w) {
-			font = KBEEB_FONT_SMALL;
+			font = KEEB_FONT_SMALL;
 		}
 
 		keeb_text(ctx, font, w->x, w->y, w->w, align, text);
@@ -664,7 +791,15 @@ static void draw_widget(struct keeb_ctx *ctx, const struct keeb_widget *w,
 	case KEEB_WID_PIPS: {
 		uint16_t gap = (w->style == KEEB_PIPS_LARGE) ? 3 : 2;
 
-		keeb_pips(ctx, w->x, w->y, KBEEB_LAYER_COUNT, st->layer, w->w, w->h, gap);
+		if (w->source == KEEB_SRC_PROFILE_PIPS) {
+			/* A profile row is at most as wide as a layer row, so it
+			 * inherits the same geometry check. */
+			keeb_pips(ctx, w->x, w->y, MIN(st->profile_count, KEEB_LAYER_COUNT),
+				  (int8_t)st->profile_active, w->w, w->h, gap);
+			break;
+		}
+
+		keeb_pips(ctx, w->x, w->y, KEEB_LAYER_COUNT, st->layer, w->w, w->h, gap);
 		break;
 	}
 
@@ -674,8 +809,37 @@ static void draw_widget(struct keeb_ctx *ctx, const struct keeb_widget *w,
 		}
 		break;
 
+	case KEEB_WID_BONGO: {
+#if KEEB_UI_CENTRAL
+		break; /* validated out: no frames are linked on this half */
+#else
+		const lv_image_dsc_t *art = keeb_bongo_frame(st->wpm, k_uptime_get());
+
+		if (!art || art->header.w == 0 || art->header.h == 0) {
+			break;
+		}
+
+		int16_t x = (int16_t)(w->x + (w->w - (int16_t)art->header.w) / 2);
+		int16_t y = (int16_t)(w->y + (w->h - (int16_t)art->header.h) / 2);
+		lv_area_t coords = {x, y, x + (int16_t)art->header.w - 1,
+				    y + (int16_t)art->header.h - 1};
+		lv_draw_image_dsc_t dsc;
+
+		/* A8 stencil blended in the panel's ink colour, exactly like the
+		 * layer artwork: CONFIG_ZMK_DISPLAY_INVERT flips the cat with the
+		 * rest of the panel (see tools/gen_bongo.py). */
+		lv_draw_image_dsc_init(&dsc);
+		dsc.src = art;
+		dsc.recolor = KEEB_INK;
+		dsc.recolor_opa = LV_OPA_COVER;
+
+		lv_draw_image(&ctx->layer, &dsc, &coords);
+		break;
+#endif
+	}
+
 	case KEEB_WID_ART: {
-#if KBEEB_UI_ART_LINKED
+#if KEEB_UI_ART_LINKED
 		const lv_image_dsc_t *art = keeb_layer_art(st->art_layer);
 
 		if (!art || art->header.w == 0 || art->header.h == 0) {
@@ -696,7 +860,7 @@ static void draw_widget(struct keeb_ctx *ctx, const struct keeb_widget *w,
 
 		lv_draw_image_dsc_init(&dsc);
 		dsc.src = art;
-		dsc.recolor = KBEEB_INK;
+		dsc.recolor = KEEB_INK;
 		dsc.recolor_opa = LV_OPA_COVER;
 
 		lv_draw_image(&ctx->layer, &dsc, &coords);
@@ -714,7 +878,7 @@ static void draw_widget(struct keeb_ctx *ctx, const struct keeb_widget *w,
 static void state_format(struct keeb_ui_state *st) {
 	snprintf(st->layer_str, sizeof(st->layer_str), "%02u", st->layer + 1);
 	snprintf(st->pos_str, sizeof(st->pos_str), "LAYER %u / %u", st->layer + 1,
-		 KBEEB_LAYER_COUNT);
+		 KEEB_LAYER_COUNT);
 
 	if (st->left_valid) {
 		snprintf(st->left_pct_str, sizeof(st->left_pct_str), "%u%%", st->left_level);
@@ -745,7 +909,9 @@ static void state_format(struct keeb_ui_state *st) {
 		snprintf(st->device_str, sizeof(st->device_str), "%u", st->device_id);
 	}
 
-	for (uint8_t i = 0; i < KBEEB_UI_VALUE_SLOTS; i++) {
+	snprintf(st->wpm_str, sizeof(st->wpm_str), "%u", st->wpm);
+
+	for (uint8_t i = 0; i < KEEB_UI_VALUE_SLOTS; i++) {
 		snprintf(st->value_str[i], sizeof(st->value_str[i]), "%d", st->value[i]);
 	}
 }
@@ -757,7 +923,7 @@ void keeb_ui_render(struct keeb_ctx *ctx, struct keeb_ui_state *st) {
 
 	memcpy(st->text, text_slots, sizeof(st->text));
 
-	for (uint8_t i = 0; i < KBEEB_UI_VALUE_SLOTS; i++) {
+	for (uint8_t i = 0; i < KEEB_UI_VALUE_SLOTS; i++) {
 		st->value[i] = value_slots[i];
 	}
 
@@ -784,11 +950,11 @@ void keeb_ui_render(struct keeb_ctx *ctx, struct keeb_ui_state *st) {
 static int keeb_ui_model_init(void) {
 	k_mutex_init(&model_lock);
 
-#if KBEEB_UI_CENTRAL
+#if KEEB_UI_CENTRAL
 	keeb_ui_apply_preset(0);
 #else
 	/* A preset number that no longer exists must still leave a usable panel. */
-	if (keeb_ui_apply_preset(CONFIG_KBEEB_UI_PERIPHERAL_PRESET)) {
+	if (keeb_ui_apply_preset(CONFIG_KEEB_UI_PERIPHERAL_PRESET)) {
 		keeb_ui_apply_preset(0);
 	}
 #endif

@@ -57,6 +57,12 @@ export const KEEB_INFO_F_PERSISTENT = 4
 /** DISPLAY namespace is compiled in */
 export const KEEB_INFO_F_DISPLAY = 8
 
+/** SETTINGS namespace is compiled in */
+export const KEEB_INFO_F_SETTINGS = 16
+
+/** buzzer tunes are editable at runtime */
+export const KEEB_INFO_F_SOUND = 32
+
 export const KEEB_NS_SYS = 0
 
 export const KEEB_NS_KEYMAP = 1
@@ -140,6 +146,50 @@ export const KEEB_T_DISPLAY_BLANK = 8204
 
 export const KEEB_T_PRESET_NAME = 8205
 
+export const KEEB_T_PEER_DISPLAY_INFO = 8206
+
+export const KEEB_T_PEER_DISPLAY_GET = 8207
+
+export const KEEB_T_PEER_DISPLAY = 8208
+
+export const KEEB_T_PEER_DISPLAY_SET = 8209
+
+export const KEEB_T_PEER_TEXT_SET = 8210
+
+export const KEEB_T_PEER_DISPLAY_SAVE = 8211
+
+export const KEEB_T_PEER_DISPLAY_DISCARD = 8212
+
+export const KEEB_T_PEER_DISPLAY_RESET = 8213
+
+export const KEEB_T_PEER_DISPLAY_BLANK = 8214
+
+export const KEEB_T_SETTINGS_GET = 12289
+
+export const KEEB_T_SETTINGS = 12290
+
+export const KEEB_T_SETTINGS_SET = 12291
+
+export const KEEB_T_SETTINGS_SAVE = 12292
+
+export const KEEB_T_SETTINGS_DISCARD = 12293
+
+export const KEEB_T_SETTINGS_RESET = 12294
+
+export const KEEB_T_TUNE_GET = 12295
+
+export const KEEB_T_TUNE = 12296
+
+export const KEEB_T_TUNE_SET = 12297
+
+export const KEEB_T_SOUND_MAP_GET = 12298
+
+export const KEEB_T_SOUND_MAP_SET = 12299
+
+export const KEEB_T_TUNE_PLAY = 12300
+
+export const KEEB_T_SOUND_MAP = 12301
+
 export const KEEB_ERR_NONE = 0
 
 export const KEEB_ERR_BAD_MAGIC = 1
@@ -214,6 +264,15 @@ export const KEEB_EV_DISPLAY_SAVED = 8
 /** payload: uint8_t pos, uint8_t pressed, uint8_t layer */
 export const KEEB_EV_KEY = 9
 
+/** payload: uint16_t flags — which fields changed */
+export const KEEB_EV_SETTINGS_CHANGED = 10
+
+/** payload: uint8_t count, uint8_t flags */
+export const KEEB_EV_PEER_DISPLAY_SET = 11
+
+/** payload: none */
+export const KEEB_EV_PEER_DISPLAY_SAVED = 12
+
 /** KEEB_WID_RECT: fill with paper instead of ink */
 export const KEEB_RECT_PAPER = 1
 
@@ -232,20 +291,79 @@ export const KEEB_ART_CENTRE = 0
 /** align to the bottom edge of the box */
 export const KEEB_ART_BOTTOM = 1
 
+export const KEEB_RSSI_INVALID = 255
+
+export const KEEB_PROFILE_NONE = 255
+
 export const KEEB_DEV_NONE = 0
 
 export const KEEB_DEV_USB = 128
 
 export const KEEB_DISPLAY_INFO_F_ART = 1
 
+export const KEEB_DISPLAY_INFO_F_PEER = 2
+
 /** not yet saved to settings */
 export const KEEB_DISPLAY_F_DIRTY = 1
 
-/** read-only table (peripheral half) */
+/** reserved: the peer panel used to be fixed */
 export const KEEB_DISPLAY_F_FIXED = 2
 
 /** the behavior driver exists in this build */
 export const KEEB_TOKEN_F_READY = 1
+
+export const KEEB_SETTINGS_F_IDLE_TIMEOUT = 1
+
+export const KEEB_SETTINGS_F_SLEEP_TIMEOUT = 2
+
+export const KEEB_SETTINGS_F_DEBOUNCE_PRESS = 4
+
+export const KEEB_SETTINGS_F_DEBOUNCE_RELEASE = 8
+
+export const KEEB_SETTINGS_F_TAPPING_TERM = 16
+
+export const KEEB_SETTINGS_F_QUICK_TAP = 32
+
+export const KEEB_SETTINGS_F_PRIOR_IDLE = 64
+
+export const KEEB_SETTINGS_F_HOLD_TAP_FLAVOR = 128
+
+export const KEEB_SETTINGS_F_SLEEP_ALLOWED = 256
+
+export const KEEB_SETTINGS_F_BLANK_ON_IDLE = 512
+
+export const KEEB_SETTINGS_F_LED_BRIGHTNESS = 1024
+
+export const KEEB_SETTINGS_F_LED_COLOR_RED = 2048
+
+export const KEEB_SETTINGS_F_LED_COLOR_GREEN = 4096
+
+export const KEEB_SETTINGS_F_LED_COLOR_BLUE = 8192
+
+export const KEEB_SETTINGS_F_LED_LAYERS = 16384
+
+export const KEEB_SETTINGS_F_ALL = 32767
+
+/** ZMK_SLEEP, off = never deep sleep */
+export const KEEB_SETTINGS_B_SLEEP_ALLOWED = 1
+
+/** ZMK_DISPLAY_BLANK_ON_IDLE */
+export const KEEB_SETTINGS_B_BLANK_ON_IDLE = 2
+
+export const KEEB_SETTINGS_B_ALL = 3
+
+export const KEEB_SETTINGS_FLAVOR_AUTO = 255
+
+export const KEEB_SETTINGS_LED_LAYER_MAX = 8
+
+/** enum zmk_buzzer_tune, random first */
+export const KEEB_SOUND_TUNE_COUNT = 7
+
+/** ZMK_BUZZER_STEPS_MAX */
+export const KEEB_SOUND_STEPS_MAX = 8
+
+/** enum keeb_sound_event */
+export const KEEB_SOUND_EVENT_COUNT = 5
 
 export const KEEB_CRC32_START = 4294967295
 
@@ -284,7 +402,9 @@ export const KEEB_WID_BOLT = 8
 
 export const KEEB_WID_ART = 9
 
-export const KEEB_WID_COUNT = 10
+export const KEEB_WID_BONGO = 10
+
+export const KEEB_WID_COUNT = 11
 
 export const KEEB_SRC_NONE = 0
 
@@ -318,9 +438,25 @@ export const KEEB_SRC_DEVICE_ID = 14
 
 export const KEEB_SRC_DEVICE_NAME = 15
 
+export const KEEB_SRC_WPM = 16
+
+export const KEEB_SRC_PROFILE_PIPS = 17
+
+export const KEEB_SRC_RSSI = 18
+
 export const KEEB_SRC_TEXT_BASE = 0x20
 
 export const KEEB_SRC_VALUE_BASE = 0x40
+
+export const KEEB_SND_LAYER_ON = 0
+
+export const KEEB_SND_LAYER_OFF = 1
+
+export const KEEB_SND_UPDATE_OK = 2
+
+export const KEEB_SND_UPDATE_FAIL = 3
+
+export const KEEB_SND_WAKE = 4
 
 /* Wire struct layouts: sizes the headers assert, and the offset of every
  * field, so a decoder never hardcodes where a field sits. */
@@ -602,5 +738,70 @@ export const KEEB_PARAM_VALUE_OFFSETS: Record<string, number> = {
   "b": 8,
   "name_len": 12,
   "set": 13
+}
+
+/** sizeof(struct keeb_tune_step) — asserted in the header */
+export const KEEB_TUNE_STEP_SIZE = 6
+
+/** struct keeb_tune_step — the packed field widths in order, and where each field sits. */
+export const KEEB_TUNE_STEP_FIELDS: number[] = [2, 2, 2]
+export const KEEB_TUNE_STEP_OFFSETS: Record<string, number> = {
+  "pitch_pct": 0,
+  "on_ms": 2,
+  "gap_ms": 4
+}
+
+/** sizeof(struct keeb_tune_hdr) — asserted in the header */
+export const KEEB_TUNE_HDR_SIZE = 4
+
+/** struct keeb_tune_hdr — the packed field widths in order, and where each field sits. */
+export const KEEB_TUNE_HDR_FIELDS: number[] = [1, 1, 2]
+export const KEEB_TUNE_HDR_OFFSETS: Record<string, number> = {
+  "tune": 0,
+  "count": 1,
+  "rsvd": 2
+}
+
+/** sizeof(struct keeb_sound_map) — asserted in the header */
+export const KEEB_SOUND_MAP_SIZE = 2
+
+/** struct keeb_sound_map — the packed field widths in order, and where each field sits. */
+export const KEEB_SOUND_MAP_FIELDS: number[] = [1, 1]
+export const KEEB_SOUND_MAP_OFFSETS: Record<string, number> = {
+  "event": 0,
+  "tune": 1
+}
+
+/** sizeof(struct keeb_sound_play) — asserted in the header */
+export const KEEB_SOUND_PLAY_SIZE = 2
+
+/** struct keeb_sound_play — the packed field widths in order, and where each field sits. */
+export const KEEB_SOUND_PLAY_FIELDS: number[] = [1, 1]
+export const KEEB_SOUND_PLAY_OFFSETS: Record<string, number> = {
+  "tune": 0,
+  "rsvd": 1
+}
+
+/** sizeof(struct keeb_settings) — asserted in the header */
+export const KEEB_SETTINGS_SIZE = 80
+
+/** struct keeb_settings — the packed field widths in order, and where each field sits. */
+export const KEEB_SETTINGS_FIELDS: number[] = [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 2, 1, 1]
+export const KEEB_SETTINGS_OFFSETS: Record<string, number> = {
+  "idle_timeout_ms": 0,
+  "sleep_timeout_ms": 4,
+  "debounce_press_ms": 8,
+  "debounce_release_ms": 12,
+  "tapping_term_ms": 16,
+  "quick_tap_ms": 20,
+  "prior_idle_ms": 24,
+  "led_brightness_percent": 28,
+  "led_color_red": 32,
+  "led_color_green": 36,
+  "led_color_blue": 40,
+  "led_layer_colors": 44,
+  "flags": 76,
+  "booleans": 78,
+  "hold_tap_flavor": 79
 }
 

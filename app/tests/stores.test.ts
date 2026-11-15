@@ -120,6 +120,28 @@ test('&trans inherits from the lower slot, &none does not', async () => {
   assert.equal(disabled.binding.token, NONE_TOKEN)
 })
 
+test("layerDiff reads a layer's redefinitions against the base layer", async () => {
+  const { keymap } = await loaded()
+
+  const pos = 24
+  const base = keymap.resolve(0, pos)!.binding
+
+  keymap.setBinding(1, pos, { token: TRANSPARENT_TOKEN, param1: 0, param2: 0 })
+  await keymap.commitLayer(1)
+  assert.equal(keymap.layerDiff(1, pos), 'neutral', 'transparent inherits: no redefinition here')
+
+  keymap.setBinding(1, pos, { token: base.token, param1: base.param1, param2: base.param2 })
+  await keymap.commitLayer(1)
+  assert.equal(keymap.layerDiff(1, pos), 'same', 're-asserting the base binding is not a change')
+
+  const overrideToken = base.token === NONE_TOKEN ? kp : NONE_TOKEN
+  keymap.setBinding(1, pos, { token: overrideToken, param1: 0, param2: 0 })
+  await keymap.commitLayer(1)
+  assert.equal(keymap.layerDiff(1, pos), 'override', 'a binding that differs from base is a redefinition')
+
+  assert.equal(keymap.layerDiff(0, pos), 'neutral', 'the base layer has nothing to compare')
+})
+
 test('a layer-state notification from the keyboard updates the store', async () => {
   const { device, keymap } = await loaded()
 
