@@ -33,12 +33,11 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
-      - name: Install, test, render smoke test
+      - name: Install, then typecheck + tests + render smoke test
         working-directory: app
         run: |
           npm ci
-          npm run test
-          npm run smoke
+          npm run check
 
       - name: Install SSH key
         env:

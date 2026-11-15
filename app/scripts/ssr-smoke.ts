@@ -124,11 +124,9 @@ function navLabels(): string[] {
   return [...nav.matchAll(/>\s*([A-Za-z][\w .·-]*?)\s*</g)].map((m) => m[1])
 }
 
-/* The palette under the board, sliced for the same reason as the sidebar. */
-const palette = html.slice(
-  html.indexOf('class="palette"'),
-  html.indexOf('</section>', html.indexOf('class="palette"')),
-)
+/* The dock under the board, sliced for the same reason as the sidebar. */
+const dockStart = html.indexOf('class="dock"')
+const dock = dockStart < 0 ? '' : html.slice(dockStart, html.indexOf('</section>', dockStart))
 
 const panel = await renderToString(createApp(PanelEditor).use(pinia))
 
@@ -155,40 +153,49 @@ const checks: Array<[string, boolean]> = [
    * to its outer corner, so position 11 lands last, not first. A view that
    * sorted each half by column number would flip the whole right hand. */
   ['caps render in matrix-transform map order', capsDrawnInMapOrder(html)],
-  /* `tab[ "]` and not `tab`: the wrapper around the tabs is class="tabs", and a
-   prefix match would count it as a seventh tab. */
-  ['6 layer tabs', (html.match(/class="tab[ "]/g) ?? []).length === 6],
+  /* Layers are a rail beside the board now, one slot button per layer, with the
+   * rename and the move controls hanging off the slot being edited. */
+  ['6 layer slots in the rail', (html.match(/class="rail-btn"/g) ?? []).length === 6],
   /* The arrangement is a preset, and the case is drawn as an outline around both
-   * halves. The default preset is the board itself, so it must be the one the
-   * page draws and the one the select marks. */
+   * halves. The default preset is the board itself, so it is the one the page
+   * draws. */
   ['case outline drawn', html.includes('class="case"') && html.includes('data-layout="cosmotyl"')],
-  ['layout presets selectable', html.includes('value="cosmotyl"') && html.includes('value="corne"')],
-  ['log panel reachable from the footer', html.includes('term-btn')],
-  /* The sidebar carries quick binding actions (trans, none, unstage).  The
-   * actual layer ops moved to the palette under the board. */
-  ['sidebar carries the binding editor', aside.includes('class="bind') && aside.includes('&amp;trans') && aside.includes('&amp;none')],
-  /* What a person rebinds every session is on the surface; what they rebind once
-   * in a build is behind a group that starts closed. The closed groups are not in
-   * the markup at all, so this is a real assertion about the default state and
-   * not about styling. */
+  /* The log toggle moved from a footer button into the top nav, next to Help. */
+  ['log panel reachable from the nav', html.includes('log-toggle')],
+  /* The right column is an inspector of the selected cap: tap, hold, layer,
+   * position, and nothing that writes. The writes are in the dock. */
   [
-    'everyday bindings are on the surface',
-    ['&amp;trans', '&amp;none', 'Unstage'].every((s) => aside.includes(s)),
+    'the sidebar inspects, it does not write',
+    aside.includes('class="insp"')
+      && ['tap', 'hold', 'layer', 'position'].every((row) => aside.includes(`>${row}<`))
+      && !aside.includes('<input')
+      && !aside.includes('<button'),
   ],
-  /* The multi-argument picker is a group in this column, the same kind of group
-   * the state and the session are: no button opens it, and nothing is fixed over
-   * the page. */
+  /* Apply is always on the bar; revert / save / discard sit behind the ⋯ next to
+   * it. Both are drawn before anything is clicked. */
   [
-    'the advanced picker lives in the palette, not the sidebar',
-    palette.includes('layers') && palette.includes('dual-function') && !aside.includes('advanced binding') && !html.includes('class="overlay"'),
+    'the dock carries the write actions',
+    dock.includes('go-apply') && dock.includes('revert · save · discard'),
   ],
+  /* The picker is the dock itself: a search, then a category step, no group that
+   * has to be opened first and nothing fixed over the page. */
   [
-    'occasional bindings are in the palette, not the sidebar',
+    'the picker is the dock, not a sidebar group or an overlay',
+    dock.includes('class="cats"') && !aside.includes('class="cat"') && !html.includes('class="overlay"'),
+  ],
+  /* Layer and behavior tokens are picked in the dock, so they never appear in
+   * the inspector column either. */
+  [
+    'behavior tokens stay out of the inspector',
     ['&amp;mo', '&amp;to', '&amp;tog', '&amp;sl', '&amp;lt'].every((s) => !aside.includes(s)),
   ],
-  /* Layer ops are in the palette with a stepped flow: choose category, then op,
-   * then layer (and keycode for lt).  No hidden groups in the sidebar. */
-  ['palette has keys and behaviors tabs', palette.includes('Keys') && palette.includes('Behaviors')],
+  /* Categories on the bar, not tabs: four named on the surface, the rest named
+   * inside More so the whole token space is visible before anything is opened. */
+  [
+    'the dock names every category',
+    ['Letters', 'Symbols', 'Modifiers', 'Navigation'].every((c) => dock.includes(`>${c}<`))
+      && dock.includes('Function, Media, Layers, Dual, System, Mouse'),
+  ],
   /* The board is the page: the things you do to it are views of it, not rooms.
    * A tester is a second view of the same board; the panels and the layer list
    * are edited where they are drawn. */
@@ -207,12 +214,11 @@ const checks: Array<[string, boolean]> = [
      * looks like. */
     && html.includes('aria-label="screen 1: 18/24"')
     && !html.includes('plabel')],
-  /* The palette under the board: the search sits on the surface rather than
-   * behind a group that has to be opened first, and the category step — not an
-   * empty list waiting for typing — is what is drawn before anything is typed. */
+  /* The search sits on the bar rather than behind a group that has to be opened
+   * first, and the category step is what is drawn before anything is typed. */
   [
-    'the keycode palette is reachable without typing',
-    palette.includes('type="search"') && palette.includes('letters · numbers') && !palette.includes('class="disc"'),
+    'the dock is searchable without typing',
+    dock.includes('type="search"') && dock.includes('search keys…') && !dock.includes('class="disc"'),
   ],
   ['layer names', ['HOME', 'NAV', 'FUN', 'MOUSE', 'MEDIA', 'GAME'].every((n) => html.includes(n))],
   ['the edited keycap', html.includes('A')],
