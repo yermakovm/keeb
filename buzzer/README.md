@@ -207,11 +207,22 @@ Why these shapes:
 - A tune is at most **3 steps** with gaps ≤ 80 ms: on a 3.3 V piezo, long gaps
   read as a device glitch rather than as rhythm.
 
-Adding one: append a `tune_xxx[]` table and a `tunes[]` entry in `buzzer/src/buzzer.c`,
-the matching name in `zmk_buzzer_tune_by_name()`, the enum in
-`buzzer/include/zmk/buzzer.h`, and the name in the `enum` list of
-`buzzer/dts/bindings/behaviors/zmk,behavior-buzzer.yaml`. The four lists are the
-same vocabulary in four places; `BUZZER_SEQ_MAX` grows with the tables on its own.
+**The shapes below are defaults, not the running values.** A boot copies them
+into RAM (`zmk_buzzer_tune_defaults()`), the configurator's Sound page rewrites
+that RAM over the TLV channel, and only an explicit save writes flash:
+`keeb-module/settings/keeb_sound.c` owns the wire records and the `keeb/sound`
+settings subtree. The event → tune map is RAM too, so which sound a layer change,
+an accepted/refused update or a wake plays is editable without a rebuild; a chord
+(`buzzer_reset`, `buzzer_boot`) still takes its tune from its own devicetree
+property.
+
+Adding a tune is still a build change: append a `tune_xxx[]` table and a
+`tune_defaults[]` entry in `buzzer/src/buzzer.c`, the matching name in
+`zmk_buzzer_tune_by_name()`, the enum in `buzzer/include/zmk/buzzer.h`, and the
+name in the `enum` list of `buzzer/dts/bindings/behaviors/zmk,behavior-buzzer.yaml`
+(plus `TUNE_NAMES` and `KEEB_SOUND_TUNE_COUNT` on the host side). The lists are
+the same vocabulary in several places; `BUZZER_SEQ_MAX` no longer grows with
+them — it is `MAX(ZMK_BUZZER_STEPS_MAX, CONFIG_ZMK_BUZZER_PULSES_MAX)`.
 
 ## Why "sound then reset" is a behavior and not two bindings
 
@@ -288,9 +299,24 @@ int  zmk_buzzer_play_tune(enum zmk_buzzer_tune tune, uint32_t *duration_ms);
                        /* out: tune length in ms, so a caller can schedule after it */
 int  zmk_buzzer_play_random(uint32_t *duration_ms);   /* == play_tune(RANDOM, …) */
 int  zmk_buzzer_tune_by_name(const char *name);       /* DT string -> enum, -1 if unknown */
+
+/* Editable shapes and the event map (RAM; persisted by keeb-module/settings). */
+int  zmk_buzzer_tune_get(enum zmk_buzzer_tune, struct zmk_buzzer_step *steps, uint8_t *count);
+int  zmk_buzzer_tune_set(enum zmk_buzzer_tune, const struct zmk_buzzer_step *steps, uint8_t count);
+void zmk_buzzer_tune_defaults(void);
+enum zmk_buzzer_tune zmk_buzzer_event_tune(enum zmk_buzzer_event);
+int  zmk_buzzer_event_set_tune(enum zmk_buzzer_event, enum zmk_buzzer_tune);
+int  zmk_buzzer_play_event(enum zmk_buzzer_event, uint32_t *duration_ms);
+
 void zmk_buzzer_stop(void);
 bool zmk_buzzer_busy(void);
 ```
+
+A step is `{pitch_pct, on_ms, gap_ms}`: pitch 50–400 % of
+`CONFIG_ZMK_BUZZER_TUNE_BASE_HZ`, on 10–1000 ms, gap 0–1000 ms, at most 8 steps
+per tune. `zmk_buzzer_tune_set()` refuses the whole tune if one step is outside
+those ranges, so a partial tune can never be half-applied. RANDOM has no table
+(it is drawn per press) and is refused by the setter.
 
 All non-blocking. `0`, `-ENODEV` (no device on this half), `-EAGAIN` (sleeping),
 `-EINVAL`. Requested pitches are clamped to 200–8000 Hz.

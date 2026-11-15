@@ -30,7 +30,7 @@ Every lit signal below runs at `ZMK_STATUS_LED_BRIGHTNESS_PERCENT` (default
 | State | Pattern | Trigger |
 |---|---|---|
 | Error | solid **red** | battery <= `ZMK_STATUS_LED_BATTERY_ERROR_LEVEL` (latched, clears at threshold +5%) |
-| Layer | solid **red/green/blue** | keyboard calls `zmk_status_led_set_layer_color()` (e.g. non-home layer indication, see [keeb](../keeb-module)) |
+| Layer | solid, any color | keyboard calls `zmk_status_led_set_layer_rgb()` with the color it has for the active layer (see [keeb](../keeb-module)). Its own value, not one of the three palette colors |
 | Connected | one 150 ms **green** flash | BLE profile connected (also on profile switch) |
 | Advertising | 100 ms **blue** pulse every 2 s | BLE disconnected / not connected |
 | Boot | `ZMK_STATUS_LED_BOOT_BLINKS` quick **white** blinks | startup, then transitions to the state above |

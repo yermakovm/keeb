@@ -39,7 +39,7 @@
  * see by itself - a layer this node was told to announce (`beep-layers`), and a
  * boot that the SoC says came from System OFF (`beep-on-wake`) - and
  * zmk,behavior-buzzer plays the one its `tune` property names, while the TLV
- * engine reports its own accepted/refused updates through zmk_buzzer_play_tune().
+ * engine reports its own accepted/refused updates through zmk_buzzer_play_event().
  */
 
 #include <zephyr/devicetree.h>
@@ -135,6 +135,40 @@ int zmk_buzzer_play_tune(enum zmk_buzzer_tune tune, uint32_t *duration_ms) {
 	return -ENODEV;
 }
 
+int zmk_buzzer_play_event(enum zmk_buzzer_event event, uint32_t *duration_ms) {
+	ARG_UNUSED(event);
+	ARG_UNUSED(duration_ms);
+	return -ENODEV;
+}
+
+int zmk_buzzer_tune_get(enum zmk_buzzer_tune tune, struct zmk_buzzer_step *steps, uint8_t *count) {
+	ARG_UNUSED(tune);
+	ARG_UNUSED(steps);
+	ARG_UNUSED(count);
+	return -ENODEV;
+}
+
+int zmk_buzzer_tune_set(enum zmk_buzzer_tune tune, const struct zmk_buzzer_step *steps,
+			uint8_t count) {
+	ARG_UNUSED(tune);
+	ARG_UNUSED(steps);
+	ARG_UNUSED(count);
+	return -ENODEV;
+}
+
+void zmk_buzzer_tune_defaults(void) {}
+
+enum zmk_buzzer_tune zmk_buzzer_event_tune(enum zmk_buzzer_event event) {
+	ARG_UNUSED(event);
+	return ZMK_BUZZER_TUNE_RANDOM;
+}
+
+int zmk_buzzer_event_set_tune(enum zmk_buzzer_event event, enum zmk_buzzer_tune tune) {
+	ARG_UNUSED(event);
+	ARG_UNUSED(tune);
+	return -ENODEV;
+}
+
 void zmk_buzzer_stop(void) {}
 
 bool zmk_buzzer_busy(void) { return false; }
@@ -156,43 +190,46 @@ static const struct pwm_dt_spec tone = PWM_DT_SPEC_GET(DT_DRV_INST(0));
  * 2000 Hz. A gap of 0 means "this is the last step" - the trailing gap is never
  * played, which is also what makes a tune's length predictable.
  */
-struct tune_step {
-	uint16_t pitch_pct;
-	uint16_t on_ms;
-	uint16_t gap_ms;
-};
-
 /* Entering the announced layer: two rising notes, "you are somewhere else now". */
-static const struct tune_step tune_layer_on[] = {{90, 45, 30}, {115, 80, 0}};
+static const struct zmk_buzzer_step tune_layer_on[] = {{90, 45, 30}, {115, 80, 0}};
 
 /* Leaving it: the same two notes upside down, so on/off cannot be confused. */
-static const struct tune_step tune_layer_off[] = {{115, 45, 30}, {90, 80, 0}};
+static const struct zmk_buzzer_step tune_layer_off[] = {{115, 45, 30}, {90, 80, 0}};
 
 /* Three descending notes: the app is about to disappear, and the sound goes the
  * same way the keyboard is about to. Long enough to be heard over the reboot. */
-static const struct tune_step tune_bootloader[] = {{120, 60, 20}, {100, 60, 20}, {80, 120, 0}};
+static const struct zmk_buzzer_step tune_bootloader[] = {{120, 60, 20}, {100, 60, 20}, {80, 120, 0}};
 
 /* Accepted: a short bright rising ding, the one tune here that is meant to be
  * pleasant, because this one is the common case. */
-static const struct tune_step tune_update_ok[] = {{105, 55, 25}, {125, 110, 0}};
+static const struct zmk_buzzer_step tune_update_ok[] = {{105, 55, 25}, {125, 110, 0}};
 
 /* Refused: the same low note twice. Repetition at a constant pitch is what
  * reads as "no" next to update_ok's rising pair, and it is deliberately not the
  * mirror of it - a failure should not sound like a layer toggle. */
-static const struct tune_step tune_update_fail[] = {{80, 120, 80}, {80, 160, 0}};
+static const struct zmk_buzzer_step tune_update_fail[] = {{80, 120, 80}, {80, 160, 0}};
 
 /* Woke from System OFF: brief and soft - this one fires while the key that woke
  * the board is still being pressed, in the middle of an ordinary typing session. */
-static const struct tune_step tune_wake[] = {{95, 35, 20}, {120, 55, 0}};
+static const struct zmk_buzzer_step tune_wake[] = {{95, 35, 20}, {120, 55, 0}};
 
 #define TUNE_LEN(t) (sizeof(t) / sizeof((t)[0]))
 
+/* One tune's editable shape. RAM, not flash: the configurator rewrites these at
+ * runtime (keeb-module/settings/keeb_sound.c) and only an explicit save writes
+ * flash. A boot copies the compiled-in defaults in; DISCARD copies them back. */
 struct tune {
-	const struct tune_step *steps;
+	struct zmk_buzzer_step steps[ZMK_BUZZER_STEPS_MAX];
 	uint8_t count;
 };
 
-static const struct tune tunes[ZMK_BUZZER_TUNE_COUNT] = {
+/* The compiled-in shapes: what a boot starts from and what DISCARD restores. */
+struct tune_default {
+	const struct zmk_buzzer_step *steps;
+	uint8_t count;
+};
+
+static const struct tune_default tune_defaults[ZMK_BUZZER_TUNE_COUNT] = {
 	[ZMK_BUZZER_TUNE_RANDOM] = {NULL, 0}, /* generated per call, see play_random() */
 	[ZMK_BUZZER_TUNE_LAYER_ON] = {tune_layer_on, TUNE_LEN(tune_layer_on)},
 	[ZMK_BUZZER_TUNE_LAYER_OFF] = {tune_layer_off, TUNE_LEN(tune_layer_off)},
@@ -202,15 +239,32 @@ static const struct tune tunes[ZMK_BUZZER_TUNE_COUNT] = {
 	[ZMK_BUZZER_TUNE_WAKE] = {tune_wake, TUNE_LEN(tune_wake)},
 };
 
+/* Which tune each self-sounding event plays until a host says otherwise. */
+static const uint8_t default_event_map[ZMK_BUZZER_EVENT_COUNT] = {
+	[ZMK_BUZZER_EVENT_LAYER_ON] = ZMK_BUZZER_TUNE_LAYER_ON,
+	[ZMK_BUZZER_EVENT_LAYER_OFF] = ZMK_BUZZER_TUNE_LAYER_OFF,
+	[ZMK_BUZZER_EVENT_UPDATE_OK] = ZMK_BUZZER_TUNE_UPDATE_OK,
+	[ZMK_BUZZER_EVENT_UPDATE_FAIL] = ZMK_BUZZER_TUNE_UPDATE_FAIL,
+	[ZMK_BUZZER_EVENT_WAKE] = ZMK_BUZZER_TUNE_WAKE,
+};
+
+/* Runtime state. Written from the TLV engine's work item and from settings load,
+ * read by the buzzer's own delayable work item - all on the system work queue,
+ * so no lock. Moving either onto another queue needs one. */
+static struct tune tunes[ZMK_BUZZER_TUNE_COUNT];
+static uint8_t event_map[ZMK_BUZZER_EVENT_COUNT];
+
 #define MAX_PULSES CONFIG_ZMK_BUZZER_PULSES_MAX
 
 /* The pattern buffer has to hold the longest thing this file can play: the
- * longest random pattern the Kconfig allows, or the longest named tune. Adding
- * a step to a tune widens this on its own. */
-#define BUZZER_SEQ_MAX                                                                             \
-	MAX(MAX(TUNE_LEN(tune_layer_on), TUNE_LEN(tune_layer_off)),                                 \
-	    MAX(MAX(TUNE_LEN(tune_bootloader), TUNE_LEN(tune_update_ok)),                          \
-	        MAX(MAX(TUNE_LEN(tune_update_fail), TUNE_LEN(tune_wake)), MAX_PULSES)))
+ * longest random pattern the Kconfig allows, or a tune widened at runtime. */
+#define BUZZER_SEQ_MAX MAX(ZMK_BUZZER_STEPS_MAX, MAX_PULSES)
+
+BUILD_ASSERT(ARRAY_SIZE(tune_layer_on) <= ZMK_BUZZER_STEPS_MAX, "default tune is longer than a RAM tune");
+BUILD_ASSERT(ARRAY_SIZE(tune_bootloader) <= ZMK_BUZZER_STEPS_MAX,
+	     "default tune is longer than a RAM tune");
+BUILD_ASSERT(ARRAY_SIZE(tune_update_fail) <= ZMK_BUZZER_STEPS_MAX,
+	     "default tune is longer than a RAM tune");
 
 /* Below the piezo's useful band a beep is inaudible rather than wrong, but a
  * division by it is not something to hand to a pattern generator. */
@@ -426,7 +480,10 @@ int zmk_buzzer_play_tune(enum zmk_buzzer_tune tune, uint32_t *duration_ms) {
 		pattern.seq[i].freq_hz = tune_pitch_hz(t->steps[i].pitch_pct);
 		pattern.seq[i].on_ms = t->steps[i].on_ms;
 		pattern.seq[i].gap_ms = t->steps[i].gap_ms;
-		total_ms += t->steps[i].on_ms + t->steps[i].gap_ms;
+		/* A gap on the last step is never played, so it must not count
+		 * towards the reported length either - the behavior schedules its
+		 * target from that number. */
+		total_ms += t->steps[i].on_ms + (i + 1 < t->count ? t->steps[i].gap_ms : 0);
 	}
 
 	pattern.pulses = t->count;
@@ -446,6 +503,101 @@ int zmk_buzzer_play_tune(enum zmk_buzzer_tune tune, uint32_t *duration_ms) {
 
 int zmk_buzzer_play_random(uint32_t *duration_ms) {
 	return zmk_buzzer_play_tune(ZMK_BUZZER_TUNE_RANDOM, duration_ms);
+}
+
+/* --------------------------------------------------------------------------
+ * Editable tunes
+ * -------------------------------------------------------------------------- */
+
+/* What a host may write into a step. The pitch bounds are wider than the
+ * defaults on purpose (75-130 % of the base) so a different piezo can be
+ * reached from the configurator; the on-time bounds match the Kconfig ranges. */
+#define TUNE_PITCH_PCT_MIN 50
+#define TUNE_PITCH_PCT_MAX 400
+#define TUNE_ON_MS_MIN 10
+#define TUNE_ON_MS_MAX 1000
+#define TUNE_GAP_MS_MAX 1000
+
+static bool step_is_sane(const struct zmk_buzzer_step *s) {
+	return s->pitch_pct >= TUNE_PITCH_PCT_MIN && s->pitch_pct <= TUNE_PITCH_PCT_MAX &&
+	       s->on_ms >= TUNE_ON_MS_MIN && s->on_ms <= TUNE_ON_MS_MAX &&
+	       s->gap_ms <= TUNE_GAP_MS_MAX;
+}
+
+void zmk_buzzer_tune_defaults(void) {
+	for (int i = 0; i < ZMK_BUZZER_TUNE_COUNT; i++) {
+		tunes[i].count = tune_defaults[i].count;
+
+		if (tunes[i].count != 0) {
+			memcpy(tunes[i].steps, tune_defaults[i].steps,
+			       tunes[i].count * sizeof(tunes[i].steps[0]));
+		}
+	}
+
+	memcpy(event_map, default_event_map, sizeof(event_map));
+}
+
+int zmk_buzzer_tune_get(enum zmk_buzzer_tune tune, struct zmk_buzzer_step *steps, uint8_t *count) {
+	if (tune < 0 || tune >= ZMK_BUZZER_TUNE_COUNT || steps == NULL || count == NULL) {
+		return -EINVAL;
+	}
+
+	uint8_t n = tunes[tune].count;
+
+	if (n != 0) {
+		memcpy(steps, tunes[tune].steps, n * sizeof(*steps));
+	}
+
+	*count = n;
+
+	return 0;
+}
+
+int zmk_buzzer_tune_set(enum zmk_buzzer_tune tune, const struct zmk_buzzer_step *steps,
+			uint8_t count) {
+	/* RANDOM is drawn per call and has no table to replace. */
+	if (tune <= ZMK_BUZZER_TUNE_RANDOM || tune >= ZMK_BUZZER_TUNE_COUNT || steps == NULL ||
+	    count == 0 || count > ZMK_BUZZER_STEPS_MAX) {
+		return -EINVAL;
+	}
+
+	for (uint8_t i = 0; i < count; i++) {
+		if (!step_is_sane(&steps[i])) {
+			return -EINVAL;
+		}
+	}
+
+	memcpy(tunes[tune].steps, steps, count * sizeof(*steps));
+	tunes[tune].count = count;
+
+	return 0;
+}
+
+enum zmk_buzzer_tune zmk_buzzer_event_tune(enum zmk_buzzer_event event) {
+	if (event < 0 || event >= ZMK_BUZZER_EVENT_COUNT) {
+		return ZMK_BUZZER_TUNE_RANDOM;
+	}
+
+	return (enum zmk_buzzer_tune)event_map[event];
+}
+
+int zmk_buzzer_event_set_tune(enum zmk_buzzer_event event, enum zmk_buzzer_tune tune) {
+	if (event < 0 || event >= ZMK_BUZZER_EVENT_COUNT || tune < 0 ||
+	    tune >= ZMK_BUZZER_TUNE_COUNT) {
+		return -EINVAL;
+	}
+
+	event_map[event] = (uint8_t)tune;
+
+	return 0;
+}
+
+int zmk_buzzer_play_event(enum zmk_buzzer_event event, uint32_t *duration_ms) {
+	if (event < 0 || event >= ZMK_BUZZER_EVENT_COUNT) {
+		return -EINVAL;
+	}
+
+	return zmk_buzzer_play_tune(zmk_buzzer_event_tune(event), duration_ms);
 }
 
 void zmk_buzzer_stop(void) { pattern_stop(); }
@@ -495,8 +647,8 @@ static int layer_event_listener(const zmk_event_t *eh) {
 		if (beep_layers[i] == ev->layer) {
 			/* The tune carries the direction, so the event's own `state` is all
 			 * this needs; a busy keyboard does not get a second tone queued. */
-			(void)zmk_buzzer_play_tune(ev->state ? ZMK_BUZZER_TUNE_LAYER_ON
-							 : ZMK_BUZZER_TUNE_LAYER_OFF,
+			(void)zmk_buzzer_play_event(ev->state ? ZMK_BUZZER_EVENT_LAYER_ON
+							 : ZMK_BUZZER_EVENT_LAYER_OFF,
 							     NULL);
 			break;
 		}
@@ -539,6 +691,11 @@ static bool woke_from_sleep(void) {
 #endif /* beep-on-wake */
 
 static int buzzer_init(void) {
+	/* Before the device check: the RAM tables are the driver's answer to
+	 * "what does a layer change sound like" whether or not the PWM device
+	 * came up, and a saved shape lands on top of them at settings load. */
+	zmk_buzzer_tune_defaults();
+
 	if (!device_is_ready(tone.dev)) {
 		LOG_ERR("buzzer: PWM device %s not ready", tone.dev->name);
 		return -ENODEV;
@@ -554,7 +711,7 @@ static int buzzer_init(void) {
 	 * time this runs, and a tone that arrives after the first keystroke reads as
 	 * the keyboard answering instead of waking. */
 	if (woke_from_sleep()) {
-		int ret = zmk_buzzer_play_tune(ZMK_BUZZER_TUNE_WAKE, NULL);
+		int ret = zmk_buzzer_play_event(ZMK_BUZZER_EVENT_WAKE, NULL);
 
 		if (ret < 0) {
 			LOG_WRN("wake tone failed (%d)", ret);

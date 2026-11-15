@@ -12,12 +12,18 @@
  * the whole thing dims together. A GPIO channel cannot honor it; the driver
  * says so once at boot rather than silently running full on.
  *
+ * The palette (three colors + brightness) is mutable at runtime through
+ * zmk_status_led_set_palette(); the Kconfig value and the constants below are
+ * only what a half boots with. A config channel can retune it - see
+ * zmk-config's keeb-module/settings.
+ *
  * Palette (priority order):
  *   ERROR   - solid red; battery <= CONFIG_ZMK_STATUS_LED_BATTERY_ERROR_LEVEL,
  *             latched until the level recovers by 5% (hysteresis)
- *   LAYER   - solid color chosen by the keyboard via
- *             zmk_status_led_set_layer_color() (see include/zmk/status_led.h);
- *             overrides FLASH/ADV while active, ERROR still wins
+ *   LAYER   - solid color set by the keyboard via
+ *             zmk_status_led_set_layer_rgb() (see include/zmk/status_led.h);
+ *             a raw RGB of its own, not one of the three palette colors.
+ *             Overrides FLASH/ADV while active, ERROR still wins
  *   FLASH   - one 150 ms green flash; BLE profile connected (also on switch)
  *   ADV     - slow periodic blue pulse while not connected / advertising
  *   BOOT    - N quick white blinks at startup, then FLASH/ADV/ERROR
@@ -73,6 +79,17 @@ static const struct led_dt_spec led_b = LED_DT_SPEC_GET(LED_B_NODE);
 
 #define LED_ON_PCT CONFIG_ZMK_STATUS_LED_BRIGHTNESS_PERCENT
 
+/* The palette in work, colors packed 0x00RRGGBB.  Written by the config channel
+ * (zmk_status_led_set_palette) and read by the tick work; a repaint is scheduled
+ * on a change so a new color shows without waiting for the next blink. */
+static uint8_t brightness_pct = LED_ON_PCT;
+static uint32_t palette_red = 0x00FF0000u;   /* battery error */
+static uint32_t palette_green = 0x0000FF00u; /* profile connected flash */
+static uint32_t palette_blue = 0x000000FFu;  /* advertising pulse */
+
+/* A boot blink is "all three signals at once", whatever colors they are. */
+#define PALETTE_ALL (palette_red | palette_green | palette_blue)
+
 #define BOOT_ON_MS 100
 #define BOOT_OFF_MS 100
 #define FLASH_ON_MS 150
@@ -83,7 +100,7 @@ static const struct led_dt_spec led_b = LED_DT_SPEC_GET(LED_B_NODE);
 enum led_mode { MODE_OFF, MODE_BOOT, MODE_FLASH, MODE_ADV, MODE_ERROR, MODE_LAYER };
 
 static enum led_mode mode = MODE_OFF;
-static enum zmk_status_led_color layer_color = ZMK_STATUS_LED_COLOR_OFF;
+static uint32_t layer_rgb; /* solid layer color 0x00RRGGBB, 0 = no layer indication */
 static bool suspended;      /* ZMK activity state is SLEEP */
 static bool connected;      /* profile (central) or central (peripheral) connected */
 static bool error_latched;  /* battery below threshold */
@@ -101,8 +118,14 @@ static K_WORK_DELAYABLE_DEFINE(led_tick, tick);
  * both make the driver stop the PWM peripheral and hold the pad, so only a
  * dimmed signal keeps the peripheral running. Called from the tick work only,
  * never from an ISR. */
-static inline void led_channel(const struct led_dt_spec *led, bool on) {
-	uint8_t pct = on ? LED_ON_PCT : 0;
+/*
+ * ON is the color's own 8-bit level scaled by brightness_pct, OFF is 0: on a
+ * `pwm-leds` channel 0% and 100% both make the driver stop the PWM peripheral
+ * and hold the pad, so only a dimmed signal keeps the peripheral running.
+ * Called from the tick work and the palette setter only, never from an ISR.
+ */
+static inline void led_channel(const struct led_dt_spec *led, uint8_t level) {
+	uint8_t pct = (uint8_t)(((uint32_t)level * brightness_pct) / 255u);
 	int ret = led_set_brightness_dt(led, pct);
 
 	if (ret < 0) {
@@ -110,10 +133,10 @@ static inline void led_channel(const struct led_dt_spec *led, bool on) {
 	}
 }
 
-static inline void led_rgb(bool r, bool g, bool b) {
-	led_channel(&led_r, r);
-	led_channel(&led_g, g);
-	led_channel(&led_b, b);
+static inline void led_rgb(uint32_t color) {
+	led_channel(&led_r, (uint8_t)(color >> 16));
+	led_channel(&led_g, (uint8_t)(color >> 8));
+	led_channel(&led_b, (uint8_t)color);
 }
 
 static void enter(enum led_mode m) {
@@ -129,7 +152,7 @@ static void reevaluate(void) {
 	}
 	if (error_latched) {
 		enter(MODE_ERROR);
-	} else if (layer_color != ZMK_STATUS_LED_COLOR_OFF) {
+	} else if (layer_rgb) {
 		enter(MODE_LAYER);
 	} else if (connected) {
 		enter(MODE_FLASH);
@@ -138,11 +161,14 @@ static void reevaluate(void) {
 	}
 }
 
-void zmk_status_led_set_layer_color(enum zmk_status_led_color color) {
-	if (color == layer_color) {
+void zmk_status_led_set_layer_rgb(uint32_t rgb) {
+	rgb &= 0x00FFFFFFu;
+
+	if (rgb == layer_rgb) {
 		return;
 	}
-	layer_color = color;
+
+	layer_rgb = rgb;
 	/* During boot blinks or sleep just record it; BOOT end and the
 	 * wake path both reevaluate(). */
 	if (mode != MODE_BOOT && !suspended) {
@@ -150,37 +176,46 @@ void zmk_status_led_set_layer_color(enum zmk_status_led_color color) {
 	}
 }
 
+void zmk_status_led_set_palette(const struct zmk_status_led_palette *palette) {
+	brightness_pct = palette->brightness_percent > 100 ? 100 : palette->brightness_percent;
+	palette_red = palette->red & 0x00FFFFFFu;
+	palette_green = palette->green & 0x00FFFFFFu;
+	palette_blue = palette->blue & 0x00FFFFFFu;
+
+	/* Repaint whatever is lit now; the solid modes do not reschedule themselves. */
+	if (!suspended) {
+		k_work_schedule(&led_tick, K_NO_WAIT);
+	}
+}
+
+void zmk_status_led_get_palette(struct zmk_status_led_palette *palette) {
+	palette->brightness_percent = brightness_pct;
+	palette->red = palette_red;
+	palette->green = palette_green;
+	palette->blue = palette_blue;
+}
+
 static void tick(struct k_work *work) {
 	switch (mode) {
 	case MODE_ERROR:
-		led_rgb(true, false, false); /* solid red */
+		led_rgb(palette_red);
 		/* solid: no reschedule; re-entered on recovery/wake via reevaluate() */
 		return;
 
 	case MODE_LAYER:
-		switch (layer_color) {
-		case ZMK_STATUS_LED_COLOR_RED:
-			led_rgb(true, false, false);
-			break;
-		case ZMK_STATUS_LED_COLOR_GREEN:
-			led_rgb(false, true, false);
-			break;
-		case ZMK_STATUS_LED_COLOR_BLUE:
-			led_rgb(false, false, true);
-			break;
-		default: /* OFF: reevaluate() should have left this mode already */
-			break;
-		}
+		/* The layer color is its own value; led_rgb() dims it to the same
+		 * brightness level every other signal uses. */
+		led_rgb(layer_rgb);
 		/* solid: no reschedule; re-entered on color change via reevaluate() */
 		return;
 
 	case MODE_OFF:
-		led_rgb(false, false, false);
+		led_rgb(0);
 		return;
 
 	case MODE_BOOT: {
 		bool on = (step & 1) == 0;
-		led_rgb(on, on, on); /* white */
+		led_rgb(on ? PALETTE_ALL : 0);
 		step++;
 		if (step < CONFIG_ZMK_STATUS_LED_BOOT_BLINKS * 2) {
 			k_work_schedule(&led_tick, K_MSEC((step & 1) ? BOOT_OFF_MS : BOOT_ON_MS));
@@ -191,7 +226,7 @@ static void tick(struct k_work *work) {
 	} /* MODE_BOOT */
 
 	case MODE_FLASH:
-		led_rgb(false, step == 0, false); /* one green flash */
+		led_rgb(step == 0 ? palette_green : 0); /* one flash */
 		step++;
 		if (step == 1) {
 			k_work_schedule(&led_tick, K_MSEC(FLASH_ON_MS));
@@ -209,7 +244,7 @@ static void tick(struct k_work *work) {
 			return;
 		}
 #endif
-		led_rgb(false, false, step == 0); /* blue pulse */
+		led_rgb(step == 0 ? palette_blue : 0); /* pulse */
 		step ^= 1;
 		k_work_schedule(&led_tick, K_MSEC(step ? ADV_ON_MS : ADV_PERIOD_MS - ADV_ON_MS));
 		return;
@@ -294,7 +329,7 @@ static int activity_changed_listener(const zmk_event_t *eh) {
 	if (ev->state == ZMK_ACTIVITY_SLEEP) {
 		suspended = true;
 		k_work_cancel_delayable(&led_tick);
-		led_rgb(false, false, false);
+		led_rgb(0);
 	} else if (suspended) {
 		suspended = false;
 		reevaluate();

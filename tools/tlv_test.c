@@ -26,6 +26,12 @@
 
 #include "keeb_tlv.h"
 
+/* The split relay's framing is shared by the central and the peripheral
+ * (ui/panel_stream.h). Its checksum is a copy of the codec's, inlined because
+ * the peripheral does not link the codec - this is the test that keeps the two
+ * implementations the same function. */
+#include "../keeb-module/boards/shields/keeb/ui/panel_stream.h"
+
 /* Shared with the firmware headers, so the test reads like firmware. */
 #define ARG_UNUSED(x) (void)(x)
 
@@ -84,6 +90,18 @@ static void test_wire_layout(void)
 	CHECK_EQ(sizeof(struct keeb_tokens_hdr), 8, "tokens header size");
 	CHECK_EQ(sizeof(struct keeb_token_rec), 6, "token record size");
 	CHECK_EQ(sizeof(struct keeb_param_value), 14, "param value size");
+	CHECK_EQ(sizeof(struct keeb_tune_step), 6, "tune step size");
+	CHECK_EQ(sizeof(struct keeb_tune_hdr), 4, "tune header size");
+	CHECK_EQ(sizeof(struct keeb_sound_map), 2, "sound event size");
+	CHECK_EQ(sizeof(struct keeb_sound_play), 2, "sound play size");
+
+	/* The whole tune table answers one GET, so it has to fit one message. */
+	CHECK(KEEB_SOUND_EVENT_COUNT * (4 + sizeof(struct keeb_sound_map)) +
+		      KEEB_SOUND_TUNE_COUNT *
+			      (4 + sizeof(struct keeb_tune_hdr) +
+			       KEEB_SOUND_STEPS_MAX * sizeof(struct keeb_tune_step)) <
+		      KEEB_TLV_MSG_MAX,
+	      "every tune and event must fit one message");
 
 	/* One layer of a 60-key board must fit one message. */
 	CHECK(sizeof(struct keeb_cells_hdr) + 60 * sizeof(struct keeb_cell) < KEEB_TLV_MSG_MAX,
@@ -619,6 +637,27 @@ static void test_header_round_trip(void)
 	CHECK_EQ(wire[15], 0x0b, "crc last byte");
 }
 
+static void test_panel_stream(void)
+{
+	uint8_t payload[KEEB_PANEL_STREAM_MAX];
+
+	for (uint16_t i = 0; i < sizeof(payload); i++) {
+		payload[i] = (uint8_t)(i * 31u + 7u);
+	}
+
+	/* Every length matters: a one-byte difference in the polynomial or the
+	 * complement shows up somewhere in here. */
+	for (uint16_t len = 0; len <= sizeof(payload); len += 17) {
+		CHECK_EQ(keeb_panel_crc32(payload, len), keeb_crc32(payload, len),
+			 "panel stream crc == codec crc");
+	}
+
+	CHECK_EQ(KEEB_PANEL_STREAM_HDR(300) & 0xffu, KEEB_PANEL_STREAM_MAGIC, "panel hdr magic");
+	CHECK_EQ((KEEB_PANEL_STREAM_HDR(300) >> 8) & 0xffu, KEEB_PANEL_STREAM_VERSION,
+		 "panel hdr version");
+	CHECK_EQ((KEEB_PANEL_STREAM_HDR(300) >> 16) & 0xffffu, 300, "panel hdr length");
+}
+
 int main(void)
 {
 	printf("keeb tlv codec test\n");
@@ -630,6 +669,7 @@ int main(void)
 	test_loopback();
 	test_fragment_failure_modes();
 	test_input_rejections();
+	test_panel_stream();
 
 	printf("%d checks, %d failures\n", checks, failures);
 

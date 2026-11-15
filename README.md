@@ -119,7 +119,7 @@ Persistence is ZMK's own:
 `SAVE` / `DISCARD` / `RESET` go to `zmk_keymap_save_changes()`,
 `zmk_keymap_discard_changes()`, `zmk_keymap_reset_settings()`.
 
-**Central-only by design** (`CONFIG_KBEEB_ENGINE depends on !ZMK_SPLIT ||
+**Central-only by design** (`CONFIG_KEEB_ENGINE depends on !ZMK_SPLIT ||
 ZMK_SPLIT_ROLE_CENTRAL`): ZMK resolves bindings on the central and sends the
 resolved binding to the peripheral, so the peripheral executes whatever the
 central's layout says, and it holds no host connection anyway. The right half
@@ -150,6 +150,32 @@ can tell a panel-capable build from one that is not.
 
 Image upload (`KEEB_NS_IMAGE`) is still unimplemented: the panel today selects
 compiled-in artwork, it does not receive bitmaps.
+
+## Sound from the app
+
+The buzzer's tune shapes are data now, not `const` tables: the driver copies its
+compiled-in defaults into RAM at boot and plays from there, so a host can rewrite
+them without a rebuild. They ride the `SETTINGS` namespace and its existing
+`SETTINGS_SAVE` / `DISCARD` verbs (one flash write covers settings and sounds),
+and live under their own key, `keeb/sound`. Owner: `buzzer/` (the RAM and the
+playback) + `keeb-module/settings/keeb_sound.c` (records, validation, flash).
+
+| record | what it does |
+|---|---|
+| `TUNE_GET` → `TUNE` + `SOUND_MAP` | every tune's shape and the event → tune map, in one reply |
+| `TUNE_SET` | replace one tune whole (1–8 steps, pitch 50–400 %, on 10–1000 ms, gap 0–1000 ms) |
+| `SOUND_MAP_SET` | point one event at another tune |
+| `TUNE_PLAY` | preview: a sound, no state change |
+| `SETTINGS_SAVE` / `DISCARD` / `RESET` | persist / back to the compiled-in shapes / same |
+
+The events are the sounds the keyboard makes by itself (`layer_on`, `layer_off`,
+`update_ok`, `update_fail`, `wake`); a chord keeps the tune its devicetree node
+names. `SYS INFO` advertises `KEEB_INFO_F_SOUND`. Central-only, like the engine:
+the buzzer is on the central half and a peripheral has neither.
+
+The configurator's **Sound** page is the editor: one dropdown per event, a step
+list per tune, and a `▶` that applies that one shape and plays it, so a preview
+is what the page shows rather than what was last saved.
 
 ## Presentation deck (docs/)
 

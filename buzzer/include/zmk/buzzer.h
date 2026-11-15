@@ -78,6 +78,66 @@ enum zmk_buzzer_tune {
  * random pattern (so its length is only known once drawn). */
 int zmk_buzzer_play_tune(enum zmk_buzzer_tune tune, uint32_t *duration_ms);
 
+/* --------------------------------------------------------------------------
+ * Editable tunes
+ * --------------------------------------------------------------------------
+ *
+ * The tune shapes live in RAM, not flash: a boot copies the compiled-in defaults
+ * in, the configurator (keeb-module/settings/keeb_sound.c) rewrites them over
+ * the TLV channel, and only an explicit save writes flash. The enum above stays
+ * the vocabulary - a tune is still named, only its shape is data now.
+ */
+
+/** Longest tune this build can hold. BUZZER_SEQ_MAX is sized from it. */
+#define ZMK_BUZZER_STEPS_MAX 8
+
+/** One tune step. `pitch_pct` is a percentage of
+ * CONFIG_ZMK_BUZZER_TUNE_BASE_HZ, `gap_ms` 0 means "the last step" - the
+ * trailing gap is never played. */
+struct zmk_buzzer_step {
+	uint16_t pitch_pct;
+	uint16_t on_ms;
+	uint16_t gap_ms;
+};
+
+/* What the firmware sounds on its own. The driver resolves each of these through
+ * a RAM map, so a host can change which tune a layer change, a refused update or
+ * a wake plays. Chords keep their own `tune` property: a behavior is told what
+ * to play, an event is not. */
+enum zmk_buzzer_event {
+	ZMK_BUZZER_EVENT_LAYER_ON,
+	ZMK_BUZZER_EVENT_LAYER_OFF,
+	ZMK_BUZZER_EVENT_UPDATE_OK,
+	ZMK_BUZZER_EVENT_UPDATE_FAIL,
+	ZMK_BUZZER_EVENT_WAKE,
+
+	ZMK_BUZZER_EVENT_COUNT,
+};
+
+/* Read one tune's current shape. `steps` must have room for
+ * ZMK_BUZZER_STEPS_MAX entries. RANDOM reports count 0 - its shape is drawn
+ * per call, not stored. Returns 0, -ENODEV or -EINVAL. */
+int zmk_buzzer_tune_get(enum zmk_buzzer_tune tune, struct zmk_buzzer_step *steps, uint8_t *count);
+
+/* Replace one tune's shape. Rejected as a whole (-EINVAL) if a step is outside
+ * the piezo's useful ranges: pitch 50-400 %, on-time 10-1000 ms, gap 0-1000 ms,
+ * count 1..ZMK_BUZZER_STEPS_MAX. RANDOM has no table and is refused. */
+int zmk_buzzer_tune_set(enum zmk_buzzer_tune tune, const struct zmk_buzzer_step *steps,
+			uint8_t count);
+
+/* Put every tune and the event map back to the compiled-in defaults. */
+void zmk_buzzer_tune_defaults(void);
+
+/* Which tune an event currently plays (RANDOM for an unknown event). */
+enum zmk_buzzer_tune zmk_buzzer_event_tune(enum zmk_buzzer_event event);
+
+/* Point an event at another tune. Returns 0, -ENODEV or -EINVAL. */
+int zmk_buzzer_event_set_tune(enum zmk_buzzer_event event, enum zmk_buzzer_tune tune);
+
+/* Play whatever an event is mapped to now. What the driver's own listeners and
+ * the TLV engine call, so they follow the host's map instead of a constant. */
+int zmk_buzzer_play_event(enum zmk_buzzer_event event, uint32_t *duration_ms);
+
 /* Map a tune name ("layer_on", "bootloader", ...) to the enum. Returns
  * -EINVAL for a name this build does not have. Works on a half with no buzzer
  * too: the name is valid, only the playing is not. */

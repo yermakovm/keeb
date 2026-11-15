@@ -7,6 +7,7 @@
 #   make flash-right  same for the right half
 #   make monitor      USB serial console (/dev/cu.keeb*)
 #   make tlv-test     run the TLV codec host test (no keyboard needed)
+#   make wpm-test     run the typing-rate host test (no keyboard needed)
 #   make clean        drop the build trees
 #
 # Run from anywhere: make -C ~/src/keyboard-zmk/zmk-config left
@@ -51,7 +52,22 @@ EXTRA_MODULES = $(KEEB_MODULE);$(STATUS_LED);$(BUZZER)
 COMMON = -s $(APP) -b $(BOARD) -d $(BUILD_DIR) -- \
          -DSHIELD=$(SHIELD) -DZMK_CONFIG=$(ZMK_CONFIG) -DZMK_EXTRA_MODULES="$(EXTRA_MODULES)"
 
-.PHONY: left right flash-left flash-right monitor tlv-test clean
+ZMK_PATCH_DIR = $(REPO)/zmk-patches
+ZMK_PATCHES = $(wildcard $(ZMK_PATCH_DIR)/*.patch)
+
+.PHONY: left right flash-left flash-right monitor tlv-test wpm-test clean patch-zmk
+
+patch-zmk:
+	@for p in $(ZMK_PATCHES); do \
+	  patch -d $(WS)/zmk -p1 --forward --dry-run -i $$p >/dev/null 2>&1 && \
+	  { echo "applying $$(basename $$p)"; patch -d $(WS)/zmk -p1 --forward -i $$p || true; } || \
+	  { echo "$$(basename $$p) already applied or failed"; }; \
+	done
+
+# Apply ZMK patches before building.  The --forward --dry-run dance skips
+# already-applied patches instead of failing.
+left: patch-zmk
+right: patch-zmk
 
 # The TLV codec is the one part of the live-keymap feature that is verifiable
 # without a keyboard attached: framing, fragmentation, reassembly, CRC and the
@@ -60,6 +76,9 @@ COMMON = -s $(APP) -b $(BOARD) -d $(BUILD_DIR) -- \
 # receiver. Run it after touching the codec or the protocol header.
 tlv-test:
 	@tools/tlv_test.sh
+
+wpm-test:
+	@tools/wpm_test.sh
 
 clean:
 	rm -rf $(OUT)/left $(OUT)/right $(OUT)/nodisp
@@ -77,7 +96,7 @@ left:
 right:
 	BUILD_DIR=$(OUT)/right $(MAKE) _build SHIELD=keeb_right
 
-_build:
+_build: patch-zmk
 	unset EXTRA_ZEPHYR_MODULES; \
 	$(SDK_ENV) west build $(COMMON)
 
