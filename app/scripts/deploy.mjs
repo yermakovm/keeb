@@ -29,10 +29,12 @@
  *
  * Target comes from TARGET below; environment variables win:
  *   DEPLOY_USER=... DEPLOY_HOST=... DEPLOY_PATH=... npm run upload
+ *   DEPLOY_SSH_KEY=~/.ssh/oracle-cloud.key   explicit identity file
  */
 
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -59,11 +61,17 @@ if (has('--help', '-h')) {
   --help, -h      this message
 
 target: ${TARGET.user}@${TARGET.host}:${TARGET.path}
-override with DEPLOY_USER / DEPLOY_HOST / DEPLOY_PATH`)
+override with DEPLOY_USER / DEPLOY_HOST / DEPLOY_PATH / DEPLOY_SSH_KEY`)
   process.exit(0)
 }
 
 const dryRun = has('--dry-run', '-n')
+
+// Identity file for the SSH session. Locally ~/.ssh/config already picks the
+// right key for this host; CI has no config file, so it passes one explicitly.
+const sshKey = process.env.DEPLOY_SSH_KEY?.replace(/^~(?=$|\/)/, homedir())
+const sshOpts = sshKey ? ['-i', sshKey, '-o', 'IdentitiesOnly=yes'] : []
+if (sshKey && !existsSync(sshKey)) fail(`DEPLOY_SSH_KEY=${sshKey} is not a file`)
 
 function fail(message, hint) {
   console.error(`deploy: ${message}`)
@@ -129,7 +137,7 @@ const siteRoot = TARGET.path.replace(/\/$/, '')
 const targetRef = `${TARGET.user}@${TARGET.host}`
 
 const probe = `command -v rsync >/dev/null 2>&1 || exit 10; test -d '${siteRoot}' || exit 11`
-const check = spawnSync('ssh', [targetRef, probe], { encoding: 'utf8' })
+const check = spawnSync('ssh', [...sshOpts, targetRef, probe], { encoding: 'utf8' })
 if (check.status === 10) {
   fail('rsync is not installed on the server', `ssh ${targetRef} 'sudo pacman -S rsync'`)
 }
@@ -146,6 +154,7 @@ const remote = `${targetRef}:${TARGET.path}`
 const rsyncArgs = ['-a', '-i', '--stats']
 if (dryRun) rsyncArgs.push('-n')
 if (!has('--no-delete')) rsyncArgs.push('--delete')
+if (sshKey) rsyncArgs.push('-e', ['ssh', ...sshOpts].join(' '))
 rsyncArgs.push('--', `${distDir}/`, remote) // `--` so a path is never parsed as a flag
 
 console.log(`\ndeploy: ${distDir}/ -> ${remote}${dryRun ? '  (dry run: nothing written)' : ''}`)
@@ -159,7 +168,7 @@ if (!has('--no-chmod')) {
   if (dryRun) {
     console.log(`\nwould run: ssh ${targetRef} ${remoteCmd}`)
   } else {
-    run('ssh', [targetRef, remoteCmd])
+    run('ssh', [...sshOpts, targetRef, remoteCmd])
   }
 }
 

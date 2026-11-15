@@ -1,0 +1,62 @@
+name: Build and Deploy Configurator to Oracle Cloud
+
+# Builds app/ with Vite and ships it with app/scripts/deploy.mjs (rsync over
+# SSH to opc@92.5.48.29:/var/www/keeb). The script does the preflight checks,
+# the --delete pass and the nginx chmod; this workflow only supplies the SSH
+# identity it would normally read from ~/.ssh/config.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/deploy-app.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-configurator
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install, test, render smoke test
+        working-directory: app
+        run: |
+          npm ci
+          npm run test
+          npm run smoke
+
+      - name: Install SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy.key
+          chmod 600 ~/.ssh/deploy.key
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            # No pinned host key: trust on first use instead of letting ssh
+            # fail with "Host key verification failed" in a non-interactive shell.
+            printf 'Host *\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+          fi
+          echo "DEPLOY_SSH_KEY=$HOME/.ssh/deploy.key" >> "$GITHUB_ENV"
+
+      - name: Build and rsync to the server
+        working-directory: app
+        run: npm run upload

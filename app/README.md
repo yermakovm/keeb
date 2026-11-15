@@ -43,6 +43,35 @@ npm run build        # production bundle in app/dist (gitignored)
 the ZMK keycode macros, and writes the contract table. Run it whenever the
 firmware's token table or matrix changes.
 
+## Deploy
+
+`npm run upload` builds and rsyncs `dist/` to `opc@92.5.48.29:/var/www/keeb`
+(nginx's site root). `~/.ssh/config` already names the identity file for that
+host, so no key flag is needed locally:
+
+```sh
+npm run upload:dry -- --no-build   # show the diff, write nothing
+npm run upload                     # build, then sync
+```
+
+`--delete` is on by default — Vite emits content-hashed asset names, so
+without it the served directory only ever grows. Override the target with
+`DEPLOY_USER` / `DEPLOY_HOST` / `DEPLOY_PATH`; use
+`DEPLOY_SSH_KEY=~/.ssh/oracle-cloud.key` where there is no `~/.ssh/config`.
+
+CI runs the same script: `.github/workflows/deploy-app.yml` fires on pushes to
+`main` that touch `app/` (plus `workflow_dispatch`), after `npm run test` and
+`npm run smoke`. Repo secrets — Settings → Secrets and variables → Actions:
+
+| Secret | Required | Value |
+|---|---|---|
+| `SSH_PRIVATE_KEY` | yes | the full text of the OpenSSH private key that logs in as `opc` |
+| `SSH_KNOWN_HOSTS` | no | output of `ssh-keyscan 92.5.48.29`; pins the server host key instead of trust-on-first-use |
+
+A key generated just for deploys is safer than the one you log in with: a
+leaked CI secret then costs a key, not your shell. Either way, add it to
+`~/.ssh/authorized_keys` on the box and remove it to revoke.
+
 ## How the models match the firmware
 
 | firmware | UI |
