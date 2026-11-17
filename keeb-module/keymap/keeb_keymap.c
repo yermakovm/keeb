@@ -201,14 +201,27 @@ static int entry_binding(const struct keeb_cells_set_hdr *hdr, const struct keeb
 
 	*binding = binding_from_token(token, entry->param1, entry->param2);
 
-	/* ZMK's own validation against the behavior's param metadata. Studio
-	 * uses the same call (zmk/app/src/studio/keymap_subsystem.c), so this
-	 * is the firmware's real rule for a legal binding, not a guess at it.
+	/* ZMK's own validation against the behavior's param metadata - the same
+	 * rule zmk_behavior_validate_binding() applies for Studio
+	 * (zmk/app/src/studio/keymap_subsystem.c). It is called through its two
+	 * steps here because that wrapper folds "no metadata" into failure:
+	 * behaviors without metadata (zmk,behavior-input-two-axis, i.e. &mmv and
+	 * &msc, and this module's own &layer_art) would then be unwritable from
+	 * the configurator while remaining legal in the compiled keymap. With no
+	 * metadata there is nothing to validate against, so accept - the same as
+	 * a keymap file, where ZMK never inspects those params either.
 	 */
-	int err = zmk_behavior_validate_binding(binding);
+	const struct device *behavior = zmk_behavior_get_binding(token->name);
+	struct behavior_parameter_metadata metadata;
 
-	if (err) {
-		LOG_WRN("token %u rejected by behavior validation: %d", entry->token, err);
+	if (!behavior) {
+		LOG_WRN("token %u (%s): no driver in this build", entry->token, token->name);
+		return -KEEB_ERR_BEHAVIOR;
+	}
+
+	if (behavior_get_parameter_metadata(behavior, &metadata) == 0 &&
+	    zmk_behavior_check_params_match_metadata(&metadata, binding->param1, binding->param2)) {
+		LOG_WRN("token %u rejected by behavior validation", entry->token);
 		return -KEEB_ERR_BEHAVIOR;
 	}
 
