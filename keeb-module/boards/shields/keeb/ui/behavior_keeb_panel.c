@@ -68,7 +68,7 @@ static void rx_apply(void) {
 		return;
 	}
 
-	if (len < 2) {
+	if (len < 1) {
 		return;
 	}
 
@@ -109,6 +109,10 @@ static void rx_apply(void) {
 		return;
 	}
 
+	/* The only line that says a push landed: the central cannot see this half's
+	 * verdict (it acks its own copy), so this is where a lost stream shows. */
+	LOG_INF("peer panel rx: %u widget(s) applied", count);
+
 	for (uint8_t slot = 0; slot < KEEB_UI_TEXT_SLOTS; slot++) {
 		if (at >= len) {
 			break;
@@ -128,21 +132,40 @@ static void rx_apply(void) {
 
 /** One relay invocation. Called from the split transport on this half. */
 static void panel_rx(uint32_t first, uint32_t second) {
-	/* A header only while idle, so payload bytes that look like the magic
-	 * cannot restart a stream half-received. */
-	if (rx_want == 0 && (first & 0xffu) == KEEB_PANEL_STREAM_MAGIC) {
+	/* A header starts a stream even when one is already half-received. One frame
+	 * lost on the way would otherwise park this receiver for good: every later
+	 * push would be appended to that corpse and thrown away by its CRC, which is
+	 * exactly what kept the other half's panel frozen while the central acked
+	 * every write (it only ever vouches for its own copy).
+	 *
+	 * A payload byte that happens to equal the magic byte still cannot restart a
+	 * stream mid-flight: the version and the length have to agree as well, which
+	 * a stray text byte does not manage. */
+	if ((first & 0xffu) == KEEB_PANEL_STREAM_MAGIC) {
 		uint8_t version = (uint8_t)((first >> 8) & 0xffu);
 		uint16_t len = (uint16_t)((first >> 16) & 0xffffu);
 
-		if (version != KEEB_PANEL_STREAM_VERSION || len < 2 || len > sizeof(rx_buf)) {
-			LOG_WRN("peer panel stream header refused (v%u, %u bytes)", version, len);
+		if (version == KEEB_PANEL_STREAM_VERSION && len >= 1 && len <= sizeof(rx_buf)) {
+			if (rx_want != 0) {
+				LOG_WRN("peer panel stream restarted mid-flight (%u of %u bytes)",
+					rx_got, rx_want);
+			}
+
+			LOG_INF("peer panel stream: %u bytes", len);
+
+			rx_want = len;
+			rx_got = 0;
+			rx_crc = second;
 			return;
 		}
 
-		rx_want = len;
-		rx_got = 0;
-		rx_crc = second;
-		return;
+		/* Not a header after all: idle means a stray frame, mid-stream means
+		 * payload that began with the magic byte and belongs to what is in
+		 * flight. */
+		if (rx_want == 0) {
+			LOG_WRN("peer panel stream header refused (v%u, %u bytes)", version, len);
+			return;
+		}
 	}
 
 	if (rx_want == 0) {

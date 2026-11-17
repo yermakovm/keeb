@@ -79,6 +79,17 @@ BUILD_ASSERT(sizeof(UI_STAT_DEV) <= ZMK_SPLIT_RUN_BEHAVIOR_DEV_LEN,
 
 static atomic_t peer_connected;
 
+/* A panel push is a 9+ frame burst with no acknowledgement coming back (see
+ * ui/panel_stream.h), and the connect edge fires it while the link is still
+ * settling - which is how a frame gets lost and a table never lands. The table is
+ * idempotent, so re-pushing costs one redraw.
+ *
+ * shortcut: 3 ticks is a guess, not a protocol; add a real ack from the
+ * peripheral if a push is ever seen to need more than this. */
+#define KEEB_PEER_PANEL_REPUSH 3
+
+static uint8_t peer_panel_repush;
+
 bool keeb_layer_sync_peer_connected(void) { return atomic_get(&peer_connected) != 0; }
 
 uint8_t keeb_split_device_id(void) {
@@ -282,6 +293,10 @@ static void check_peer(void) {
 		keeb_ui_request_draw();
 	}
 
+	if (!connected) {
+		peer_panel_repush = 0;
+	}
+
 	if (connected && !was_connected) {
 		push_active_layer();
 
@@ -298,6 +313,7 @@ static void check_peer(void) {
 		 * compiled-in preset, so a link that comes up after a host edited it
 		 * has to be taught the saved look. */
 		keeb_peer_panel_push();
+		peer_panel_repush = KEEB_PEER_PANEL_REPUSH;
 	}
 }
 
@@ -314,6 +330,13 @@ static void poll_work_cb(struct k_work *work) {
 	 * so CONFIG_KEEB_UI_LAYER_SYNC_POLL_MS is the knob that keeps both
 	 * halves' rate readouts meaningful. */
 	if (keeb_layer_sync_peer_connected()) {
+		/* Same reason as the connect edge above: this burst is the one most
+		 * likely to lose a frame, so it gets more than one attempt. */
+		if (peer_panel_repush) {
+			peer_panel_repush--;
+			keeb_peer_panel_push();
+		}
+
 		push_stats();
 	}
 }

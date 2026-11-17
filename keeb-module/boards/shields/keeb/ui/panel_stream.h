@@ -15,10 +15,15 @@
  *                 param2 = CRC-32 of the payload
  *   invocation N: param1 = payload bytes 0..3, param2 = payload bytes 4..7
  *
- * The receiver only treats an invocation as a header while it is idle, so a
- * payload byte that happens to equal the magic cannot restart a stream. If a
- * link drops mid-stream the next push is refused by the CRC and dropped; the
- * one after that (the connect edge, or the next Apply) starts clean.
+ * Any invocation that carries the magic byte, the version and a plausible
+ * length starts a new stream, even one that is already half-received; a payload
+ * byte that happens to equal the magic does not match the version as well. A
+ * stream is therefore never left parked: if a frame goes missing mid-stream the
+ * buffer is thrown away by its CRC, and the next push starts clean instead of
+ * being appended to the wreckage. What that costs is one apply that does not
+ * land, which is why the central re-pushes the table after the connect edge
+ * (ui/layer_sync.c) - there is no acknowledgement coming back from the
+ * peripheral to tell it to retry sooner.
  */
 
 #pragma once
