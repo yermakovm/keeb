@@ -294,6 +294,21 @@ checks.push(
   ['no keycaps are drawn without a keyboard', !offlineHtml.includes('class="cap')],
 )
 
+/* /demo is the same shell with the simulated keyboard as its device: it must not
+ * offer a Bluetooth connection, and the home page must not offer the mock. */
+const demoPinia = createPinia()
+const demoApp = createApp(App, { demo: true })
+
+demoApp.use(demoPinia)
+
+const demoHtml = await renderToString(demoApp)
+
+checks.push(
+  ['demo page names itself', demoHtml.includes('demo-tag')],
+  ['demo page offers no Bluetooth chooser', !demoHtml.includes('Show all devices')],
+  ['home page no longer offers the simulated keyboard', !offlineHtml.includes('Simulate keyboard')],
+)
+
 for (const [name, ok] of checks) {
   console.log(`${ok ? 'ok  ' : 'FAIL'}  ${name}`)
 

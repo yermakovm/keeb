@@ -25,9 +25,8 @@ const message = ref('')
 
 const hex = (v: number): string => `0x${v.toString(16).padStart(8, '0')}`
 
-/* The simulated keyboard exists for the tests and the SSR smoke render only;
- * nothing here can reach it. Every action in this panel is a real keyboard
- * action. */
+/* The simulated keyboard is the /demo page's device and the tests' one; every
+ * action in this panel is a keyboard action, real or simulated. */
 
 async function run(label: string, fn: () => Promise<unknown>): Promise<void> {
   busy.value = true

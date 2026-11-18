@@ -24,6 +24,8 @@ app/
 │   └── keymap.ts              ← slots, ids, live model, pending edits
 ├── src/model/cap.ts           ← {token, param1, param2} → what a keycap shows
 ├── src/data/keycodes.ts       ← curated picker catalog over the generated table
+├── index.html                 ← the configurator page
+├── demo/index.html            ← the /demo page: same bundle, simulated keyboard
 └── tests/                     ← codec, wire-layout, session, store tests (node --test, no runner)
 ```
 
@@ -32,7 +34,7 @@ app/
 ```sh
 cd app
 npm install
-npm run dev          # http://localhost:5173 — opens against the simulated keyboard
+npm run dev          # http://localhost:5173 — the connect card; /demo/ is the simulated keyboard
 npm run check        # typecheck + tests + render smoke test
 npm run gen          # regenerate src/proto/zmk.gen.ts
 npm run build        # production bundle in app/dist (gitignored)
@@ -42,6 +44,22 @@ npm run build        # production bundle in app/dist (gitignored)
 `ZMK_DIR=/path`). It reads `config/keeb.dtsi` and `config/keeb.keymap`, expands
 the ZMK keycode macros, and writes the contract table. Run it whenever the
 firmware's token table or matrix changes.
+
+## Demo page
+
+`/demo` is the same configurator with the simulated keyboard as its device: the
+same codec, the same session, the same stores — no Bluetooth, and nothing it
+does can reach a real board.
+
+```sh
+npm run dev          # http://localhost:5173/demo/
+npm run build        # emits dist/index.html and dist/demo/index.html
+```
+
+Two HTML entries, one bundle (`vite.config.ts`). `dist/demo/index.html` is a
+directory with an index, which static nginx already serves at `/demo`, so the
+link needs no server config. The page carries a **demo** tag in its header, and
+the home page no longer offers the simulated keyboard at all.
 
 ## Deploy
 
@@ -55,7 +73,8 @@ npm run upload                     # build, then sync
 ```
 
 `--delete` is on by default — Vite emits content-hashed asset names, so
-without it the served directory only ever grows. Override the target with
+without it the served directory only ever grows. The demo page ships in the
+same sync (`dist/demo/` → `/var/www/keeb/demo/`). Override the target with
 `DEPLOY_USER` / `DEPLOY_HOST` / `DEPLOY_PATH`; use
 `DEPLOY_SSH_KEY=~/.ssh/oracle-cloud.key` where there is no `~/.ssh/config`.
 

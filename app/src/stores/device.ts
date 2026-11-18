@@ -131,8 +131,8 @@ import type {
 } from '../proto/types.ts'
 import { BleTransport, forgetGrants } from '../transport/ble.ts'
 /* Test double, not a device: MockKeyboard is what the codec, session and store
- * tests (and the SSR smoke render) speak to. The app itself only ever talks to
- * a real keyboard. */
+ * tests (and the SSR smoke render) speak to, and the same one the /demo page
+ * serves. Any other page only ever talks to a real keyboard. */
 import { MockKeyboard } from '../transport/mockKeyboard.ts'
 import type { KeebTransport, TransportState } from '../transport/types.ts'
 
@@ -360,9 +360,7 @@ export const useDeviceStore = defineStore('device', () => {
     testMode.value = false
   }
 
-  /** Test-only: attach the simulated keyboard. Nothing in the UI calls this;
-   * it exists so the protocol and the stores stay testable without hardware.
-   */
+  /** Attach the simulated keyboard: the /demo page and the test suite. */
   async function connectMock(): Promise<void> {
     await attach(new MockKeyboard(), 'mock')
   }

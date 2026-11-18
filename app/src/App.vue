@@ -44,6 +44,12 @@ import { useSettingsStore } from './stores/settings.ts'
 import { useSoundStore } from './stores/sound.ts'
 import { useTesterStore } from './stores/tester.ts'
 
+const props = defineProps<{ demo?: boolean }>()
+
+/* /demo passes this in: the simulated keyboard is the device, so the page never
+ * offers a Bluetooth connection and never touches a real board. */
+const demo = props.demo === true
+
 const device = useDeviceStore()
 const keymap = useKeymapStore()
 const display = useDisplayStore()
@@ -133,25 +139,6 @@ async function connectRetry(): Promise<void> {
   }
 }
 
-/* The mock is the same codec, the same session and the same stores the real path
- * uses - it is how the layout gets checked without a keyboard on the bench. It
- * is offered explicitly rather than auto-attached, so a real session is never
- * silently replaced by a simulated one. */
-async function connectMock(): Promise<void> {
-  busy.value = true
-
-  try {
-    await device.connectMock()
-    await loadFromKeyboard()
-
-    say('connected to the simulated keyboard')
-  } catch (err) {
-    say(err instanceof Error ? err.message : String(err))
-  } finally {
-    busy.value = false
-  }
-}
-
 /** The only path from a staged edit to the keyboard. */
 async function applyChanges(): Promise<void> {
   busy.value = true
@@ -215,6 +202,13 @@ onMounted(async () => {
   document.addEventListener('pointerdown', onDocPointerDown)
 
   try {
+    if (demo) {
+      await device.connectMock()
+      await loadFromKeyboard()
+      say('demo: this is the simulated keyboard - nothing here can reach a real one')
+      return
+    }
+
     const label = await device.reconnectBle()
 
     if (!label) {
@@ -535,8 +529,10 @@ const pickedDisplay = computed(() => describeBinding(pickedBinding.value, keymap
       <div class="head-left">
         <div class="title">
           <h1>{{ keyboardName }}</h1>
-          <small>split keyboard · nicenano · ble</small>
+          <small>{{ demo ? 'split keyboard · simulated' : 'split keyboard · nicenano · ble' }}</small>
         </div>
+
+        <span v-if="demo" class="demo-tag" title="the simulated keyboard: same protocol, same editor, no hardware and no way to reach a real keyboard">demo</span>
       </div>
 
       <nav class="head-center" aria-label="Sections">
@@ -608,7 +604,14 @@ const pickedDisplay = computed(() => describeBinding(pickedBinding.value, keymap
       <!-- No keyboard, nothing to edit: the page asks for the connection instead
            of drawing a layout no keyboard has ever confirmed. -->
       <section v-if="!device.connected" class="connect">
-        <div class="connect-card">
+        <!-- The demo page has no keyboard to connect to: it attaches its own. -->
+        <div v-if="demo" class="connect-card">
+          <h2>loading the simulated keyboard</h2>
+
+          <p class="why">{{ device.statusLine }}</p>
+        </div>
+
+        <div v-else class="connect-card">
           <h2>no keyboard connected</h2>
 
           <button class="btn connect" :disabled="busy" @click="connectChooser()">Connect</button>
@@ -616,10 +619,6 @@ const pickedDisplay = computed(() => describeBinding(pickedBinding.value, keymap
           <div class="connect-alt">
             <button class="btn link" :disabled="busy" title="reconnect to a keyboard this browser already has permission for - no chooser" @click="connectRetry">Retry the saved keyboard</button>
             <button class="btn link" :disabled="busy" title="open the chooser with every BLE device in range" @click="connectChooser(true)">Show all devices</button>
-          </div>
-
-          <div class="connect-alt">
-            <button class="btn link" :disabled="busy" title="attach the host-side mock keyboard: same codec, same session, same stores - no hardware needed" @click="connectMock">Simulate keyboard</button>
           </div>
 
           <p class="why">{{ device.statusLine }}</p>
@@ -792,6 +791,19 @@ header {
 }
 
 .spacer { flex: 1; }
+
+/* The demo page shares this shell, so it says so in the header: a shared link
+ * must not look like a live session with someone's keyboard. */
+.demo-tag {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--mid);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 
 .conn {
   display: flex;

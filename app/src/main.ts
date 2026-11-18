@@ -12,4 +12,11 @@ if (MISSING_CATALOG_NAMES.length) {
   console.warn('[keeb] catalog names missing from the generated ZMK table:', MISSING_CATALOG_NAMES.join(', '))
 }
 
-createApp(App).use(createPinia()).mount('#app')
+/* /demo is the hardware-free page: the same shell, the same codec and the same
+ * stores, driven by the simulated keyboard. The demo entry says so on the mount
+ * point; the path is the fallback for a host that answers /demo with the root
+ * page instead of redirecting to /demo/. */
+const demo =
+  document.getElementById('app')?.dataset.mode === 'demo' || /^\/demo\/?$/.test(location.pathname)
+
+createApp(App, { demo }).use(createPinia()).mount('#app')
