@@ -1,5 +1,10 @@
 # keeb split keyboard
 
+**Watch it:** [60-second video demo](https://youtu.be/Vu30jgNvCN0) ·
+**Try it with no hardware:** [keeb.live/demo](https://keeb.live/demo) — the same
+configurator driven by the simulated keyboard, nothing it does can reach a real
+board.
+
 This repo is the keyboard's authored code (keymap, shield, drivers, web UI).
 It lives inside a Zephyr workspace; upstream (ZMK + Zephyr + vendor HALs) is
 downloaded by `west` into the workspace root, never into this repo.
